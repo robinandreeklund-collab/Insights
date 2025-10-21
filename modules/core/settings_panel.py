@@ -154,14 +154,24 @@ class SettingsPanel:
             # Reset all
             self._initialize_defaults()
         else:
-            # Reset specific section
-            self._initialize_defaults()
-            defaults = self.load_settings()
+            # Reset specific section - load defaults first, then merge with current
+            # Create a temporary file for defaults
+            import tempfile
+            temp_dir = tempfile.mkdtemp()
+            temp_panel = SettingsPanel(yaml_dir=temp_dir)
+            defaults = temp_panel.load_settings()
             
+            # Load current settings
+            current = self.load_settings()
+            
+            # Replace only the specified section
             if section in defaults:
-                current = self.load_settings()
                 current[section] = defaults[section]
                 self._save_yaml(self.settings_file, current)
+            
+            # Clean up temp dir
+            import shutil
+            shutil.rmtree(temp_dir)
         
         return True
     

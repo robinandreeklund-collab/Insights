@@ -26,6 +26,10 @@ from modules.core.bill_manager import BillManager
 from modules.core.loan_manager import LoanManager
 from modules.core.parse_pdf_bills import PDFBillParser
 from modules.core.bill_matcher import BillMatcher
+from modules.core.history_viewer import HistoryViewer
+from modules.core.income_tracker import IncomeTracker
+from modules.core.agent_interface import AgentInterface
+from modules.core.settings_panel import SettingsPanel
 
 
 def clear_data_on_exit(signum=None, frame=None):
@@ -111,37 +115,49 @@ def create_overview_tab():
 
 # Create input tab content with CSV upload
 def create_input_tab():
-    """Create the Input tab with drag-and-drop CSV upload."""
+    """Create the Input tab with drag-and-drop CSV upload and income input."""
     return html.Div([
         html.H3("Inmatning", className="mt-3 mb-4"),
         
-        dbc.Card([
-            dbc.CardBody([
-                html.H5("CSV-import", className="card-title mb-3"),
-                html.P("Dra och släpp en Nordea CSV-fil här, eller klicka för att välja fil"),
-                
-                dcc.Upload(
-                    id='upload-csv',
-                    children=html.Div([
-                        html.I(className="bi bi-cloud-upload", style={'fontSize': '48px'}),
-                        html.Br(),
-                        'Dra och släpp eller klicka för att välja CSV-fil'
-                    ]),
-                    style={
-                        'width': '100%',
-                        'height': '200px',
-                        'lineHeight': '200px',
-                        'borderWidth': '2px',
-                        'borderStyle': 'dashed',
-                        'borderRadius': '10px',
-                        'textAlign': 'center',
-                        'backgroundColor': '#f8f9fa'
-                    },
-                    multiple=False
-                ),
-                
-                html.Div(id='upload-status', className="mt-3")
-            ])
+        # CSV Import section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("CSV-import", className="card-title mb-3"),
+                        html.P("Dra och släpp en Nordea CSV-fil här, eller klicka för att välja fil"),
+                        
+                        dcc.Upload(
+                            id='upload-csv',
+                            children=html.Div([
+                                html.I(className="bi bi-cloud-upload", style={'fontSize': '48px'}),
+                                html.Br(),
+                                'Dra och släpp eller klicka för att välja CSV-fil'
+                            ]),
+                            style={
+                                'width': '100%',
+                                'height': '200px',
+                                'lineHeight': '200px',
+                                'borderWidth': '2px',
+                                'borderStyle': 'dashed',
+                                'borderRadius': '10px',
+                                'textAlign': 'center',
+                                'backgroundColor': '#f8f9fa'
+                            },
+                            multiple=False
+                        ),
+                        
+                        html.Div(id='upload-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Income input section
+        dbc.Row([
+            dbc.Col([
+                create_income_section()
+            ], width=12)
         ])
     ], className="p-3")
 
@@ -398,6 +414,299 @@ def create_loans_tab():
     ], className="p-3")
 
 
+# Create history tab content
+def create_history_tab():
+    """Create the History tab with monthly summaries and trends."""
+    return html.Div([
+        html.H3("Historik", className="mt-3 mb-4"),
+        
+        # Month selector
+        dbc.Row([
+            dbc.Col([
+                html.Label("Välj månad:", className="fw-bold"),
+                dcc.Dropdown(
+                    id='history-month-selector',
+                    placeholder="Välj en månad...",
+                    className="mb-3"
+                )
+            ], width=4)
+        ]),
+        
+        # Monthly summary section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Månadssammanfattning", className="card-title"),
+                        html.Div(id='monthly-summary-display')
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Category trends section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Kategoritrender", className="card-title"),
+                        dcc.Dropdown(
+                            id='trend-category-selector',
+                            options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
+                            value='Mat & Dryck',
+                            className="mb-3"
+                        ),
+                        dcc.Graph(id='category-trend-graph')
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Top expenses section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Största utgifter", className="card-title"),
+                        html.Div(id='top-expenses-display')
+                    ])
+                ])
+            ], width=12)
+        ]),
+        
+        # Interval for auto-refresh
+        dcc.Interval(id='history-interval', interval=5000, n_intervals=0)
+    ], className="p-3")
+
+
+# Create agent tab content
+def create_agent_tab():
+    """Create the Agent Analysis tab with query interface."""
+    return html.Div([
+        html.H3("Frågebaserad analys", className="mt-3 mb-4"),
+        html.P("Ställ frågor om din ekonomi i naturligt språk. Exempel: 'Hur mycket har jag kvar i november?', 'Visa fakturor', 'Simulera ränta 4.5%'"),
+        
+        # Query input section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Ställ en fråga", className="card-title"),
+                        dbc.Textarea(
+                            id='agent-query-input',
+                            placeholder='Skriv din fråga här...',
+                            style={'minHeight': '100px'},
+                            className="mb-3"
+                        ),
+                        dbc.Button("Skicka fråga", id='agent-submit-btn', color="primary"),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Response section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Svar", className="card-title"),
+                        html.Div(id='agent-response-display', style={'whiteSpace': 'pre-line', 'minHeight': '200px'})
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Example queries
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Exempel på frågor", className="card-title"),
+                        html.Ul([
+                            html.Li("Hur mycket saldo har jag?"),
+                            html.Li("Visa alla fakturor"),
+                            html.Li("Vilka lån har jag?"),
+                            html.Li("Simulera ränteökning till 4.5%"),
+                            html.Li("Visa inkomster denna månad"),
+                            html.Li("Största utgifter denna månad"),
+                            html.Li("Trend för Mat & Dryck"),
+                        ])
+                    ])
+                ])
+            ], width=12)
+        ])
+    ], className="p-3")
+
+
+# Create income tab content (add to Input tab)
+def create_income_section():
+    """Create income input section to be added to Input tab."""
+    return dbc.Card([
+        dbc.CardBody([
+            html.H5("Lägg till inkomst", className="card-title mb-3"),
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Person:", className="fw-bold"),
+                    dbc.Input(id='income-person-input', type='text', placeholder='T.ex. Robin'),
+                ], width=4),
+                dbc.Col([
+                    html.Label("Konto:", className="fw-bold"),
+                    dcc.Dropdown(id='income-account-dropdown', placeholder='Välj konto...'),
+                ], width=4),
+                dbc.Col([
+                    html.Label("Kategori:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='income-category-dropdown',
+                        options=[
+                            {'label': 'Lön', 'value': 'Lön'},
+                            {'label': 'Bonus', 'value': 'Bonus'},
+                            {'label': 'Återbäring', 'value': 'Återbäring'},
+                            {'label': 'Övrigt', 'value': 'Övrigt'}
+                        ],
+                        value='Lön'
+                    ),
+                ], width=4),
+            ], className="mb-3"),
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Belopp (SEK):", className="fw-bold"),
+                    dbc.Input(id='income-amount-input', type='number', placeholder='0.00'),
+                ], width=4),
+                dbc.Col([
+                    html.Label("Datum:", className="fw-bold"),
+                    dbc.Input(id='income-date-input', type='date'),
+                ], width=4),
+                dbc.Col([
+                    html.Label("Beskrivning:", className="fw-bold"),
+                    dbc.Input(id='income-description-input', type='text', placeholder='Valfri beskrivning...'),
+                ], width=4),
+            ], className="mb-3"),
+            dbc.Button("Lägg till inkomst", id='add-income-btn', color="success"),
+            html.Div(id='income-add-status', className="mt-3")
+        ])
+    ])
+
+
+# Create settings tab content
+def create_settings_tab():
+    """Create the Settings tab with configuration options."""
+    return html.Div([
+        html.H3("Inställningar", className="mt-3 mb-4"),
+        
+        # General settings
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Allmänna inställningar", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Valuta:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='settings-currency',
+                                    options=[
+                                        {'label': 'SEK - Svenska kronor', 'value': 'SEK'},
+                                        {'label': 'EUR - Euro', 'value': 'EUR'},
+                                        {'label': 'USD - US Dollar', 'value': 'USD'}
+                                    ],
+                                    value='SEK'
+                                )
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Decimaler:", className="fw-bold"),
+                                dcc.Slider(
+                                    id='settings-decimals',
+                                    min=0, max=4, step=1, value=2,
+                                    marks={i: str(i) for i in range(5)}
+                                )
+                            ], width=6)
+                        ], className="mb-3"),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Display settings
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Visningsinställningar", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Transaktioner per sida:", className="fw-bold"),
+                                dcc.Slider(
+                                    id='settings-items-per-page',
+                                    min=10, max=200, step=10, value=50,
+                                    marks={i: str(i) for i in [10, 50, 100, 200]}
+                                )
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Uppdateringsintervall (sekunder):", className="fw-bold"),
+                                dcc.Slider(
+                                    id='settings-refresh-interval',
+                                    min=1, max=60, step=1, value=5,
+                                    marks={i: str(i) for i in [1, 5, 10, 30, 60]}
+                                )
+                            ], width=6)
+                        ], className="mb-3"),
+                        dbc.Checklist(
+                            id='settings-display-options',
+                            options=[
+                                {'label': ' Automatisk uppdatering', 'value': 'auto_refresh'},
+                                {'label': ' Visa cirkeldiagram', 'value': 'show_pie'},
+                                {'label': ' Visa prognosgraf', 'value': 'show_forecast'}
+                            ],
+                            value=['auto_refresh', 'show_pie', 'show_forecast'],
+                            inline=True
+                        )
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Notification settings
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Notifieringar", className="card-title"),
+                        dbc.Checklist(
+                            id='settings-notifications',
+                            options=[
+                                {'label': ' Fakturavarningar', 'value': 'bill_reminders'},
+                                {'label': ' Lågt saldobelarm', 'value': 'low_balance'}
+                            ],
+                            value=['bill_reminders', 'low_balance'],
+                            inline=True,
+                            className="mb-3"
+                        ),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Påminnelse dagar före förfallodatum:", className="fw-bold"),
+                                dbc.Input(id='settings-reminder-days', type='number', value=3, min=0, max=30)
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Lågt saldo gräns (SEK):", className="fw-bold"),
+                                dbc.Input(id='settings-low-balance-threshold', type='number', value=1000.0, step=100)
+                            ], width=6)
+                        ])
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Save button
+        dbc.Row([
+            dbc.Col([
+                dbc.Button("Spara inställningar", id='save-settings-btn', color="primary", size="lg"),
+                dbc.Button("Återställ till standard", id='reset-settings-btn', color="secondary", size="lg", className="ms-2"),
+                html.Div(id='settings-save-status', className="mt-3")
+            ], width=12)
+        ])
+    ], className="p-3")
+
+
 # Main app layout
 app.layout = dbc.Container([
     html.H1("Insights – Hushållsekonomi Dashboard", className="text-center my-4"),
@@ -435,13 +744,7 @@ app.layout = dbc.Container([
         dcc.Tab(
             label="Historik",
             value="history",
-            children=[
-                html.Div([
-                    html.H3("Historik", className="mt-3"),
-                    html.P("Månadssammanställningar, kategoritrender, saldohistorik och topptransaktioner."),
-                    html.Div(id="history-content", className="mt-3")
-                ], className="p-3")
-            ]
+            children=create_history_tab()
         ),
         
         # Lån
@@ -455,26 +758,14 @@ app.layout = dbc.Container([
         dcc.Tab(
             label="Frågebaserad analys",
             value="agent",
-            children=[
-                html.Div([
-                    html.H3("Frågebaserad analys", className="mt-3"),
-                    html.P("Tolkar naturliga frågor och genererar svar, insikter och simuleringar."),
-                    html.Div(id="agent-content", className="mt-3")
-                ], className="p-3")
-            ]
+            children=create_agent_tab()
         ),
         
         # Inställningar
         dcc.Tab(
             label="Inställningar",
             value="settings",
-            children=[
-                html.Div([
-                    html.H3("Inställningar", className="mt-3"),
-                    html.P("Hanterar användarinställningar, toggles, thresholds och UI-konfiguration."),
-                    html.Div(id="settings-content", className="mt-3")
-                ], className="p-3")
-            ]
+            children=create_settings_tab()
         ),
     ])
 ], fluid=True)
@@ -1192,11 +1483,282 @@ def update_amortization_graph(loan_id, n):
         return fig
 
 
+# Callback: History month selector
+@app.callback(
+    Output('history-month-selector', 'options'),
+    Output('history-month-selector', 'value'),
+    Input('history-interval', 'n_intervals')
+)
+def update_history_month_options(n):
+    """Update available months for history view."""
+    try:
+        viewer = HistoryViewer()
+        months = viewer.get_all_months()
+        
+        if not months:
+            return [], None
+        
+        options = [{'label': month, 'value': month} for month in months]
+        return options, months[0] if months else None
+    except:
+        return [], None
+
+
+# Callback: Monthly summary display
+@app.callback(
+    Output('monthly-summary-display', 'children'),
+    Input('history-month-selector', 'value'),
+    Input('history-interval', 'n_intervals')
+)
+def update_monthly_summary(month, n):
+    """Update monthly summary display."""
+    if not month:
+        return html.P("Välj en månad för att se sammanfattning.")
+    
+    try:
+        viewer = HistoryViewer()
+        summary = viewer.get_monthly_summary(month)
+        
+        return html.Div([
+            dbc.Row([
+                dbc.Col([
+                    html.H6("Inkomster"),
+                    html.H4(f"{summary['income']:.2f} SEK", className="text-success"),
+                    html.Small(f"{summary['income_count']} transaktioner")
+                ], width=3),
+                dbc.Col([
+                    html.H6("Utgifter"),
+                    html.H4(f"{summary['expenses']:.2f} SEK", className="text-danger"),
+                    html.Small(f"{summary['expense_count']} transaktioner")
+                ], width=3),
+                dbc.Col([
+                    html.H6("Netto"),
+                    html.H4(f"{summary['net']:.2f} SEK", className="text-primary"),
+                    html.Small(f"Totalt {summary['total_transactions']} transaktioner")
+                ], width=3),
+            ])
+        ])
+    except Exception as e:
+        return html.P(f"Fel: {str(e)}", className="text-danger")
+
+
+# Callback: Category trend graph
+@app.callback(
+    Output('category-trend-graph', 'figure'),
+    Input('trend-category-selector', 'value'),
+    Input('history-interval', 'n_intervals')
+)
+def update_category_trend(category, n):
+    """Update category trend graph."""
+    try:
+        viewer = HistoryViewer()
+        trend = viewer.get_category_trend(category, months=6)
+        
+        months = [t['month'] for t in trend]
+        amounts = [t['amount'] for t in trend]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=months,
+            y=amounts,
+            mode='lines+markers',
+            name=category,
+            line=dict(width=3),
+            marker=dict(size=10)
+        ))
+        
+        fig.update_layout(
+            title=f'Trend för {category} (6 månader)',
+            xaxis_title='Månad',
+            yaxis_title='Belopp (SEK)',
+            template='plotly_white'
+        )
+        
+        return fig
+    except Exception as e:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"Ingen data tillgänglig",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
+
+
+# Callback: Top expenses display
+@app.callback(
+    Output('top-expenses-display', 'children'),
+    Input('history-month-selector', 'value'),
+    Input('history-interval', 'n_intervals')
+)
+def update_top_expenses(month, n):
+    """Update top expenses display."""
+    if not month:
+        return html.P("Välj en månad för att se största utgifter.")
+    
+    try:
+        viewer = HistoryViewer()
+        top = viewer.get_top_expenses(month, top_n=10)
+        
+        if not top:
+            return html.P("Inga utgifter hittades.")
+        
+        rows = []
+        for i, tx in enumerate(top, 1):
+            rows.append(html.Tr([
+                html.Td(str(i)),
+                html.Td(tx.get('description', 'N/A')),
+                html.Td(tx.get('date', 'N/A')),
+                html.Td(f"{abs(tx['amount']):.2f} SEK", className="text-end")
+            ]))
+        
+        return dbc.Table([
+            html.Thead(html.Tr([
+                html.Th("#"),
+                html.Th("Beskrivning"),
+                html.Th("Datum"),
+                html.Th("Belopp", className="text-end")
+            ])),
+            html.Tbody(rows)
+        ], striped=True, hover=True, size="sm")
+    except Exception as e:
+        return html.P(f"Fel: {str(e)}", className="text-danger")
+
+
+# Callback: Agent query processing
+@app.callback(
+    Output('agent-response-display', 'children'),
+    Input('agent-submit-btn', 'n_clicks'),
+    State('agent-query-input', 'value'),
+    prevent_initial_call=True
+)
+def process_agent_query(n_clicks, query):
+    """Process agent query and return response."""
+    if not query:
+        return "Ange en fråga först."
+    
+    try:
+        agent = AgentInterface()
+        response = agent.process_query(query)
+        return response
+    except Exception as e:
+        return f"Fel vid bearbetning av fråga: {str(e)}"
+
+
+# Callback: Income account dropdown
+@app.callback(
+    Output('income-account-dropdown', 'options'),
+    Input('overview-interval', 'n_intervals')
+)
+def update_income_account_dropdown(n):
+    """Update account dropdown for income input."""
+    try:
+        manager = AccountManager()
+        accounts = manager.get_accounts()
+        return [{'label': acc['name'], 'value': acc['name']} for acc in accounts]
+    except:
+        return []
+
+
+# Callback: Add income
+@app.callback(
+    Output('income-add-status', 'children'),
+    Input('add-income-btn', 'n_clicks'),
+    State('income-person-input', 'value'),
+    State('income-account-dropdown', 'value'),
+    State('income-amount-input', 'value'),
+    State('income-date-input', 'value'),
+    State('income-description-input', 'value'),
+    State('income-category-dropdown', 'value'),
+    prevent_initial_call=True
+)
+def add_income(n_clicks, person, account, amount, date, description, category):
+    """Add income entry."""
+    if not all([person, account, amount, date]):
+        return dbc.Alert("Fyll i alla obligatoriska fält.", color="warning")
+    
+    try:
+        tracker = IncomeTracker()
+        tracker.add_income(
+            person=person,
+            account=account,
+            amount=float(amount),
+            date=date,
+            description=description or "",
+            category=category or "Lön"
+        )
+        return dbc.Alert(f"Inkomst tillagd: {amount} SEK för {person}", color="success")
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Save settings
+@app.callback(
+    Output('settings-save-status', 'children'),
+    Input('save-settings-btn', 'n_clicks'),
+    State('settings-currency', 'value'),
+    State('settings-decimals', 'value'),
+    State('settings-items-per-page', 'value'),
+    State('settings-refresh-interval', 'value'),
+    State('settings-display-options', 'value'),
+    State('settings-notifications', 'value'),
+    State('settings-reminder-days', 'value'),
+    State('settings-low-balance-threshold', 'value'),
+    prevent_initial_call=True
+)
+def save_settings(n_clicks, currency, decimals, items_per_page, refresh_interval, 
+                  display_options, notifications, reminder_days, low_balance_threshold):
+    """Save settings."""
+    try:
+        panel = SettingsPanel()
+        
+        updates = {
+            'general': {
+                'currency': currency,
+                'decimal_places': decimals
+            },
+            'display': {
+                'items_per_page': items_per_page,
+                'refresh_interval': refresh_interval * 1000,  # Convert to ms
+                'auto_refresh': 'auto_refresh' in display_options,
+                'show_pie_chart': 'show_pie' in display_options,
+                'show_forecast_graph': 'show_forecast' in display_options
+            },
+            'notifications': {
+                'bill_reminders': 'bill_reminders' in notifications,
+                'low_balance_alert': 'low_balance' in notifications,
+                'reminder_days_before': reminder_days,
+                'low_balance_threshold': low_balance_threshold
+            }
+        }
+        
+        panel.update_settings(updates)
+        return dbc.Alert("Inställningar sparade!", color="success")
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Reset settings
+@app.callback(
+    Output('settings-save-status', 'children', allow_duplicate=True),
+    Input('reset-settings-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def reset_settings(n_clicks):
+    """Reset settings to defaults."""
+    try:
+        panel = SettingsPanel()
+        panel.reset_to_defaults()
+        return dbc.Alert("Inställningar återställda till standard!", color="info")
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
 if __name__ == "__main__":
     # Register signal handler for Ctrl-C
     signal.signal(signal.SIGINT, clear_data_on_exit)
     
-    print("Starting Insights Dashboard (Sprint 3)...")
+    print("Starting Insights Dashboard (Sprint 5)...")
     print("Open your browser at: http://127.0.0.1:8050")
     print("\nPress Ctrl-C to stop the server and clear data files")
     

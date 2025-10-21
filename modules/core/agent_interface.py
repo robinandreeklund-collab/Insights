@@ -66,21 +66,22 @@ class AgentInterface:
         }
         
         # Pattern matching for different intents
+        # Check more specific patterns first to avoid false matches
         
-        # Balance/Saldo queries
-        if any(word in text_lower for word in ['saldo', 'balance', 'kvar']):
-            result['intent'] = 'balance_query'
-            result['module'] = 'forecast_engine'
+        # Bill/Faktura queries - check first to avoid "visa" matching history
+        if any(word in text_lower for word in ['faktura', 'fakturor', 'räkning', 'räkningar', 'bill', 'bills']):
+            result['intent'] = 'bill_query'
+            result['module'] = 'bill_manager'
             
             # Extract month if mentioned
             month_match = re.search(r'(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)', text_lower)
             if month_match:
                 result['parameters']['month'] = month_match.group(1)
         
-        # Bill/Faktura queries
-        elif any(word in text_lower for word in ['faktura', 'räkning', 'bill']):
-            result['intent'] = 'bill_query'
-            result['module'] = 'bill_manager'
+        # Balance/Saldo queries
+        elif any(word in text_lower for word in ['saldo', 'balance', 'kvar']):
+            result['intent'] = 'balance_query'
+            result['module'] = 'forecast_engine'
             
             # Extract month if mentioned
             month_match = re.search(r'(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)', text_lower)
@@ -162,7 +163,8 @@ class AgentInterface:
                 response = f"Nuvarande totalt saldo: {total_balance:.2f} SEK\n\n"
                 
                 # Get forecast
-                forecast = get_forecast_summary(total_balance, 30, self.yaml_dir)
+                transactions_file = os.path.join(self.yaml_dir, "transactions.yaml")
+                forecast = get_forecast_summary(total_balance, transactions_file, 30)
                 response += f"Prognos 30 dagar: {forecast['predicted_final_balance']:.2f} SEK\n"
                 response += f"Genomsnittlig daglig inkomst: {forecast['avg_daily_income']:.2f} SEK\n"
                 response += f"Genomsnittlig daglig utgift: {forecast['avg_daily_expenses']:.2f} SEK"
