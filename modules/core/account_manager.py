@@ -217,6 +217,36 @@ class AccountManager:
                     break
             self._save_yaml(self.accounts_file, data)
     
+    def update_account(self, old_name: str, new_name: str = None, **kwargs) -> Optional[dict]:
+        """Update account information.
+        
+        Args:
+            old_name: Current account name
+            new_name: New account name (optional)
+            **kwargs: Additional fields to update (balance, source_file, etc.)
+            
+        Returns:
+            Updated account dictionary or None if not found
+        """
+        data = self._load_yaml(self.accounts_file)
+        if 'accounts' not in data:
+            return None
+        
+        for account in data['accounts']:
+            if account.get('name') == old_name:
+                # Update name if provided
+                if new_name:
+                    account['name'] = new_name
+                
+                # Update other fields
+                for key, value in kwargs.items():
+                    account[key] = value
+                
+                self._save_yaml(self.accounts_file, data)
+                return account
+        
+        return None
+    
     def save_transactions(self, data: dict) -> None:
         """
         Save transactions data to file.
