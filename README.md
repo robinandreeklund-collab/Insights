@@ -2,9 +2,23 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 3
+## 🎯 Projektstatus: Sprint 4
 
-**Sprint 3 Status:** Dashboard-integration och interaktiv visualisering fungerar!
+**Sprint 4 Status:** Faktura- och lånehantering implementerad!
+
+Sprint 4 har implementerat:
+- ✅ Fakturor-tab med fakturahantering
+- ✅ Möjlighet att lägga till, visa, redigera och ta bort fakturor
+- ✅ PDF-fakturaimport (placeholder-implementation för demo)
+- ✅ Automatisk fakturamatchning mot transaktioner
+- ✅ Schemaläggning av betalningar
+- ✅ Lån-tab med lånehantering
+- ✅ Lägg till och hantera lån med ränta och bindningstid
+- ✅ Visualisering av återbetalningsplan
+- ✅ Simulering av ränteförändringar
+- ✅ Omfattande tester för alla nya moduler
+
+**Sprint 3 Status (tidigare):** Dashboard-integration och interaktiv visualisering fungerar!
 
 Sprint 3 har implementerat:
 - ✅ Drag-and-drop CSV-upload direkt i dashboarden
@@ -85,6 +99,8 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 ### 4. Fakturor
 - Aktiva och hanterade fakturor
 - Automatisk matchning mot transaktioner
+- PDF-import (placeholder för demo)
+- Schemaläggning av betalningar
 - Prognosintegration och historik
 
 ### 5. Historik
@@ -96,6 +112,7 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - Lägg till lån med ränta och bindningstid
 - Visualisera återbetalning och saldo
 - Simulera ränteförändringar och bindningstidens slut
+- Månadsvis amorteringsplan
 
 ### 7. Frågebaserad analys
 - "Vad händer om räntan ökar med 2%?"
@@ -263,6 +280,55 @@ tx = manager.categorize_transaction(tx, "Mat & Dryck", "Matinköp")
 manager.train_ai_from_manual_input(tx)
 ```
 
+### 7. Hantera fakturor och lån (via Dashboard eller Python - Sprint 4)
+
+**Via Dashboard:**
+1. Gå till fliken "Fakturor"
+2. Fyll i fakturadetaljer (namn, belopp, förfallodatum)
+3. Klicka "Lägg till faktura"
+4. Använd "Importera från PDF (demo)" för att ladda in exempel-fakturor
+5. Klicka "Matcha fakturor" för att automatiskt matcha mot betalda transaktioner
+
+**För lån:**
+1. Gå till fliken "Lån"
+2. Fyll i låndetaljer (namn, belopp, ränta, löptid)
+3. Klicka "Lägg till lån"
+4. Välj ett lån och ange ny ränta för att simulera ränteförändring
+5. Se återbetalningsplan i grafen
+
+**Via Python:**
+```python
+from modules.core.bill_manager import BillManager
+from modules.core.loan_manager import LoanManager
+
+# Hantera fakturor
+bill_manager = BillManager()
+bill = bill_manager.add_bill(
+    name="Elräkning December",
+    amount=850.0,
+    due_date="2025-12-31",
+    category="Boende"
+)
+
+# Schemalägg betalning
+bill_manager.schedule_payment(bill['id'], "2025-12-25")
+
+# Hantera lån
+loan_manager = LoanManager()
+loan = loan_manager.add_loan(
+    name="Bolån",
+    principal=2000000.0,
+    interest_rate=3.5,
+    start_date="2025-01-01",
+    term_months=360
+)
+
+# Simulera ränteförändring
+simulation = loan_manager.simulate_interest_change(loan['id'], 4.5)
+print(f"Ny månadsbetalning: {simulation['new_monthly_payment']} SEK")
+print(f"Skillnad: {simulation['difference']} SEK ({simulation['difference_percent']}%)")
+```
+
 ## 🧪 Tester
 
 Kör enhetstester:
@@ -308,6 +374,14 @@ Insights är byggt för att vara:
   - [x] Manuell kategorisering via UI
   - [x] Realtidsuppdateringar
 - [ ] Sprint 4: Fakturor och lånhantering
+  - [x] Fakturahantering (lägg till, visa, redigera, ta bort)
+  - [x] PDF-fakturaimport (placeholder-implementation)
+  - [x] Automatisk fakturamatchning mot transaktioner
+  - [x] Schemaläggning av betalningar
+  - [x] Lånehantering (lägg till, visa, redigera)
+  - [x] Återbetalningsvisualisering
+  - [x] Ränteförändringssimuleringar
+  - [x] Tester för faktura- och lånehantering
 - [ ] Sprint 5: Agentdriven analys och simulering
 
 ## 🤝 Bidra
