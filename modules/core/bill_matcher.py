@@ -129,12 +129,14 @@ class BillMatcher:
         # Exakt beloppsmatchning = +0.5
         if abs(bill_amount - tx_amount) < 0.01:
             confidence += 0.5
-        # Nära beloppsmatchning (inom 5%) = +0.3
-        elif abs(bill_amount - tx_amount) / bill_amount < 0.05:
-            confidence += 0.3
-        # Ungefär rätt belopp (inom 10%) = +0.2
-        elif abs(bill_amount - tx_amount) / bill_amount < 0.10:
-            confidence += 0.2
+        # Endast gör procentuella jämförelser om bill_amount > 0
+        elif bill_amount > 0:
+            # Nära beloppsmatchning (inom 5%) = +0.3
+            if abs(bill_amount - tx_amount) / bill_amount < 0.05:
+                confidence += 0.3
+            # Ungefär rätt belopp (inom 10%) = +0.2
+            elif abs(bill_amount - tx_amount) / bill_amount < 0.10:
+                confidence += 0.2
         
         # Textmatchning i beskrivning
         bill_name = bill.get('name', '').lower()
