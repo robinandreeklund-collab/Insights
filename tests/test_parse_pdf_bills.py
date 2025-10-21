@@ -107,6 +107,29 @@ class TestPDFBillParser:
         bills = bill_manager.get_bills()
         assert len(bills) == count
     
+    def test_parse_pdf_demo_mode(self):
+        """Test parsing with demo mode (no file required)."""
+        # Should work without an actual file when demo mode is enabled
+        bills = self.parser.parse_pdf("nonexistent.pdf", use_demo_data=True)
+        
+        assert len(bills) > 0
+        assert all('name' in bill for bill in bills)
+        assert all('amount' in bill for bill in bills)
+        assert all('due_date' in bill for bill in bills)
+    
+    def test_import_bills_demo_mode(self):
+        """Test importing bills with demo mode."""
+        bill_manager = BillManager(yaml_dir=self.test_dir)
+        
+        # Should work without an actual file when demo mode is enabled
+        count = self.parser.import_bills_to_manager("nonexistent.pdf", bill_manager, use_demo_data=True)
+        
+        assert count > 0
+        
+        # Verify bills were actually added
+        bills = bill_manager.get_bills()
+        assert len(bills) == count
+    
     def test_extract_bills_from_pdf_function(self):
         """Test the wrapper function."""
         # Create a dummy file

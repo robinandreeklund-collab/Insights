@@ -21,15 +21,21 @@ class PDFBillParser:
             self.pdfplumber = None
             self.has_pdfplumber = False
     
-    def parse_pdf(self, pdf_path: str) -> List[Dict]:
+    def parse_pdf(self, pdf_path: str, use_demo_data: bool = False) -> List[Dict]:
         """Extrahera fakturor från en PDF-fil.
         
         Args:
             pdf_path: Sökväg till PDF-filen
+            use_demo_data: Om True, använd demo-data oavsett om filen finns
             
         Returns:
             Lista med extraherade fakturor
         """
+        # If demo mode, return example data without checking file
+        if use_demo_data:
+            print("Info: Using demo data for PDF import")
+            return self._get_example_bills()
+        
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF-fil hittades inte: {pdf_path}")
         
@@ -189,17 +195,18 @@ class PDFBillParser:
         
         return example_bills
     
-    def import_bills_to_manager(self, pdf_path: str, bill_manager) -> int:
+    def import_bills_to_manager(self, pdf_path: str, bill_manager, use_demo_data: bool = False) -> int:
         """Importera fakturor från PDF till bill manager.
         
         Args:
             pdf_path: Sökväg till PDF-filen
             bill_manager: Instans av BillManager
+            use_demo_data: Om True, använd demo-data oavsett om filen finns
             
         Returns:
             Antal importerade fakturor
         """
-        bills = self.parse_pdf(pdf_path)
+        bills = self.parse_pdf(pdf_path, use_demo_data=use_demo_data)
         count = 0
         
         for bill_data in bills:
