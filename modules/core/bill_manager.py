@@ -87,9 +87,14 @@ class BillManager:
         
         # Uppdatera status för förfallna fakturor
         today = datetime.now().strftime('%Y-%m-%d')
+        status_changed = False
         for bill in bills:
             if bill.get('status') == 'pending' and bill.get('due_date', '') < today:
                 bill['status'] = 'overdue'
+                status_changed = True
+        
+        if status_changed:
+            self.save_bills(bills)
         
         return bills
     
