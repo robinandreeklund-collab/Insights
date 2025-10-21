@@ -1,0 +1,17 @@
+# Insights - Requirements
+# Python 3.10+
+
+# Dashboard and UI
+dash>=2.14.0
+dash-bootstrap-components>=1.5.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# YAML handling
+pyyaml>=6.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
