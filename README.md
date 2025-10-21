@@ -51,7 +51,6 @@ Kräver Python 3.10+ och Dash
 
 
 Projektstruktur
-bash
 insights/
 ├── modules/
 │   ├── import_bank_data.py
