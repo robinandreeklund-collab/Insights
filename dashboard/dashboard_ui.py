@@ -323,7 +323,7 @@ def handle_csv_upload(contents, filename):
         
         # Create/update account
         manager = AccountManager()
-        latest_balance = df['balance'].iloc[0] if 'balance' in df.columns else 0.0
+        latest_balance = df['balance'].iloc[0] if 'balance' in df.columns and len(df) > 0 else 0.0
         manager.create_account(name=account_name, source_file=filename, balance=latest_balance)
         
         # Auto-categorize
