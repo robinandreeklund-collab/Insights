@@ -632,7 +632,7 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
                 break
         
         # Save updated transactions
-        manager._save_yaml(manager.transactions_file, data)
+        manager.save_transactions(data)  # Use public method to save transactions
         
         return dbc.Alert("✓ Kategorisering sparad!", color="success", dismissable=True)
     except Exception as e:
