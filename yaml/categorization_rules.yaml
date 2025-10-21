@@ -1,0 +1,9 @@
+# Categorization rules
+# Format:
+# rules:
+#   - pattern: regex_pattern
+#     category: category_name
+#     subcategory: subcategory_name
+#     priority: priority_number
+
+rules: []

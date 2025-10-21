@@ -1,0 +1,9 @@
+# Training data for AI model
+# Format:
+# training_data:
+#   - description: transaction_description
+#     category: category_name
+#     subcategory: subcategory_name
+#     manual: true/false
+
+training_data: []
