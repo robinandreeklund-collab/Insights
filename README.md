@@ -2,9 +2,20 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 2
+## 🎯 Projektstatus: Sprint 3
 
-**Sprint 2 Status:** CSV-import, kategorisering och prognoser fungerar!
+**Sprint 3 Status:** Dashboard-integration och interaktiv visualisering fungerar!
+
+Sprint 3 har implementerat:
+- ✅ Drag-and-drop CSV-upload direkt i dashboarden
+- ✅ Interaktiv prognosgraf (line chart) över framtida saldo
+- ✅ Utgiftsfördelning per kategori med pie chart
+- ✅ Transaktionsbläddring med paginering (50 per sida)
+- ✅ UI för manuell kategorisering med dropdowns
+- ✅ Realtidsuppdateringar av saldo och grafer
+- ✅ Fullständig dashboard-integration med alla Sprint 2-funktioner
+
+**Sprint 2 Status (tidigare):** CSV-import, kategorisering och prognoser fungerar!
 
 Sprint 2 har implementerat:
 - ✅ CSV-import med Nordea-format
@@ -33,17 +44,24 @@ I Sprint 1 satte vi upp:
 pip install -r requirements.txt
 ```
 
-2. **Importera din första CSV-fil:**
-```bash
-python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
-```
-
-3. **Starta dashboarden:**
+2. **Starta dashboarden:**
 ```bash
 python dashboard/dashboard_ui.py
 ```
 
-4. **Öppna i webbläsaren:** [http://127.0.0.1:8050](http://127.0.0.1:8050)
+3. **Öppna i webbläsaren:** [http://127.0.0.1:8050](http://127.0.0.1:8050)
+
+4. **Importera din första CSV-fil:**
+   - Gå till fliken "Inmatning" i dashboarden
+   - Dra och släpp en Nordea CSV-fil eller klicka för att välja fil
+   - Systemet kommer automatiskt att importera och kategorisera transaktionerna
+   - Gå till "Ekonomisk översikt" för att se prognoser och utgiftsfördelning
+   - Gå till "Konton" för att bläddra i transaktioner och kategorisera manuellt
+
+**Alternativt (kommandorad):**
+```bash
+python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
+```
 
 ## 🚀 Planerade funktioner
 
@@ -159,7 +177,40 @@ Insights/
 
 ## 🔄 Exempel på flöde
 
-### 1. Importera CSV
+### 1. Importera CSV via Dashboard (Sprint 3)
+
+1. Starta dashboarden: `python dashboard/dashboard_ui.py`
+2. Öppna [http://127.0.0.1:8050](http://127.0.0.1:8050) i din webbläsare
+3. Gå till fliken "Inmatning"
+4. Dra och släpp en Nordea CSV-fil (t.ex., "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv")
+5. Systemet kommer att:
+   - Extrahera kontonamnet från filnamnet
+   - Läsa och normalisera CSV-filen
+   - Skapa kontot om det inte finns
+   - Kategorisera alla transaktioner automatiskt
+   - Visa bekräftelse med antal importerade transaktioner
+
+### 2. Visa prognoser och utgiftsfördelning (Sprint 3)
+
+1. Gå till fliken "Ekonomisk översikt"
+2. Se nuvarande totalt saldo över alla konton
+3. Studera 30-dagars prognosen (line chart) som visar förväntat saldo
+4. Analysera utgiftsfördelningen per kategori (pie chart)
+5. Grafer uppdateras automatiskt var 5:e sekund när ny data importeras
+
+### 3. Bläddra och kategorisera transaktioner (Sprint 3)
+
+1. Gå till fliken "Konton"
+2. Välj ett konto från dropdown-menyn
+3. Bläddra igenom transaktioner (50 per sida) med pagination
+4. Klicka på en transaktion för att välja den
+5. Använd dropdowns för att välja kategori och underkategori
+6. Klicka "Spara kategorisering" för att:
+   - Uppdatera transaktionens kategori
+   - Lägga till i AI-träningsdata för framtida automatisk kategorisering
+7. Tabellen uppdateras automatiskt för att visa den nya kategoriseringen
+
+### 4. Importera CSV via kommandorad (Sprint 2)
 
 ```bash
 python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
@@ -175,7 +226,7 @@ Systemet kommer att:
 5. Spara transaktioner i `yaml/transactions.yaml`
 6. Uppdatera `yaml/accounts.yaml` med kontouppgifter
 
-### 2. Visa prognoser (via Python)
+### 5. Visa prognoser (via Python)
 
 ```python
 from modules.core.forecast_engine import get_forecast_summary, get_category_breakdown
@@ -194,7 +245,7 @@ for category, amount in breakdown.items():
     print(f"{category}: {amount} SEK")
 ```
 
-### 3. Kategorisera manuellt
+### 6. Kategorisera manuellt (via Python)
 
 ```python
 from modules.core.account_manager import AccountManager
@@ -211,13 +262,6 @@ tx = manager.categorize_transaction(tx, "Mat & Dryck", "Matinköp")
 # Träna AI-modellen från den manuella kategoriseringen
 manager.train_ai_from_manual_input(tx)
 ```
-
-### 4. Visa översikt (Dashboard kommer i nästa sprint)
-1. Starta dashboarden: `python dashboard/dashboard_ui.py`
-2. Gå till fliken "Ekonomisk översikt"
-3. Se prognos för kommande 30 dagar
-4. Visa utgiftsfördelning per kategori
-5. Läs agentgenererade insikter och varningar
 
 ## 🧪 Tester
 
@@ -256,11 +300,13 @@ Insights är byggt för att vara:
   - [x] AI/heuristisk kategorisering
   - [x] Prognosmotorer
   - [x] YAML-databas
-- [ ] Sprint 3: Dashboard-integration och visualiseringar
-  - [ ] Integrera import i dashboard
-  - [ ] Visa prognosgrafer
-  - [ ] Kategorifördelningsdiagram
-  - [ ] Kontoutdragsvy
+- [x] Sprint 3: Dashboard-integration och visualiseringar
+  - [x] Drag-and-drop CSV-upload i dashboard
+  - [x] Prognosgrafer (line chart)
+  - [x] Kategorifördelningsdiagram (pie chart)
+  - [x] Kontoutdragsvy med paginering
+  - [x] Manuell kategorisering via UI
+  - [x] Realtidsuppdateringar
 - [ ] Sprint 4: Fakturor och lånhantering
 - [ ] Sprint 5: Agentdriven analys och simulering
 

@@ -49,3 +49,7 @@ Thumbs.db
 
 # Dash
 *.log
+*.backup
+
+# Temp files
+/tmp/
