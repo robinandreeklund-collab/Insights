@@ -25,9 +25,17 @@ class TestClearDataFiles:
         # Should not raise exception
         clear_data_files(self.test_dir)
         
-        # Files should be created
-        assert not os.path.exists(os.path.join(self.test_dir, "transactions.yaml"))
-        assert not os.path.exists(os.path.join(self.test_dir, "accounts.yaml"))
+        # Files should be created and contain empty arrays
+        transactions_file = os.path.join(self.test_dir, "transactions.yaml")
+        accounts_file = os.path.join(self.test_dir, "accounts.yaml")
+        assert os.path.exists(transactions_file)
+        assert os.path.exists(accounts_file)
+        with open(transactions_file, 'r') as f:
+            data = yaml.safe_load(f)
+            assert data == {'transactions': []}
+        with open(accounts_file, 'r') as f:
+            data = yaml.safe_load(f)
+            assert data == {'accounts': []}
     
     def test_clear_data_files_with_data(self):
         """Test clearing files that contain data."""
