@@ -1,0 +1,8 @@
+module: dashboard_ui
+description: Dash-gränssnitt för visualisering, inmatning och agentinteraktion
+functions:
+  - render_dashboard
+  - update_forecast_graph
+  - input_panel
+  - agent_query_interface
+yaml_config: [settings_panel.yaml, forecast_engine.yaml, income_tracker.yaml]

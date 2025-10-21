@@ -1,0 +1,8 @@
+module: forecast_engine
+description: Simulerar framtida saldo baserat på historik och planerade poster
+functions:
+  - calculate_historical_average
+  - inject_future_income_and_bills
+  - simulate_monthly_balance
+  - compare_scenarios
+yaml_config: [forecast_engine.yaml]

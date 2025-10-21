@@ -1,0 +1,10 @@
+module: parse_pdf_bills
+description: Extraherar fakturor från PDF och konverterar till YAML
+functions:
+  - extract_text_from_pdf
+  - extract_bills_from_text
+  - validate_bill_structure
+  - write_bills_to_yaml
+  - extract_text_with_ocr
+yaml_output: [upcoming_bills.yaml]
+dependencies: [pdfplumber, pytesseract, pdf2image]

@@ -1,0 +1,155 @@
+modules:
+  import_bank_data:
+    description: Importerar och normaliserar bankdata från CSV, Excel eller JSON.
+    functions:
+      - load_file(path: str) → DataFrame
+      - detect_format(data: DataFrame) → str
+      - normalize_columns(data: DataFrame, format: str) → DataFrame
+    inputs: [CSV, Excel]
+    outputs: [raw_transactions]
+    yaml: []
+
+  parse_transactions:
+    description: Extraherar, strukturerar och renar transaktionsdata.
+    functions:
+      - parse_dates(data: DataFrame) → DataFrame
+      - clean_descriptions(data: DataFrame) → DataFrame
+      - extract_metadata(data: DataFrame) → DataFrame
+    inputs: [raw_transactions]
+    outputs: [structured_transactions]
+    yaml: [transactions.yaml]
+
+  categorize_expenses:
+    description: Kategoriserar transaktioner med regler och AI-hybrid.
+    functions:
+      - auto_categorize(data: DataFrame, rules: dict) → DataFrame
+      - manual_override(data: DataFrame, overrides: dict) → DataFrame
+      - update_category_map(new_rules: dict) → None
+    inputs: [transactions.yaml, training_data.yaml]
+    outputs: [categorized_transactions]
+    yaml: [categorization_rules.yaml, training_data.yaml]
+
+  account_manager:
+    description: Skapar, hanterar och rensar konton. Stöd för manuell kategorisering och AI-träning.
+    functions:
+      - create_account(name: str, source_file: str) → dict
+      - delete_account(name: str) → bool
+      - get_account_transactions(name: str) → List[dict]
+      - categorize_transaction(tx: dict, category: str, subcategory: str) → dict
+      - train_ai_from_manual_input(tx: dict) → None
+    inputs: [transactions.yaml]
+    outputs: [accounts.yaml, training_data.yaml]
+    yaml: [accounts.yaml]
+
+  upcoming_bills:
+    description: Hanterar aktiva och hanterade fakturor.
+    functions:
+      - add_bill(bill: dict) → None
+      - get_upcoming_bills() → List[dict]
+      - archive_bill(bill_id: str) → None
+    inputs: [manual_form, pdf_extract]
+    outputs: [upcoming_bills.yaml]
+    yaml: [upcoming_bills.yaml]
+
+  bill_matcher:
+    description: Matchar fakturor mot transaktioner och markerar som betalda.
+    functions:
+      - match_bill_to_transaction(bill: dict, tx_list: list) → dict
+      - update_bill_status(bill_id: str, status: str) → None
+    inputs: [transactions.yaml, upcoming_bills.yaml]
+    outputs: [updated_bills]
+    yaml: [upcoming_bills.yaml]
+
+  income_tracker:
+    description: Registrerar inkomster per person och konto.
+    functions:
+      - add_income(income: dict) → None
+      - get_monthly_income(month: str) → float
+      - forecast_income(months: int) → List[float]
+    inputs: [manual_form]
+    outputs: [income_tracker.yaml]
+    yaml: [income_tracker.yaml]
+
+  loan_manager:
+    description: Hanterar lån, ränta, bindningstid och återbetalning.
+    functions:
+      - add_loan(loan: dict) → None
+      - get_active_loans() → List[dict]
+      - update_loan_payment(tx: dict) → None
+      - get_loan_timeline(name: str) → List[dict]
+    inputs: [manual_form, transactions.yaml]
+    outputs: [loans.yaml]
+    yaml: [loans.yaml]
+
+  loan_simulator:
+    description: Simulerar ränteförändringar och bindningstidens slut.
+    functions:
+      - simulate_interest_change(loan: dict, delta: float) → dict
+      - simulate_binding_expiry(loan: dict, new_rate: float) → dict
+      - generate_loan_forecast(loan: dict, months: int) → List[dict]
+    inputs: [loans.yaml]
+    outputs: [loan_forecast]
+    yaml: [loan_simulation.yaml]
+
+  forecast_engine:
+    description: Simulerar framtida saldo baserat på inkomster, fakturor och historik.
+    functions:
+      - calculate_historical_average(account: str) → float
+      - inject_future_income_and_bills(account: str) → List[dict]
+      - simulate_monthly_balance(account: str, months: int) → List[float]
+    inputs: [transactions.yaml, income_tracker.yaml, upcoming_bills.yaml]
+    outputs: [forecast_graph]
+    yaml: [forecast_engine.yaml]
+
+  alerts_and_insights:
+    description: Genererar varningar och insikter baserat på prognos och regler.
+    functions:
+      - check_budget_thresholds(data: dict) → List[str]
+      - generate_insights(data: dict) → List[str]
+      - recommend_actions(data: dict) → List[str]
+    inputs: [forecast_engine]
+    outputs: [insights.yaml]
+    yaml: [insights.yaml]
+
+  history_viewer:
+    description: Visar historisk utgiftsdata, trender och insikter.
+    functions:
+      - get_monthly_summary(month: str) → dict
+      - get_category_trend(category: str, months: int) → list
+      - get_account_balance_history(account: str) → list
+      - get_top_expenses(month: str, top_n: int) → list
+    inputs: [transactions.yaml, income_tracker.yaml, upcoming_bills.yaml]
+    outputs: [history.yaml]
+    yaml: [history.yaml]
+
+  agent_interface:
+    description: Tolkar frågor och genererar svar, insikter och simuleringar.
+    functions:
+      - parse_query(text: str) → dict
+      - route_to_module(parsed: dict) → str
+      - generate_response(parsed: dict) → str
+      - log_query_and_response(query: str, response: str) → None
+    inputs: [user_query]
+    outputs: [agent_response, insights.yaml]
+    yaml: [agent_queries.yaml, insights.yaml]
+
+  dashboard_ui:
+    description: Dash-gränssnitt för visualisering, inmatning och agentinteraktion.
+    functions:
+      - render_dashboard() → layout
+      - update_forecast_graph(account: str, days: int) → graph
+      - input_panel() → form
+      - agent_query_interface() → chat
+    inputs: [all YAML]
+    outputs: [interactive UI]
+    yaml: [settings_panel.yaml]
+
+  settings_panel:
+    description: Hanterar användarinställningar, toggles och UI-konfiguration.
+    functions:
+      - load_settings() → dict
+      - render_controls() → layout
+      - update_settings(new: dict) → None
+    inputs: [settings_panel.yaml]
+    outputs: [updated_settings]
+    yaml: [settings_panel.yaml]

@@ -1,0 +1,7 @@
+module: income_tracker
+description: Registrerar inkomster per person
+functions:
+  - add_income
+  - get_monthly_income
+  - forecast_income
+yaml_config: [income_tracker.yaml]

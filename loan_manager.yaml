@@ -1,0 +1,8 @@
+module: loan_manager
+description: Hanterar lån, ränta, bindningstid och återbetalning
+functions:
+  - add_loan
+  - get_active_loans
+  - update_loan_payment
+  - get_loan_timeline
+yaml_config: [loans.yaml]

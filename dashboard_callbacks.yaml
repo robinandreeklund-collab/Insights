@@ -1,0 +1,139 @@
+dashboard_callbacks:
+  - id: update_forecast_graph
+    component: overview_panel
+    trigger: on_date_change
+    inputs:
+      - selected_account
+      - forecast_days
+    outputs:
+      - forecast_graph
+    modules: [forecast_engine]
+    description: >
+      Uppdaterar prognosgrafen baserat på valt konto och antal dagar framåt.
+
+  - id: update_category_chart
+    component: overview_panel
+    trigger: on_transaction_update
+    inputs:
+      - transactions.yaml
+    outputs:
+      - category_chart
+    modules: [categorize_expenses]
+    description: >
+      Visar utgiftsfördelning per kategori från senaste transaktionsdata.
+
+  - id: log_insight
+    component: overview_panel
+    trigger: on_forecast_complete
+    inputs:
+      - forecast_result
+    outputs:
+      - insight_log
+    modules: [alerts_and_insights]
+    description: >
+      Genererar insikter och varningar efter prognosberäkning.
+
+  - id: import_csv_file
+    component: input_panel
+    trigger: on_file_upload
+    inputs:
+      - uploaded_file
+    outputs:
+      - transactions.yaml
+    modules: [import_bank_data]
+    description: >
+      Läser in CSV och konverterar till transaktionsformat.
+
+  - id: add_manual_bill
+    component: input_panel
+    trigger: on_form_submit
+    inputs:
+      - bill_form
+    outputs:
+      - upcoming_bills.yaml
+    modules: [upcoming_bills]
+    description: >
+      Lägger till ny faktura manuellt via formulär.
+
+  - id: add_income
+    component: input_panel
+    trigger: on_form_submit
+    inputs:
+      - income_form
+    outputs:
+      - income_tracker.yaml
+    modules: [income_tracker]
+    description: >
+      Registrerar ny inkomst med person, belopp och konto.
+
+  - id: categorize_transaction
+    component: account_panel
+    trigger: on_category_select
+    inputs:
+      - selected_transaction
+      - selected_category
+      - selected_subcategory
+    outputs:
+      - transactions.yaml
+      - training_data.yaml
+    modules: [account_manager, categorize_expenses]
+    description: >
+      Sparar manuell kategorisering och tränar AI-modellen.
+
+  - id: match_bill_to_transaction
+    component: bills_panel
+    trigger: on_csv_import
+    inputs:
+      - transactions.yaml
+      - upcoming_bills.yaml
+    outputs:
+      - updated_bills
+    modules: [bill_matcher]
+    description: >
+      Matchar fakturor mot transaktioner och markerar som betalda.
+
+  - id: show_monthly_summary
+    component: history_panel
+    trigger: on_month_select
+    inputs:
+      - selected_month
+    outputs:
+      - monthly_summary
+    modules: [history_viewer]
+    description: >
+      Visar sammanställning av utgifter, inkomster och saldo för vald månad.
+
+  - id: simulate_loan_change
+    component: loan_panel
+    trigger: on_rate_slider_change
+    inputs:
+      - selected_loan
+      - new_interest_rate
+    outputs:
+      - loan_forecast_graph
+    modules: [loan_simulator]
+    description: >
+      Simulerar låneutveckling vid ränteförändring.
+
+  - id: agent_query_handler
+    component: agent_panel
+    trigger: on_query_submit
+    inputs:
+      - user_query
+    outputs:
+      - agent_response
+      - insight_log
+    modules: [agent_interface]
+    description: >
+      Tolkar användarens fråga och genererar svar, insikter eller simulering.
+
+  - id: update_settings
+    component: settings_panel
+    trigger: on_toggle_change
+    inputs:
+      - settings_form
+    outputs:
+      - settings_panel.yaml
+    modules: [settings_panel]
+    description: >
+      Uppdaterar användarinställningar och sparar till YAML.

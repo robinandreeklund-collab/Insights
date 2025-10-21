@@ -1,0 +1,7 @@
+module: bill_matcher
+description: Matchar fakturor mot transaktioner och markerar som betalda
+functions:
+  - match_bill_to_transaction
+  - update_bill_status
+  - archive_handled_bill
+yaml_config: [upcoming_bills.yaml, transactions.yaml]

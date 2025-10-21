@@ -1,0 +1,7 @@
+module: alerts_and_insights
+description: Genererar varningar och insikter baserat på forecast och regler
+functions:
+  - check_budget_thresholds
+  - generate_insights
+  - recommend_actions
+yaml_config: [settings_panel.yaml]

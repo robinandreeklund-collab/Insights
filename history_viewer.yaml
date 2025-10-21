@@ -1,0 +1,8 @@
+module: history_viewer
+description: Visar historisk utgiftsdata, trender och insikter
+functions:
+  - get_monthly_summary
+  - get_category_trend
+  - get_account_balance_history
+  - get_top_expenses
+yaml_config: [history.yaml]

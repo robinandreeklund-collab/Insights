@@ -1,0 +1,13 @@
+module: categorize_expenses
+description: Kategoriserar transaktioner med hybridmetod (regler + AI)
+functions:
+  - name: auto_categorize
+    input: data: DataFrame, rules: dict
+    output: DataFrame
+  - name: manual_override
+    input: data: DataFrame, overrides: dict
+    output: DataFrame
+  - name: update_category_map
+    input: new_rules: dict
+    output: None
+yaml_config: [categorization_rules.yaml, training_data.yaml]

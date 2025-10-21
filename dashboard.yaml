@@ -1,0 +1,87 @@
+dashboard:
+  name: "Insights – Dash-gränssnitt"
+  description: >
+    Interaktivt gränssnitt för hushållsekonomisk översikt, inmatning, kontohantering,
+    fakturor, historik, lån och agentdriven analys. Byggt med Dash och YAML-konfiguration.
+
+  components:
+    - id: overview_panel
+      name: "Ekonomisk översikt"
+      description: >
+        Visar prognos 30 dagar framåt, utgiftsfördelning per kategori och agentgenererade insikter.
+      modules: [forecast_engine, categorize_expenses, alerts_and_insights]
+      inputs: [transactions.yaml, upcoming_bills.yaml, income_tracker.yaml]
+      outputs: [forecast_graph, category_chart, insight_log]
+
+    - id: input_panel
+      name: "Inmatning"
+      description: >
+        Importera CSV, lägg till fakturor och inkomster manuellt, eller läs in PDF-fakturor.
+      modules: [import_bank_data, parse_pdf_bills, upcoming_bills, income_tracker]
+      inputs: [CSV, PDF, manual_form]
+      outputs: [transactions.yaml, upcoming_bills.yaml, income_tracker.yaml]
+
+    - id: account_panel
+      name: "Konton"
+      description: >
+        Skapa och hantera konton, visa kontoutdrag, kategorisera transaktioner och träna AI-modellen.
+      modules: [account_manager, categorize_expenses]
+      inputs: [transactions.yaml]
+      outputs: [training_data.yaml, categorized_transactions]
+
+    - id: bills_panel
+      name: "Fakturor"
+      description: >
+        Visa aktiva och hanterade fakturor, redigera, ta bort och matcha mot transaktioner.
+      modules: [upcoming_bills, bill_matcher]
+      inputs: [upcoming_bills.yaml, transactions.yaml]
+      outputs: [matched_bills, bill_history]
+
+    - id: history_panel
+      name: "Historik"
+      description: >
+        Månadssammanställningar, kategoritrender, saldohistorik och topptransaktioner.
+      modules: [history_viewer]
+      inputs: [transactions.yaml, income_tracker.yaml, upcoming_bills.yaml]
+      outputs: [monthly_summary, category_trend_graph, balance_timeline]
+
+    - id: loan_panel
+      name: "Lån"
+      description: >
+        Lägg till lån med ränta och bindningstid, visualisera återbetalning och simulera ränteförändringar.
+      modules: [loan_manager, loan_simulator]
+      inputs: [loans.yaml, transactions.yaml]
+      outputs: [loan_overview, loan_forecast_graph]
+
+    - id: agent_panel
+      name: "Frågebaserad analys"
+      description: >
+        Tolkar naturliga frågor och genererar svar, insikter och simuleringar.
+      modules: [agent_interface, forecast_engine, alerts_and_insights]
+      inputs: [agent_queries.yaml, insights.yaml]
+      outputs: [agent_response, insight_log]
+
+    - id: settings_panel
+      name: "Inställningar"
+      description: >
+        Hanterar användarinställningar, toggles, thresholds och UI-konfiguration.
+      modules: [settings_panel]
+      inputs: [settings_panel.yaml]
+      outputs: [updated_settings]
+
+  layout:
+    type: "Tabbed"
+    tabs:
+      - Ekonomisk översikt
+      - Inmatning
+      - Konton
+      - Fakturor
+      - Historik
+      - Lån
+      - Frågebaserad analys
+      - Inställningar
+
+  theme:
+    default: "light"
+    options: ["light", "dark"]
+    logo: "assets/logo.png"

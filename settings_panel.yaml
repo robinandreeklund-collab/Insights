@@ -1,0 +1,7 @@
+module: settings_panel
+description: Hanterar alla inställningar via sliders, dropdowns och toggles
+functions:
+  - load_settings
+  - render_controls
+  - update_settings
+yaml_config: [settings_panel.yaml]

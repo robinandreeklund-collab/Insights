@@ -1,0 +1,70 @@
+project_structure:
+  name: "Insights"
+  folders:
+    - name: modules
+      description: Pythonmoduler för logik och databehandling
+      subfolders:
+        - name: core
+          description: Grundmoduler (import, parsing, forecast)
+        - name: ui
+          description: Dash-gränssnitt och komponenter
+        - name: agent
+          description: Frågetolkning, insiktsgenerering, simulering
+        - name: finance
+          description: Fakturor, inkomster, lån, konton
+        - name: simulation
+          description: Prognoser, scenarier, ränteförändringar
+    - name: yaml
+      description: YAML-filer för datalagring och konfiguration
+      files:
+        - transactions.yaml
+        - upcoming_bills.yaml
+        - income_tracker.yaml
+        - loans.yaml
+        - categorization_rules.yaml
+        - training_data.yaml
+        - insights.yaml
+        - agent_queries.yaml
+        - history.yaml
+        - loan_simulation.yaml
+        - settings_panel.yaml
+    - name: tests
+      description: Enhetstester för varje modul
+      files:
+        - test_import_bank_data.py
+        - test_categorize_expenses.py
+        - test_parse_pdf_bills.py
+        - test_forecast_engine.py
+        - test_loan_manager.py
+        - test_agent_interface.py
+    - name: docs
+      description: Dokumentation och onboarding
+      files:
+        - README.md
+        - README_insights.md
+        - README_sprints.md
+        - CONTRIBUTING.md
+        - index.yaml
+    - name: assets
+      description: Ikoner, bilder, exempeldata
+    - name: dashboard
+      description: Dash-appens entrypoint och layout
+      files:
+        - dashboard_ui.py
+        - dashboard_layout.py
+        - dashboard_callbacks.py
+    - name: config
+      description: Inställningar och globala parametrar
+      files:
+        - settings_panel.yaml
+        - project_structure.yaml
+        - loan_simulation.yaml
+    - name: data
+      description: Importerade CSV- och PDF-filer
+      files:
+        - nordea_oct.csv
+        - fakturor_oktober.pdf
+
+  entrypoint: dashboard/dashboard_ui.py
+  requirements: requirements.txt
+  python_version: ">=3.10"

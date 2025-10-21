@@ -1,0 +1,9 @@
+module: account_manager
+description: Skapar, rensar och hanterar konton
+functions:
+  - create_account
+  - delete_account
+  - get_account_transactions
+  - categorize_transaction
+  - train_ai_from_manual_input
+yaml_config: [accounts.yaml, training_data.yaml]

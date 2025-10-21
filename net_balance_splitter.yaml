@@ -1,0 +1,7 @@
+module: net_balance_splitter
+description: Fördelar kvarvarande pengar efter utgifter
+functions:
+  - split_balance
+  - apply_custom_ratio
+  - calculate_shared_vs_individual
+yaml_config: [net_balance_splitter.yaml]

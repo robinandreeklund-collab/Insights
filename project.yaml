@@ -1,0 +1,73 @@
+project:
+  name: "Insights"
+  description: >
+    Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi.
+    Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser,
+    frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån –
+    allt styrt via YAML och ett interaktivt Dash-gränssnitt.
+
+  features:
+    - Ekonomisk översikt:
+        - Prognos 30 dagar framåt
+        - Utgiftsfördelning per kategori
+        - Agentgenererade insikter och varningar
+    - Inmatning:
+        - Importera Nordea CSV-filer
+        - Lägg till fakturor och inkomster manuellt
+        - Läs in fakturor från PDF
+        - Automatisk transaktionsklassificering (regler + AI)
+    - Konton:
+        - Skapa och hantera konton
+        - Visa kontoutdrag (50 per sida)
+        - Manuell kategorisering med huvud- och underkategori
+        - Träna AI-modellen direkt från kontoutdraget
+    - Fakturor:
+        - Aktiva och hanterade fakturor
+        - Automatisk matchning mot transaktioner
+        - Prognosintegration och historik
+    - Historik:
+        - Månadssammanställningar
+        - Kategoritrender
+        - Topptransaktioner och saldohistorik
+    - Lån:
+        - Lägg till lån med ränta och bindningstid
+        - Visualisera återbetalning och saldo
+        - Simulera ränteförändringar och bindningstidens slut
+    - Frågebaserad analys:
+        - Agentfrågor: “Vad händer om…?”
+        - Svar + insiktslogg
+        - Scenarioanalys
+
+  architecture:
+    - YAML-baserad datalagring
+    - Agentgränssnitt för simulering och analys
+    - Dash-gränssnitt för interaktiv visualisering
+    - Enhetstester och CI-integration
+    - Modulär struktur för framtida expansion
+
+  installation:
+    prerequisites:
+      - Python >= 3.10
+      - Dash
+    steps:
+      - git clone https://github.com/dittnamn/insights.git
+      - cd insights
+      - pip install -r requirements.txt
+      - python dashboard_ui.py
+
+  structure:
+    root: insights/
+    folders:
+      - modules/
+      - yaml/
+    files:
+      - dashboard_ui.py
+      - settings_panel.yaml
+      - README.md
+      - requirements.txt
+
+  vision:
+    - Modulärt och transparent
+    - Agentförberett och självlärande
+    - Testbart och framtidssäkert
+    - Användarcentrerat och pedagogiskt

@@ -1,0 +1,7 @@
+module: loan_simulator
+description: Simulerar ränteförändringar och bindningstidens slut
+functions:
+  - simulate_interest_change
+  - simulate_binding_expiry
+  - generate_loan_forecast
+yaml_config: [loan_simulation.yaml]

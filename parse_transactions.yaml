@@ -1,0 +1,12 @@
+module: parse_transactions
+description: Extraherar och strukturerar transaktioner från rådata
+functions:
+  - name: parse_dates
+    input: data: DataFrame
+    output: DataFrame
+  - name: clean_descriptions
+    input: data: DataFrame
+    output: DataFrame
+  - name: extract_metadata
+    input: data: DataFrame
+    output: DataFrame

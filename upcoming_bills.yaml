@@ -1,0 +1,7 @@
+module: upcoming_bills
+description: Hanterar kommande och hanterade fakturor
+functions:
+  - add_bill
+  - get_upcoming_bills
+  - validate_bill_format
+yaml_config: [upcoming_bills.yaml]

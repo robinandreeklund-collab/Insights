@@ -1,0 +1,13 @@
+module: import_bank_data
+description: Importerar bankdata från CSV, Excel eller JSON
+functions:
+  - name: load_file
+    input: path: str
+    output: DataFrame
+  - name: detect_format
+    input: data: DataFrame
+    output: str
+  - name: normalize_columns
+    input: data: DataFrame, format: str
+    output: DataFrame
+yaml_config: [settings_panel.yaml]

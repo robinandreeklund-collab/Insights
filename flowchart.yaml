@@ -1,0 +1,115 @@
+flowchart:
+  name: "Insights – Flödesschema"
+  steps:
+    - step: "Importera data"
+      modules:
+        - import_bank_data
+        - parse_pdf_bills
+      input:
+        - CSV-filer (Nordea, etc.)
+        - PDF-fakturor (enskilda eller sammanställning)
+      output:
+        - rådata: DataFrame
+        - fakturor: List[dict]
+
+    - step: "Transaktionshantering"
+      modules:
+        - parse_transactions
+        - categorize_expenses
+        - account_manager
+      input:
+        - rådata från import
+      output:
+        - transaktioner med kategori
+        - AI-träningsdata
+        - kontostruktur
+
+    - step: "Fakturahantering"
+      modules:
+        - upcoming_bills
+        - bill_matcher
+      input:
+        - fakturor från PDF eller manuell inmatning
+        - transaktioner
+      output:
+        - aktiva fakturor
+        - hanterade fakturor
+        - matchningsstatus
+
+    - step: "Inkomsthantering"
+      modules:
+        - income_tracker
+      input:
+        - manuell inmatning
+      output:
+        - inkomster per person
+        - prognosdata
+
+    - step: "Lånehantering"
+      modules:
+        - loan_manager
+        - loan_simulator
+      input:
+        - manuell inmatning av lån
+        - transaktioner
+      output:
+        - låneöversikt
+        - simuleringar
+
+    - step: "Prognos och analys"
+      modules:
+        - forecast_engine
+        - net_balance_splitter
+        - alerts_and_insights
+      input:
+        - inkomster
+        - fakturor
+        - transaktioner
+        - lån
+      output:
+        - framtida saldo
+        - varningar
+        - insikter
+
+    - step: "Historisk tillbakablick"
+      modules:
+        - history_viewer
+      input:
+        - transaktioner
+        - inkomster
+        - fakturor
+      output:
+        - månadssammanställningar
+        - kategoritrender
+        - saldohistorik
+
+    - step: "Visualisering och interaktion"
+      modules:
+        - dashboard_ui
+        - settings_panel
+      input:
+        - all data
+      output:
+        - Dash-gränssnitt
+        - formulär, grafer, insiktslogg
+
+    - step: "Frågebaserad analys"
+      modules:
+        - agent_interface
+      input:
+        - naturliga frågor
+        - YAML-data
+      output:
+        - svar
+        - simuleringar
+        - insiktslogg
+
+  data_flow:
+    - CSV/PDF → import_bank_data / parse_pdf_bills
+    - → parse_transactions → categorize_expenses → account_manager
+    - → upcoming_bills + bill_matcher
+    - → income_tracker
+    - → loan_manager + loan_simulator
+    - → forecast_engine → alerts_and_insights
+    - → history_viewer
+    - → dashboard_ui + agent_interface
