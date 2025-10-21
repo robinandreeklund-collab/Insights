@@ -267,11 +267,42 @@ def create_bills_tab():
                         dbc.Row([
                             dbc.Col([
                                 dbc.Button("Lägg till faktura", id='add-bill-btn', color="primary", className="me-2"),
-                                dbc.Button("Importera från PDF (demo)", id='import-pdf-btn', color="secondary"),
-                                dbc.Button("Matcha fakturor", id='match-bills-btn', color="info", className="ms-2"),
+                                dbc.Button("Matcha fakturor", id='match-bills-btn', color="info", className="me-2"),
                             ], width=12),
                         ]),
                         html.Div(id='bill-add-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # PDF import section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Importera fakturor från PDF", className="card-title"),
+                        html.P("Ladda upp en PDF-fil med fakturor för att automatiskt extrahera fakturainformation"),
+                        dcc.Upload(
+                            id='upload-pdf-bills',
+                            children=html.Div([
+                                html.I(className="bi bi-file-pdf", style={'fontSize': '48px'}),
+                                html.Br(),
+                                'Dra och släpp eller klicka för att välja PDF-fil'
+                            ]),
+                            style={
+                                'width': '100%',
+                                'height': '150px',
+                                'lineHeight': '150px',
+                                'borderWidth': '2px',
+                                'borderStyle': 'dashed',
+                                'borderRadius': '10px',
+                                'textAlign': 'center',
+                                'backgroundColor': '#f8f9fa'
+                            },
+                            multiple=False
+                        ),
+                        html.Div(id='pdf-import-status', className="mt-3")
                     ])
                 ])
             ], width=12)
@@ -1144,24 +1175,50 @@ def add_bill(n_clicks, name, amount, due_date, category, description):
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
 
-# Callback: Import Bills from PDF
+# Callback: Import Bills from PDF Upload
 @app.callback(
-    Output('bill-add-status', 'children', allow_duplicate=True),
-    Input('import-pdf-btn', 'n_clicks'),
+    Output('pdf-import-status', 'children'),
+    Input('upload-pdf-bills', 'contents'),
+    State('upload-pdf-bills', 'filename'),
     prevent_initial_call=True
 )
-def import_bills_from_pdf(n_clicks):
-    """Import bills from PDF (demo with placeholder data)."""
+def import_bills_from_pdf(contents, filename):
+    """Import bills from uploaded PDF file."""
+    if contents is None:
+        return ""
+    
     try:
-        bill_manager = BillManager()
-        pdf_parser = PDFBillParser()
+        # Decode the uploaded file
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
         
-        # Use demo data mode (doesn't require actual PDF file)
-        count = pdf_parser.import_bills_to_manager("demo.pdf", bill_manager, use_demo_data=True)
+        # Save to temporary file
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.pdf', delete=False) as tmp_file:
+            tmp_file.write(decoded)
+            tmp_path = tmp_file.name
         
-        return dbc.Alert(f"✓ {count} fakturor importerade från PDF (demo)", color="success", dismissable=True)
+        try:
+            # Parse PDF and import bills
+            bill_manager = BillManager()
+            pdf_parser = PDFBillParser()
+            
+            # Parse the actual PDF file (not demo mode)
+            count = pdf_parser.import_bills_to_manager(tmp_path, bill_manager, use_demo_data=False)
+            
+            return dbc.Alert(
+                f"✓ {count} fakturor importerade från {filename}",
+                color="success",
+                dismissable=True
+            )
+        finally:
+            # Clean up temporary file
+            import os
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+    
     except Exception as e:
-        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+        return dbc.Alert(f"Fel vid import av PDF: {str(e)}", color="danger", dismissable=True)
 # Callback: Match Bills to Transactions
 @app.callback(
     Output('bill-add-status', 'children', allow_duplicate=True),
@@ -1191,10 +1248,10 @@ def match_bills(n_clicks):
     [Input('bill-status-filter', 'value'),
      Input('bills-interval', 'n_intervals'),
      Input('add-bill-btn', 'n_clicks'),
-     Input('import-pdf-btn', 'n_clicks'),
+     Input('upload-pdf-bills', 'contents'),
      Input('match-bills-btn', 'n_clicks')]
 )
-def update_bills_table(status_filter, n, add_clicks, import_clicks, match_clicks):
+def update_bills_table(status_filter, n, add_clicks, pdf_contents, match_clicks):
     """Update the bills table based on status filter."""
     try:
         bill_manager = BillManager()
