@@ -4,6 +4,7 @@ import sys
 import os
 from typing import Tuple
 import pandas as pd
+import yaml as yaml_module
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,6 +12,29 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modules.core.import_bank_data import import_csv
 from modules.core.account_manager import AccountManager
 from modules.core.categorize_expenses import auto_categorize
+
+
+def clear_data_files(yaml_dir: str = "yaml") -> None:
+    """
+    Clear transactions and accounts YAML files for fresh import.
+    
+    Args:
+        yaml_dir: Directory containing YAML files
+    """
+    transactions_file = os.path.join(yaml_dir, "transactions.yaml")
+    accounts_file = os.path.join(yaml_dir, "accounts.yaml")
+    
+    # Reset transactions.yaml
+    if os.path.exists(transactions_file):
+        with open(transactions_file, 'w', encoding='utf-8') as f:
+            yaml_module.dump({'transactions': []}, f, default_flow_style=False, allow_unicode=True)
+        print(f"✓ Cleared {transactions_file}")
+    
+    # Reset accounts.yaml
+    if os.path.exists(accounts_file):
+        with open(accounts_file, 'w', encoding='utf-8') as f:
+            yaml_module.dump({'accounts': []}, f, default_flow_style=False, allow_unicode=True)
+        print(f"✓ Cleared {accounts_file}")
 
 
 def import_and_process_csv(csv_path: str, yaml_dir: str = "yaml") -> Tuple[str, int]:
@@ -83,6 +107,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Import and process bank CSV file')
     parser.add_argument('csv_file', help='Path to CSV file to import')
     parser.add_argument('--yaml-dir', default='yaml', help='Directory for YAML files (default: yaml)')
+    parser.add_argument('--clear', action='store_true', 
+                        help='Clear existing transactions and accounts before import')
     
     args = parser.parse_args()
     
@@ -91,6 +117,12 @@ if __name__ == "__main__":
         sys.exit(1)
     
     try:
+        # Clear data files if requested
+        if args.clear:
+            print("Clearing existing data files...")
+            clear_data_files(args.yaml_dir)
+            print()
+        
         account_name, num_transactions = import_and_process_csv(args.csv_file, args.yaml_dir)
         print(f"\n✓ Import complete!")
         print(f"  Account: {account_name}")

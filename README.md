@@ -113,10 +113,17 @@ python import_flow.py "DIN_FIL.csv"
    - Importera och kategorisera alla transaktioner
    - Spara data i YAML-filer
 
+   **Tips för testning:** Använd `--clear` flaggan för att rensa befintliga data före import:
+```bash
+python import_flow.py --clear "DIN_FIL.csv"
+```
+   Detta är användbart när du testar och vill importera samma fil flera gånger.
+
 4. Starta dashboard:
 ```bash
 python dashboard/dashboard_ui.py
 ```
+   **OBS:** När du stoppar dashboarden med Ctrl-C kommer data filerna (`transactions.yaml` och `accounts.yaml`) att rensas automatiskt. Detta är användbart under utveckling och testning.
 
 5. Öppna din webbläsare på: [http://127.0.0.1:8050](http://127.0.0.1:8050)
 
