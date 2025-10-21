@@ -869,10 +869,10 @@ def import_bills_from_pdf(n_clicks):
         count = pdf_parser.import_bills_to_manager("placeholder.pdf", bill_manager)
         
         return dbc.Alert(f"✓ {count} fakturor importerade från PDF (demo)", color="success", dismissable=True)
+    except FileNotFoundError:
+        return dbc.Alert("Fel: placeholder.pdf hittades inte. Ladda upp en giltig PDF-fil eller skapa en placeholder.pdf för demo.", color="danger")
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
-
-
 # Callback: Match Bills to Transactions
 @app.callback(
     Output('bill-add-status', 'children', allow_duplicate=True),
