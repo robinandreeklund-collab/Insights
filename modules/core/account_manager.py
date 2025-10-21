@@ -155,6 +155,16 @@ class AccountManager:
         transactions = data.get('transactions', [])
         return [tx for tx in transactions if tx.get('account') == name]
     
+    def get_all_transactions(self) -> List[dict]:
+        """
+        Get all transactions across all accounts.
+        
+        Returns:
+            List of all transaction dictionaries
+        """
+        data = self._load_yaml(self.transactions_file)
+        return data.get('transactions', [])
+    
     def categorize_transaction(self, tx: dict, category: str, subcategory: str) -> dict:
         """
         Manually categorize a transaction.
@@ -206,3 +216,12 @@ class AccountManager:
                     account['balance'] = balance
                     break
             self._save_yaml(self.accounts_file, data)
+    
+    def save_transactions(self, data: dict) -> None:
+        """
+        Save transactions data to file.
+        
+        Args:
+            data: Dictionary containing transactions
+        """
+        self._save_yaml(self.transactions_file, data)
