@@ -85,7 +85,7 @@ class TestIntegrationFlow:
         assert 'forecast' in summary
         assert 'avg_daily_income' in summary
         assert 'avg_daily_expenses' in summary
-        assert len(summary['forecast']) == 8  # Today + 7 days
+        assert len(summary['forecast']) == 8  # Today + 7 forecast days (current day + 7 future days)
         
         # Verify category breakdown
         breakdown = get_category_breakdown(transactions_file=transactions_file)
