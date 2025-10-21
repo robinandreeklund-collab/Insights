@@ -1,9 +1,5 @@
-# Accounts data
-# Format:
-# accounts:
-#   - name: account_name
-#     source_file: path/to/file.csv
-#     created_at: YYYY-MM-DD
-#     balance: current_balance
-
-accounts: []
+accounts:
+- name: PERSONKONTO 880104-7591
+  source_file: PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv
+  created_at: '2025-10-21'
+  balance: 31.06

@@ -2,11 +2,21 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 1
+## 🎯 Projektstatus: Sprint 2
 
-**Sprint 1 Status:** Grundläggande struktur och dashboard är på plats.
+**Sprint 2 Status:** CSV-import, kategorisering och prognoser fungerar!
 
-I Sprint 1 har vi satt upp:
+Sprint 2 har implementerat:
+- ✅ CSV-import med Nordea-format
+- ✅ Automatisk kontoskapande från filnamn
+- ✅ Regelbaserad och AI-driven kategorisering (hybrid)
+- ✅ Prognosmotorer för framtida saldo
+- ✅ YAML-databas med konton, transaktioner och träningsdata
+- ✅ Omfattande enhetstester
+
+**Sprint 1 Status (tidigare):** Grundläggande struktur och dashboard är på plats.
+
+I Sprint 1 satte vi upp:
 - ✅ Mappstruktur enligt `project_structure.yaml`
 - ✅ Grundmoduler i `modules/core/` (stubs utan faktisk logik)
 - ✅ Tomma YAML-datafiler för framtida användning
@@ -14,7 +24,26 @@ I Sprint 1 har vi satt upp:
 - ✅ Grundläggande enhetstester
 - ✅ Requirements och installation
 
-**OBS:** Endast strukturen och gränssnittet är implementerat i Sprint 1. Ingen faktisk logik för import, kategorisering eller prognoser finns ännu.
+## 🚀 Kom igång
+
+### Snabbstart
+
+1. **Installera beroenden:**
+```bash
+pip install -r requirements.txt
+```
+
+2. **Importera din första CSV-fil:**
+```bash
+python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
+```
+
+3. **Starta dashboarden:**
+```bash
+python dashboard/dashboard_ui.py
+```
+
+4. **Öppna i webbläsaren:** [http://127.0.0.1:8050](http://127.0.0.1:8050)
 
 ## 🚀 Planerade funktioner
 
@@ -74,12 +103,22 @@ cd Insights
 pip install -r requirements.txt
 ```
 
-3. Starta dashboard:
+3. Importera en CSV-fil (Nordea-format):
+```bash
+python import_flow.py "DIN_FIL.csv"
+```
+   Detta kommer att:
+   - Extrahera kontonamnet från filnamnet
+   - Skapa kontot om det inte finns
+   - Importera och kategorisera alla transaktioner
+   - Spara data i YAML-filer
+
+4. Starta dashboard:
 ```bash
 python dashboard/dashboard_ui.py
 ```
 
-4. Öppna din webbläsare på: [http://127.0.0.1:8050](http://127.0.0.1:8050)
+5. Öppna din webbläsare på: [http://127.0.0.1:8050](http://127.0.0.1:8050)
 
 ## 📁 Projektstruktur
 
@@ -111,24 +150,67 @@ Insights/
 └── README.md
 ```
 
-## 🔄 Exempel på flöde (planerat för framtida sprints)
+## 🔄 Exempel på flöde
 
 ### 1. Importera CSV
-1. Gå till fliken "Inmatning"
-2. Ladda upp din CSV-fil från banken
-3. Systemet normaliserar och sparar transaktionerna i `yaml/transactions.yaml`
 
-### 2. Kategorisera transaktioner
-1. Gå till fliken "Konton"
-2. Välj konto och visa transaktioner
-3. Kategorisera manuellt eller låt AI-modellen göra det automatiskt
-4. Träna AI-modellen från manuella kategoriseringar
+```bash
+python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
+```
 
-### 3. Visa översikt
-1. Gå till fliken "Ekonomisk översikt"
-2. Se prognos för kommande 30 dagar
-3. Visa utgiftsfördelning per kategori
-4. Läs agentgenererade insikter och varningar
+Systemet kommer att:
+1. Extrahera kontonamnet från filnamnet (t.ex., "PERSONKONTO 880104-7591")
+2. Läsa och normalisera CSV-filen (Nordea-format)
+3. Skapa kontot om det inte finns
+4. Kategorisera alla transaktioner automatiskt med:
+   - Regelbaserad kategorisering (från `yaml/categorization_rules.yaml`)
+   - AI/heuristisk kategorisering för transaktioner utan regelträff
+5. Spara transaktioner i `yaml/transactions.yaml`
+6. Uppdatera `yaml/accounts.yaml` med kontouppgifter
+
+### 2. Visa prognoser (via Python)
+
+```python
+from modules.core.forecast_engine import get_forecast_summary, get_category_breakdown
+
+# Få en 30-dagars prognos
+summary = get_forecast_summary(current_balance=1000.0, forecast_days=30)
+
+print(f"Nuvarande saldo: {summary['current_balance']} SEK")
+print(f"Förväntat saldo om {summary['forecast_days']} dagar: {summary['predicted_final_balance']} SEK")
+print(f"Genomsnittlig daglig inkomst: {summary['avg_daily_income']} SEK")
+print(f"Genomsnittlig daglig utgift: {summary['avg_daily_expenses']} SEK")
+
+# Få utgiftsfördelning per kategori
+breakdown = get_category_breakdown()
+for category, amount in breakdown.items():
+    print(f"{category}: {amount} SEK")
+```
+
+### 3. Kategorisera manuellt
+
+```python
+from modules.core.account_manager import AccountManager
+
+manager = AccountManager()
+
+# Hämta transaktioner för ett konto
+transactions = manager.get_account_transactions("PERSONKONTO 880104-7591")
+
+# Kategorisera en transaktion manuellt
+tx = transactions[0]
+tx = manager.categorize_transaction(tx, "Mat & Dryck", "Matinköp")
+
+# Träna AI-modellen från den manuella kategoriseringen
+manager.train_ai_from_manual_input(tx)
+```
+
+### 4. Visa översikt (Dashboard kommer i nästa sprint)
+1. Starta dashboarden: `python dashboard/dashboard_ui.py`
+2. Gå till fliken "Ekonomisk översikt"
+3. Se prognos för kommande 30 dagar
+4. Visa utgiftsfördelning per kategori
+5. Läs agentgenererade insikter och varningar
 
 ## 🧪 Tester
 
@@ -161,8 +243,17 @@ Insights är byggt för att vara:
 ## 📝 Roadmap
 
 - [x] Sprint 1: Grundstruktur och dashboard
-- [ ] Sprint 2: Import och kategorisering av transaktioner
-- [ ] Sprint 3: Prognoser och insikter
+- [x] Sprint 2: Import och kategorisering av transaktioner
+  - [x] CSV-import med Nordea-format
+  - [x] Regelbaserad kategorisering
+  - [x] AI/heuristisk kategorisering
+  - [x] Prognosmotorer
+  - [x] YAML-databas
+- [ ] Sprint 3: Dashboard-integration och visualiseringar
+  - [ ] Integrera import i dashboard
+  - [ ] Visa prognosgrafer
+  - [ ] Kategorifördelningsdiagram
+  - [ ] Kontoutdragsvy
 - [ ] Sprint 4: Fakturor och lånhantering
 - [ ] Sprint 5: Agentdriven analys och simulering
 

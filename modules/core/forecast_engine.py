@@ -1,0 +1,164 @@
+"""Forecast engine module for predicting future balance and cash flow."""
+
+from typing import List, Dict, Optional
+import pandas as pd
+import yaml
+import os
+from datetime import datetime, timedelta
+
+
+def load_transactions(transactions_file: str = "yaml/transactions.yaml") -> List[dict]:
+    """Load transactions from YAML file."""
+    if os.path.exists(transactions_file):
+        with open(transactions_file, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f) or {}
+            return data.get('transactions', [])
+    return []
+
+
+def calculate_average_income_and_expenses(transactions: List[dict], days: int = 30) -> Dict[str, float]:
+    """
+    Calculate average daily income and expenses from historical data.
+    
+    Args:
+        transactions: List of transaction dictionaries
+        days: Number of days to look back (default: 30)
+        
+    Returns:
+        Dictionary with avg_daily_income and avg_daily_expenses
+    """
+    if not transactions:
+        return {'avg_daily_income': 0.0, 'avg_daily_expenses': 0.0}
+    
+    # Convert to DataFrame for easier processing
+    df = pd.DataFrame(transactions)
+    
+    if 'date' not in df.columns or 'amount' not in df.columns:
+        return {'avg_daily_income': 0.0, 'avg_daily_expenses': 0.0}
+    
+    # Convert date column to datetime
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    
+    # Filter to last N days
+    cutoff_date = datetime.now() - timedelta(days=days)
+    df = df[df['date'] >= cutoff_date]
+    
+    if df.empty:
+        return {'avg_daily_income': 0.0, 'avg_daily_expenses': 0.0}
+    
+    # Separate income and expenses
+    income = df[df['amount'] > 0]['amount'].sum()
+    expenses = abs(df[df['amount'] < 0]['amount'].sum())
+    
+    # Calculate daily averages
+    num_days = (df['date'].max() - df['date'].min()).days + 1
+    if num_days == 0:
+        num_days = 1
+    
+    return {
+        'avg_daily_income': income / num_days,
+        'avg_daily_expenses': expenses / num_days
+    }
+
+
+def forecast_balance(current_balance: float, transactions: List[dict], forecast_days: int = 30) -> List[Dict]:
+    """
+    Forecast balance for the next N days based on historical averages.
+    
+    Args:
+        current_balance: Current account balance
+        transactions: List of historical transactions
+        forecast_days: Number of days to forecast (default: 30)
+        
+    Returns:
+        List of dictionaries with date and predicted_balance
+    """
+    # Calculate historical averages
+    stats = calculate_average_income_and_expenses(transactions)
+    avg_daily_income = stats['avg_daily_income']
+    avg_daily_expenses = stats['avg_daily_expenses']
+    avg_daily_net = avg_daily_income - avg_daily_expenses
+    
+    # Generate forecast
+    forecast = []
+    balance = current_balance
+    
+    for day in range(forecast_days + 1):
+        forecast_date = datetime.now() + timedelta(days=day)
+        forecast.append({
+            'date': forecast_date.strftime('%Y-%m-%d'),
+            'predicted_balance': round(balance, 2),
+            'day': day
+        })
+        # Update balance for next day
+        balance += avg_daily_net
+    
+    return forecast
+
+
+def get_forecast_summary(current_balance: float, transactions_file: str = "yaml/transactions.yaml", 
+                         forecast_days: int = 30) -> Dict:
+    """
+    Get a complete forecast summary with statistics.
+    
+    Args:
+        current_balance: Current account balance
+        transactions_file: Path to transactions YAML file
+        forecast_days: Number of days to forecast
+        
+    Returns:
+        Dictionary with forecast data and statistics
+    """
+    transactions = load_transactions(transactions_file)
+    stats = calculate_average_income_and_expenses(transactions)
+    forecast = forecast_balance(current_balance, transactions, forecast_days)
+    
+    # Calculate additional insights
+    final_balance = forecast[-1]['predicted_balance'] if forecast else current_balance
+    balance_change = final_balance - current_balance
+    
+    return {
+        'current_balance': current_balance,
+        'forecast_days': forecast_days,
+        'avg_daily_income': round(stats['avg_daily_income'], 2),
+        'avg_daily_expenses': round(stats['avg_daily_expenses'], 2),
+        'avg_daily_net': round(stats['avg_daily_income'] - stats['avg_daily_expenses'], 2),
+        'predicted_final_balance': round(final_balance, 2),
+        'predicted_balance_change': round(balance_change, 2),
+        'forecast': forecast,
+        'warning': 'low_balance' if final_balance < 1000 else None
+    }
+
+
+def get_category_breakdown(transactions: List[dict] = None, transactions_file: str = "yaml/transactions.yaml") -> Dict[str, float]:
+    """
+    Get expense breakdown by category.
+    
+    Args:
+        transactions: List of transactions (optional, will load from file if not provided)
+        transactions_file: Path to transactions YAML file
+        
+    Returns:
+        Dictionary with category totals
+    """
+    if transactions is None:
+        transactions = load_transactions(transactions_file)
+    
+    if not transactions:
+        return {}
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(transactions)
+    
+    if 'amount' not in df.columns or 'category' not in df.columns:
+        return {}
+    
+    # Filter to expenses only (negative amounts)
+    expenses = df[df['amount'] < 0].copy()
+    expenses['amount'] = abs(expenses['amount'])
+    
+    # Group by category
+    category_totals = expenses.groupby('category')['amount'].sum().to_dict()
+    
+    # Round values
+    return {k: round(v, 2) for k, v in category_totals.items()}
