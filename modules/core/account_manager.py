@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 
 
 class AccountManager:
-    """Skapar, hanterar och rensar konton. Stöd för manuell kategorisering och AI-träning."""
+    """Creates, manages, and clears accounts. Supports manual categorization and AI training."""
     
     def __init__(self):
         """Initialize the account manager."""
