@@ -6,4 +6,101 @@
 #     subcategory: subcategory_name
 #     priority: priority_number
 
-rules: []
+rules:
+  # Nordea fees and services
+  - pattern: "Nordea Vardagspaket"
+    category: "Boende"
+    subcategory: "Bank & Avgifter"
+    priority: 100
+  
+  # Transfers and internal transactions
+  - pattern: "Överföring"
+    category: "Överföringar"
+    subcategory: "Intern överföring"
+    priority: 90
+  
+  - pattern: "Uttag"
+    category: "Kontanter"
+    subcategory: "Uttagsautomat"
+    priority: 90
+  
+  - pattern: "Insättning"
+    category: "Inkomster"
+    subcategory: "Insättning"
+    priority: 90
+  
+  # Food and groceries
+  - pattern: "ICA|COOP|HEMKÖP|WILLYS|LIDL"
+    category: "Mat & Dryck"
+    subcategory: "Matinköp"
+    priority: 80
+  
+  - pattern: "RESTAURANG|CAFÉ|PIZZA|BURGER|SUSHI"
+    category: "Mat & Dryck"
+    subcategory: "Restaurang"
+    priority: 80
+  
+  # Transport
+  - pattern: "BENSIN|DIESEL|TANK"
+    category: "Transport"
+    subcategory: "Bränsle"
+    priority: 80
+  
+  - pattern: "PARKERING|P-HUS"
+    category: "Transport"
+    subcategory: "Parkering"
+    priority: 80
+  
+  - pattern: "SL |TÅGLUFF|BUSS"
+    category: "Transport"
+    subcategory: "Kollektivtrafik"
+    priority: 80
+  
+  # Housing and utilities
+  - pattern: "HYRA|BOSTAD"
+    category: "Boende"
+    subcategory: "Hyra"
+    priority: 85
+  
+  - pattern: "EL-RÄKNING|ELBOLAG"
+    category: "Boende"
+    subcategory: "El"
+    priority: 85
+  
+  - pattern: "BREDBAND|INTERNET|TELIA|TELENOR"
+    category: "Boende"
+    subcategory: "Internet & Telefon"
+    priority: 85
+  
+  # Shopping
+  - pattern: "KLARNA|PAYPAL"
+    category: "Shopping"
+    subcategory: "Online-handel"
+    priority: 70
+  
+  - pattern: "AMAZON|EBAY"
+    category: "Shopping"
+    subcategory: "Online-handel"
+    priority: 75
+  
+  # Entertainment
+  - pattern: "SPOTIFY|NETFLIX|HBO|DISNEY"
+    category: "Nöje"
+    subcategory: "Streaming"
+    priority: 75
+  
+  - pattern: "BIO|TEATER|KONSERT"
+    category: "Nöje"
+    subcategory: "Evenemang"
+    priority: 75
+  
+  # Health
+  - pattern: "APOTEK|APOTEKET"
+    category: "Hälsa"
+    subcategory: "Medicin"
+    priority: 80
+  
+  - pattern: "VÅRDCENTRAL|TANDLÄKARE"
+    category: "Hälsa"
+    subcategory: "Vård"
+    priority: 80

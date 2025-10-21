@@ -1,12 +1,1 @@
-# Transactions data
-# Format:
-# transactions:
-#   - id: unique_id
-#     date: YYYY-MM-DD
-#     description: transaction description
-#     amount: amount
-#     category: category
-#     subcategory: subcategory
-#     account: account_name
-
 transactions: []

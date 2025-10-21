@@ -1,9 +1,1 @@
-# Accounts data
-# Format:
-# accounts:
-#   - name: account_name
-#     source_file: path/to/file.csv
-#     created_at: YYYY-MM-DD
-#     balance: current_balance
-
 accounts: []
