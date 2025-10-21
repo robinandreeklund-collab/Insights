@@ -50,7 +50,8 @@ python dashboard_ui.py
 Kräver Python 3.10+ och Dash
 
 
-📂 Projektstruktur
+Projektstruktur
+bash
 insights/
 ├── modules/
 │   ├── import_bank_data.py
@@ -67,7 +68,6 @@ insights/
 ├── settings_panel.yaml
 ├── README.md
 └── requirements.txt
-
 
 
 🧠 Vision
