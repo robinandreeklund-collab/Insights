@@ -1,126 +1,104 @@
 📊 Insights – Agentdriven hushållsekonomi med AI, YAML och Dash
-🧱 Projektstruktur
-🔹 Namn: Insights
-🔹 Syfte:
-Ett transparent, modulärt och agentförberett system för hushållsekonomi. Kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån.
+Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-🧩 Moduler
-Modul	Funktion
-import_bank_data	Läser in bankfiler (CSV, Excel)
-parse_transactions	Extraherar och strukturerar transaktioner
-categorize_expenses	Hybridklassificering (regler + AI)
-parse_pdf_bills	Extraherar fakturor från PDF
-upcoming_bills	Hanterar kommande fakturor
-income_tracker	Registrerar inkomster
-net_balance_splitter	Fördelar kvarvarande pengar
-forecast_engine	Simulerar framtida saldo
-alerts_and_insights	Genererar varningar och insikter
-dashboard_ui	Dash-gränssnitt för visualisering och interaktion
-settings_panel	Hanterar användarinställningar
-account_manager	Skapar och hanterar konton
-bill_matcher	Matchar fakturor mot transaktioner
-agent_interface	Tolkar frågor och genererar insikter
-loan_manager	Hanterar lån, ränta, bindningstid
-loan_simulator	Simulerar ränteförändringar och bindningstidens slut
-history_viewer	Visar historisk utgiftsdata och insikter
-📁 YAML-lagring
-accounts.yaml – konton, saldo, transaktioner
+🚀 Funktioner
+1. Ekonomisk översikt
+Prognos 30 dagar framåt
 
-transactions.yaml – transaktionsdata med kategori, AI-confidence
+Utgiftsfördelning per kategori
 
-upcoming_bills.yaml – aktiva och hanterade fakturor
+Agentgenererade insikter och varningar
 
-income_tracker.yaml – inkomster per person
+2. Inmatning
+Importera Nordea CSV-filer
 
-categorization_rules.yaml – regelbas för kategorisering
+Lägg till fakturor och inkomster manuellt
 
-training_data.yaml – AI-träningsdata
+Läs in fakturor från PDF (enskilda eller sammanställningar)
 
-insights.yaml – agentgenererade insikter
+Automatisk transaktionsklassificering (regelbaserad + AI-hybrid)
 
-agent_queries.yaml – frågelogg
+3. Konton
+Skapa och hantera konton från CSV
 
-loans.yaml – låneinformation, ränta, bindningstid
+Visa kontoutdrag (50 transaktioner per sida)
 
-loan_simulation.yaml – simuleringar och antaganden
+Manuell kategorisering med huvud- och underkategori
 
-history.yaml – månadssammanställningar och trender
+Träna AI-modellen direkt från kontoutdraget
 
-settings_panel.yaml – UI-inställningar och toggles
+4. Fakturor
+Aktiva och hanterade fakturor
 
-📊 Dash-paneler
-Ekonomisk översikt
+Automatisk matchning mot transaktioner
 
-Prognos (30 dagar)
+Prognosintegration och historik
 
-Utgiftsfördelning
-
-Insikter och varningar
-
-Inmatning
-
-Importera Nordea CSV
-
-Lägg till faktura manuellt
-
-Lägg till inkomst
-
-Läs in fakturor från PDF
-
-Konton
-
-Skapa och hantera konton
-
-Visa kontoutdrag (50 per sida)
-
-Manuell kategorisering + AI-träning
-
-Fakturor
-
-Aktiva fakturor
-
-Hanterade fakturor
-
-Automatisk matchning
-
-Historik
-
+5. Historik
 Månadssammanställningar
 
-Kategoritrender
+Kategoritrender över tid
 
-Topptransaktioner
+Topptransaktioner och saldohistorik
 
-Lån
+6. Lån
+Lägg till lån med ränta och bindningstid
 
-Lägg till lån (namn, ränta, bindningstid)
+Visualisera återbetalning och saldo
 
-Visualisera utveckling
+Simulera ränteförändringar och bindningstidens slut
 
-Simulera ränteförändringar
+7. Frågebaserad analys
+“Vad händer om räntan ökar med 2%?”
 
-Frågebaserad analys
+“Hur mycket har vi kvar i november?”
 
-Agentfrågor: “Vad händer om…?”
+“Visa alla fakturor i oktober”
 
-Svar + insiktslogg
+🧱 Teknisk arkitektur
+📁 YAML-baserad datalagring
 
-Scenarioanalys
+🧠 Agentgränssnitt för simulering och analys
 
-🧠 Agentfunktioner
-Frågetolkning: “Visa alla fakturor i oktober”
+📊 Dash-gränssnitt för interaktiv visualisering
 
-Insiktsgenerering: “Matkostnader överstiger 4000 kr”
+🧪 Enhetstester och CI-integration
 
-Simulering: “Vad händer om räntan ökar med 2%?”
+🔁 Modulär struktur för framtida expansion
 
-Rekommendationer: “Minska streamingkostnader med 20%”
+🛠️ Installation
+bash
+git clone https://github.com/dittnamn/insights.git
+cd insights
+pip install -r requirements.txt
+python dashboard_ui.py
+Kräver Python 3.10+ och Dash
 
-🧪 Teststruktur
-Enhetstester per modul
+📂 Projektstruktur
+bash
+insights/
+├── modules/
+│   ├── import_bank_data.py
+│   ├── categorize_expenses.py
+│   ├── parse_pdf_bills.py
+│   ├── forecast_engine.py
+│   └── ...
+├── yaml/
+│   ├── transactions.yaml
+│   ├── upcoming_bills.yaml
+│   ├── loans.yaml
+│   └── ...
+├── dashboard_ui.py
+├── settings_panel.yaml
+├── README.md
+└── requirements.txt
+🧠 Vision
+Insights är byggt för att vara:
 
-YAML-validering
+🧩 Modulärt och transparent
 
-Edge case-simulering
+🧠 Agentförberett och självlärande
 
-CI-integration (GitHub Actions)
+🧪 Testbart och framtidssäkert
+
+👥 Användarcentrerat och pedagogiskt
