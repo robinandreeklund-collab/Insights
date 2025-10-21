@@ -22,6 +22,10 @@ from modules.core.account_manager import AccountManager
 from modules.core.forecast_engine import get_forecast_summary, get_category_breakdown, load_transactions
 from modules.core.import_bank_data import import_csv
 from modules.core.categorize_expenses import auto_categorize
+from modules.core.bill_manager import BillManager
+from modules.core.loan_manager import LoanManager
+from modules.core.parse_pdf_bills import PDFBillParser
+from modules.core.bill_matcher import BillMatcher
 
 
 def clear_data_on_exit(signum=None, frame=None):
@@ -202,6 +206,198 @@ def create_accounts_tab():
     ], className="p-3")
 
 
+# Create bills tab content
+def create_bills_tab():
+    """Create the Bills tab with bill management and matching."""
+    return html.Div([
+        html.H3("Fakturahantering", className="mt-3 mb-4"),
+        
+        # Add new bill section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Lägg till faktura", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Namn:", className="fw-bold"),
+                                dbc.Input(id='bill-name-input', type='text', placeholder='T.ex. Elräkning December'),
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Belopp (SEK):", className="fw-bold"),
+                                dbc.Input(id='bill-amount-input', type='number', placeholder='0.00'),
+                            ], width=6),
+                        ], className="mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Förfallodatum:", className="fw-bold"),
+                                dbc.Input(id='bill-due-date-input', type='date'),
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Kategori:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='bill-category-dropdown',
+                                    options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
+                                    value='Övrigt'
+                                ),
+                            ], width=6),
+                        ], className="mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Beskrivning:", className="fw-bold"),
+                                dbc.Textarea(id='bill-description-input', placeholder='Valfri beskrivning...'),
+                            ], width=12),
+                        ], className="mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Lägg till faktura", id='add-bill-btn', color="primary", className="me-2"),
+                                dbc.Button("Importera från PDF (demo)", id='import-pdf-btn', color="secondary"),
+                                dbc.Button("Matcha fakturor", id='match-bills-btn', color="info", className="ms-2"),
+                            ], width=12),
+                        ]),
+                        html.Div(id='bill-add-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Bills display section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Aktiva fakturor", className="card-title"),
+                        dcc.Dropdown(
+                            id='bill-status-filter',
+                            options=[
+                                {'label': 'Alla', 'value': 'all'},
+                                {'label': 'Väntande', 'value': 'pending'},
+                                {'label': 'Betalda', 'value': 'paid'},
+                                {'label': 'Förfallna', 'value': 'overdue'}
+                            ],
+                            value='all',
+                            className="mb-3"
+                        ),
+                        html.Div(id='bills-table-container'),
+                    ])
+                ])
+            ], width=12)
+        ]),
+        
+        # Store and interval for auto-refresh
+        dcc.Store(id='selected-bill-id', data=None),
+        dcc.Interval(id='bills-interval', interval=5000, n_intervals=0)
+    ], className="p-3")
+
+
+# Create loans tab content
+def create_loans_tab():
+    """Create the Loans tab with loan management and simulation."""
+    return html.Div([
+        html.H3("Lånehantering", className="mt-3 mb-4"),
+        
+        # Add new loan section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Lägg till lån", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Namn:", className="fw-bold"),
+                                dbc.Input(id='loan-name-input', type='text', placeholder='T.ex. Bolån'),
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Huvudbelopp (SEK):", className="fw-bold"),
+                                dbc.Input(id='loan-principal-input', type='number', placeholder='0.00'),
+                            ], width=6),
+                        ], className="mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Årsränta (%):", className="fw-bold"),
+                                dbc.Input(id='loan-interest-input', type='number', placeholder='3.5', step='0.1'),
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Löptid (månader):", className="fw-bold"),
+                                dbc.Input(id='loan-term-input', type='number', placeholder='360', value='360'),
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Startdatum:", className="fw-bold"),
+                                dbc.Input(id='loan-start-date-input', type='date'),
+                            ], width=4),
+                        ], className="mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Bindningstid slutar (valfritt):", className="fw-bold"),
+                                dbc.Input(id='loan-fixed-end-date-input', type='date'),
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Beskrivning:", className="fw-bold"),
+                                dbc.Input(id='loan-description-input', type='text', placeholder='Valfri beskrivning...'),
+                            ], width=6),
+                        ], className="mb-3"),
+                        dbc.Button("Lägg till lån", id='add-loan-btn', color="primary"),
+                        html.Div(id='loan-add-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Loans display section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Aktiva lån", className="card-title"),
+                        html.Div(id='loans-table-container'),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Interest rate simulation section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Simulera ränteförändring", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Välj lån:", className="fw-bold"),
+                                dcc.Dropdown(id='loan-selector', placeholder='Välj ett lån...')
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Ny ränta (%):", className="fw-bold"),
+                                dbc.Input(id='new-interest-input', type='number', placeholder='4.5', step='0.1'),
+                            ], width=4),
+                            dbc.Col([
+                                dbc.Button("Simulera", id='simulate-btn', color="info", className="mt-4"),
+                            ], width=2),
+                        ]),
+                        html.Div(id='simulation-result', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Amortization schedule section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Återbetalningsplan", className="card-title"),
+                        dcc.Graph(id='amortization-graph'),
+                    ])
+                ])
+            ], width=12)
+        ]),
+        
+        # Store and interval for auto-refresh
+        dcc.Store(id='selected-loan-id', data=None),
+        dcc.Interval(id='loans-interval', interval=5000, n_intervals=0)
+    ], className="p-3")
+
+
 # Main app layout
 app.layout = dbc.Container([
     html.H1("Insights – Hushållsekonomi Dashboard", className="text-center my-4"),
@@ -232,13 +428,7 @@ app.layout = dbc.Container([
         dcc.Tab(
             label="Fakturor",
             value="bills",
-            children=[
-                html.Div([
-                    html.H3("Fakturor", className="mt-3"),
-                    html.P("Visa aktiva och hanterade fakturor, redigera, ta bort och matcha mot transaktioner."),
-                    html.Div(id="bills-content", className="mt-3")
-                ], className="p-3")
-            ]
+            children=create_bills_tab()
         ),
         
         # Historik
@@ -258,13 +448,7 @@ app.layout = dbc.Container([
         dcc.Tab(
             label="Lån",
             value="loans",
-            children=[
-                html.Div([
-                    html.H3("Lån", className="mt-3"),
-                    html.P("Lägg till lån med ränta och bindningstid, visualisera återbetalning och simulera ränteförändringar."),
-                    html.Div(id="loans-content", className="mt-3")
-                ], className="p-3")
-            ]
+            children=create_loans_tab()
         ),
         
         # Frågebaserad analys
@@ -637,6 +821,375 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
         return dbc.Alert("✓ Kategorisering sparad!", color="success", dismissable=True)
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+# Callback: Add Bill
+@app.callback(
+    Output('bill-add-status', 'children'),
+    Input('add-bill-btn', 'n_clicks'),
+    [State('bill-name-input', 'value'),
+     State('bill-amount-input', 'value'),
+     State('bill-due-date-input', 'value'),
+     State('bill-category-dropdown', 'value'),
+     State('bill-description-input', 'value')],
+    prevent_initial_call=True
+)
+def add_bill(n_clicks, name, amount, due_date, category, description):
+    """Add a new bill."""
+    if not name or not amount or not due_date:
+        return dbc.Alert("Fyll i namn, belopp och förfallodatum", color="warning")
+    
+    try:
+        bill_manager = BillManager()
+        bill = bill_manager.add_bill(
+            name=name,
+            amount=float(amount),
+            due_date=due_date,
+            description=description or "",
+            category=category or "Övrigt"
+        )
+        return dbc.Alert(f"✓ Faktura '{name}' tillagd!", color="success", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Import Bills from PDF
+@app.callback(
+    Output('bill-add-status', 'children', allow_duplicate=True),
+    Input('import-pdf-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def import_bills_from_pdf(n_clicks):
+    """Import bills from PDF (demo with placeholder data)."""
+    try:
+        bill_manager = BillManager()
+        pdf_parser = PDFBillParser()
+        
+        # Use placeholder data
+        count = pdf_parser.import_bills_to_manager("placeholder.pdf", bill_manager)
+        
+        return dbc.Alert(f"✓ {count} fakturor importerade från PDF (demo)", color="success", dismissable=True)
+    except FileNotFoundError:
+        return dbc.Alert("Fel: placeholder.pdf hittades inte. Ladda upp en giltig PDF-fil eller skapa en placeholder.pdf för demo.", color="danger")
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+# Callback: Match Bills to Transactions
+@app.callback(
+    Output('bill-add-status', 'children', allow_duplicate=True),
+    Input('match-bills-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def match_bills(n_clicks):
+    """Match pending bills to transactions."""
+    try:
+        bill_manager = BillManager()
+        account_manager = AccountManager()
+        matcher = BillMatcher(bill_manager, account_manager)
+        
+        matches = matcher.match_bills_to_transactions()
+        
+        if matches:
+            return dbc.Alert(f"✓ {len(matches)} fakturor matchade mot transaktioner!", color="success", dismissable=True)
+        else:
+            return dbc.Alert("Inga matchningar hittades", color="info", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Update Bills Table
+@app.callback(
+    Output('bills-table-container', 'children'),
+    [Input('bill-status-filter', 'value'),
+     Input('bills-interval', 'n_intervals'),
+     Input('add-bill-btn', 'n_clicks'),
+     Input('import-pdf-btn', 'n_clicks'),
+     Input('match-bills-btn', 'n_clicks')]
+)
+def update_bills_table(status_filter, n, add_clicks, import_clicks, match_clicks):
+    """Update the bills table based on status filter."""
+    try:
+        bill_manager = BillManager()
+        
+        # Get bills based on filter
+        if status_filter == 'all':
+            bills = bill_manager.get_bills()
+        else:
+            bills = bill_manager.get_bills(status=status_filter)
+        
+        if not bills:
+            return html.P("Inga fakturor funna", className="text-muted")
+        
+        # Create table
+        df = pd.DataFrame(bills)
+        table = dash_table.DataTable(
+            id='bills-table',
+            columns=[
+                {'name': 'ID', 'id': 'id'},
+                {'name': 'Namn', 'id': 'name'},
+                {'name': 'Belopp', 'id': 'amount'},
+                {'name': 'Förfallodatum', 'id': 'due_date'},
+                {'name': 'Status', 'id': 'status'},
+                {'name': 'Kategori', 'id': 'category'},
+            ],
+            data=df.to_dict('records'),
+            style_cell={'textAlign': 'left', 'padding': '10px'},
+            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+            style_data_conditional=[
+                {
+                    'if': {'filter_query': '{status} = "overdue"'},
+                    'backgroundColor': '#ffebee',
+                    'color': '#c62828'
+                },
+                {
+                    'if': {'filter_query': '{status} = "paid"'},
+                    'backgroundColor': '#e8f5e9',
+                    'color': '#2e7d32'
+                }
+            ],
+            row_selectable='single',
+            selected_rows=[]
+        )
+        
+        return table
+    except Exception as e:
+        return html.P(f"Fel vid laddning av fakturor: {str(e)}", className="text-danger")
+
+
+# Callback: Add Loan
+@app.callback(
+    Output('loan-add-status', 'children'),
+    Input('add-loan-btn', 'n_clicks'),
+    [State('loan-name-input', 'value'),
+     State('loan-principal-input', 'value'),
+     State('loan-interest-input', 'value'),
+     State('loan-term-input', 'value'),
+     State('loan-start-date-input', 'value'),
+     State('loan-fixed-end-date-input', 'value'),
+     State('loan-description-input', 'value')],
+    prevent_initial_call=True
+)
+def add_loan(n_clicks, name, principal, interest_rate, term_months, start_date, fixed_end_date, description):
+    """Add a new loan."""
+    if not name or not principal or not interest_rate or not start_date:
+        return dbc.Alert("Fyll i namn, belopp, ränta och startdatum", color="warning")
+    
+    try:
+        loan_manager = LoanManager()
+        loan = loan_manager.add_loan(
+            name=name,
+            principal=float(principal),
+            interest_rate=float(interest_rate),
+            start_date=start_date,
+            term_months=int(term_months) if term_months else 360,
+            fixed_rate_end_date=fixed_end_date if fixed_end_date else None,
+            description=description or ""
+        )
+        return dbc.Alert(f"✓ Lån '{name}' tillagt!", color="success", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Update Loans Table
+@app.callback(
+    Output('loans-table-container', 'children'),
+    [Input('loans-interval', 'n_intervals'),
+     Input('add-loan-btn', 'n_clicks')]
+)
+def update_loans_table(n, add_clicks):
+    """Update the loans table."""
+    try:
+        loan_manager = LoanManager()
+        loans = loan_manager.get_loans(status='active')
+        
+        if not loans:
+            return html.P("Inga aktiva lån funna", className="text-muted")
+        
+        # Create table with calculated monthly payment
+        loans_display = []
+        for loan in loans:
+            monthly_payment = loan_manager.calculate_monthly_payment(
+                loan['current_balance'],
+                loan['interest_rate'],
+                loan['term_months']
+            )
+            loans_display.append({
+                'id': loan['id'],
+                'name': loan['name'],
+                'balance': f"{loan['current_balance']:,.2f}",
+                'interest_rate': f"{loan['interest_rate']}%",
+                'monthly_payment': f"{monthly_payment:,.2f}",
+                'term_months': loan['term_months']
+            })
+        
+        df = pd.DataFrame(loans_display)
+        table = dash_table.DataTable(
+            id='loans-table',
+            columns=[
+                {'name': 'ID', 'id': 'id'},
+                {'name': 'Namn', 'id': 'name'},
+                {'name': 'Saldo (SEK)', 'id': 'balance'},
+                {'name': 'Ränta', 'id': 'interest_rate'},
+                {'name': 'Månadsbetalning (SEK)', 'id': 'monthly_payment'},
+                {'name': 'Löptid (mån)', 'id': 'term_months'},
+            ],
+            data=df.to_dict('records'),
+            style_cell={'textAlign': 'left', 'padding': '10px'},
+            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+            row_selectable='single',
+            selected_rows=[]
+        )
+        
+        return table
+    except Exception as e:
+        return html.P(f"Fel vid laddning av lån: {str(e)}", className="text-danger")
+
+
+# Callback: Update Loan Selector
+@app.callback(
+    Output('loan-selector', 'options'),
+    [Input('loans-interval', 'n_intervals'),
+     Input('add-loan-btn', 'n_clicks')]
+)
+def update_loan_selector(n, add_clicks):
+    """Update loan selector dropdown."""
+    loan_manager = LoanManager()
+    loans = loan_manager.get_loans(status='active')
+    return [{'label': loan['name'], 'value': loan['id']} for loan in loans]
+
+
+# Callback: Simulate Interest Rate Change
+@app.callback(
+    Output('simulation-result', 'children'),
+    Input('simulate-btn', 'n_clicks'),
+    [State('loan-selector', 'value'),
+     State('new-interest-input', 'value')],
+    prevent_initial_call=True
+)
+def simulate_interest_change(n_clicks, loan_id, new_interest):
+    """Simulate interest rate change for selected loan."""
+    if not loan_id or not new_interest:
+        return dbc.Alert("Välj ett lån och ange ny ränta", color="warning")
+    
+    try:
+        loan_manager = LoanManager()
+        result = loan_manager.simulate_interest_change(loan_id, float(new_interest))
+        
+        if not result:
+            return dbc.Alert("Lån hittades inte", color="danger")
+        
+        return dbc.Card([
+            dbc.CardBody([
+                html.H6(f"Simulering för: {result['loan_name']}", className="card-title"),
+                html.P(f"Nuvarande saldo: {result['current_balance']:,.2f} SEK"),
+                html.Hr(),
+                html.P([
+                    html.Strong("Nuvarande ränta: "),
+                    f"{result['current_interest_rate']}%"
+                ]),
+                html.P([
+                    html.Strong("Nuvarande månadsbetalning: "),
+                    f"{result['current_monthly_payment']:,.2f} SEK"
+                ]),
+                html.Hr(),
+                html.P([
+                    html.Strong("Ny ränta: "),
+                    f"{result['new_interest_rate']}%"
+                ]),
+                html.P([
+                    html.Strong("Ny månadsbetalning: "),
+                    f"{result['new_monthly_payment']:,.2f} SEK"
+                ]),
+                html.Hr(),
+                html.P([
+                    html.Strong("Skillnad: "),
+                    html.Span(
+                        f"{result['difference']:+,.2f} SEK ({result['difference_percent']:+.2f}%)",
+                        style={'color': '#dc3545' if result['difference'] > 0 else '#28a745', 'fontWeight': 'bold'}
+                    )
+                ])
+            ])
+        ], color='light', className="mt-3")
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Update Amortization Graph
+@app.callback(
+    Output('amortization-graph', 'figure'),
+    [Input('loan-selector', 'value'),
+     Input('loans-interval', 'n_intervals')]
+)
+def update_amortization_graph(loan_id, n):
+    """Update amortization schedule graph for selected loan."""
+    if not loan_id:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Välj ett lån för att visa återbetalningsplan",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
+    
+    try:
+        loan_manager = LoanManager()
+        schedule = loan_manager.get_amortization_schedule(loan_id, months=12)
+        
+        if not schedule:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="Ingen återbetalningsplan tillgänglig",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False
+            )
+            return fig
+        
+        df = pd.DataFrame(schedule)
+        
+        fig = go.Figure()
+        
+        # Add balance line
+        fig.add_trace(go.Scatter(
+            x=df['month'],
+            y=df['balance'],
+            mode='lines+markers',
+            name='Kvarstående saldo',
+            line=dict(color='#0d6efd', width=3),
+            marker=dict(size=6)
+        ))
+        
+        # Add principal and interest as stacked bar
+        fig.add_trace(go.Bar(
+            x=df['month'],
+            y=df['principal'],
+            name='Amortering',
+            marker_color='#28a745'
+        ))
+        
+        fig.add_trace(go.Bar(
+            x=df['month'],
+            y=df['interest'],
+            name='Ränta',
+            marker_color='#ffc107'
+        ))
+        
+        fig.update_layout(
+            title='Återbetalningsplan (12 månader)',
+            xaxis_title='Månad',
+            yaxis_title='Belopp (SEK)',
+            hovermode='x unified',
+            template='plotly_white',
+            barmode='stack'
+        )
+        
+        return fig
+    except Exception as e:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"Fel: {str(e)}",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+bills:
+- amount: 850.0
+  category: Övrigt
+  created_at: '2025-10-21 22:48:22'
+  description: Elkostnad för december månad
+  due_date: '2025-12-31'
+  id: BILL-0001
+  matched_transaction_id: null
+  name: Elräkning December 2025
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
