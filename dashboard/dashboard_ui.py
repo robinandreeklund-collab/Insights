@@ -3809,8 +3809,11 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
                 html.H5("Sammanfattning", className="alert-heading"),
                 html.P(f"Totala gemensamma utgifter: {total_shared:,.2f} SEK"),
                 html.P(f"Baserat på {len(shared_categories)} gemensam{'ma' if len(shared_categories) > 1 else ''} kategori{'er' if len(shared_categories) > 1 else ''}: {', '.join(shared_categories)}"),
-                html.Small("Överföringsberäkningen är endast baserad på de valda gemensamma kategorierna.", 
-                          className="text-muted fst-italic")
+                html.Small([
+                    "OBS: Beräkningen baseras på ",
+                    html.Strong("bokförda transaktioner"),
+                    " (från banken), inte på kommande schemalagda fakturor ovan."
+                ], className="text-muted fst-italic")
             ], color="info", className="mb-3"),
             html.Div(person_cards)
         ])
