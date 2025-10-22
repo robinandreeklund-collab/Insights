@@ -274,6 +274,7 @@ def create_accounts_tab():
                     dbc.CardBody([
                         html.H5("AI-träning", className="card-title"),
                         html.P("Träna AI-modellen med manuellt kategoriserade transaktioner", className="text-muted mb-3"),
+                        html.Div(id='training-readiness-status', className="mb-3"),
                         dbc.Button("🤖 Träna med AI", id='train-from-table-btn', color="success", className="me-2"),
                         html.Div(id='table-action-status', className="mt-3")
                     ])
@@ -1157,8 +1158,6 @@ def save_edited_account(n_clicks, old_name, new_name, person):
         return dbc.Alert(". ".join(messages), color="success", dismissable=True)
     else:
         return dbc.Alert("Inget ändrat", color="info", dismissable=True)
-    else:
-        return dbc.Alert("Kunde inte uppdatera konto", color="danger", dismissable=True)
 
 
 # Callback: Open Delete Account Modal
@@ -1675,6 +1674,38 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
             dismissable=True, 
             duration=5000
         ), current_trigger
+
+
+# Callback: Update Training Readiness Status
+@app.callback(
+    Output('training-readiness-status', 'children'),
+    Input('accounts-interval', 'n_intervals')
+)
+def update_training_readiness(n):
+    """Update training readiness indicator."""
+    try:
+        trainer = AITrainer()
+        stats = trainer.get_training_stats()
+        
+        if stats['total_samples'] == 0:
+            return dbc.Alert([
+                html.I(className="bi bi-info-circle me-2"),
+                "Ingen träningsdata tillgänglig. Börja med att kategorisera transaktioner manuellt."
+            ], color="info", className="mb-0 py-2")
+        
+        if stats['ready_to_train']:
+            return dbc.Alert([
+                html.I(className="bi bi-check-circle me-2"),
+                f"✓ Redo att träna! ({stats['manual_samples']} manuella kategoriseringar)"
+            ], color="success", className="mb-0 py-2")
+        else:
+            needed = stats['min_samples_needed'] - stats['manual_samples']
+            return dbc.Alert([
+                html.I(className="bi bi-exclamation-triangle me-2"),
+                f"Behöver {needed} fler manuella kategoriseringar för att träna (har {stats['manual_samples']}/{stats['min_samples_needed']})"
+            ], color="warning", className="mb-0 py-2")
+    except Exception as e:
+        return None
 
 
 # Callback: Train AI from table
@@ -2504,15 +2535,29 @@ def start_ai_training(n_clicks):
         result = trainer.train_from_samples()
         
         if result['success']:
+            # Show detailed results
+            rules_created = result.get('rules_created', 0)
+            categories = result.get('categories_trained', [])
+            
             return dbc.Alert([
-                html.H5("Träning genomförd!", className="alert-heading"),
+                html.H5("✓ Träning genomförd!", className="alert-heading"),
                 html.P(result['message']),
                 html.Hr(),
-                html.P([
-                    "Kategorier som tränats: ",
-                    ", ".join(result.get('categories_trained', []))
-                ], className="mb-0") if result.get('categories_trained') else None
-            ], color="success", dismissable=True, duration=8000)
+                html.Div([
+                    html.P([
+                        html.Strong("Nya kategoriseringsregler: "), 
+                        f"{rules_created} st"
+                    ], className="mb-2"),
+                    html.P([
+                        html.Strong("Tränade kategorier: "),
+                        ", ".join(categories) if categories else "Inga"
+                    ], className="mb-2"),
+                    html.P([
+                        html.I(className="bi bi-check-circle me-2"),
+                        "AI-modellen är nu uppdaterad och kommer användas vid automatisk kategorisering av nya transaktioner."
+                    ], className="mb-0 text-success")
+                ])
+            ], color="success", dismissable=True, duration=10000)
         else:
             return dbc.Alert(result['message'], color="warning", dismissable=True, duration=6000)
     except Exception as e:
