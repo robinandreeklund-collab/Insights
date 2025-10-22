@@ -288,6 +288,7 @@ class PDFBillParser:
                     recipient_name = "Okänd mottagare"
                     if i > 0:
                         prev_line = lines[i-1].strip()
+                        # Skip lines that match a reference number in the format '1234-5678'
                         if prev_line and not re.match(r'^\d{4}-\d{4}$', prev_line) and not re.match(r'^20\d{2}-\d{2}-\d{2}', prev_line):
                             recipient_name = prev_line
                 
