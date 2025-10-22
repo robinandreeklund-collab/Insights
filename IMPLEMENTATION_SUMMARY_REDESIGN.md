@@ -67,7 +67,7 @@ Icon helper functions:
 - Currently returns Unicode emoji (temporary)
 - Ready for SVG icon integration
 
-### 3. `THEME_GUIDE.md` (265 lines)
+### 3. `THEME_GUIDE.md` (214 lines)
 Complete theme documentation:
 - Feature overview
 - Usage instructions
