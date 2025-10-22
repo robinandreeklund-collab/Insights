@@ -306,9 +306,7 @@ def create_accounts_tab():
         dcc.Store(id='current-page', data=0),
         dcc.Store(id='selected-transaction-id', data=None),
         dcc.Store(id='table-changes', data={}),
-        
-        # Interval for auto-refresh
-        dcc.Interval(id='accounts-interval', interval=5000, n_intervals=0)
+        dcc.Store(id='table-refresh-trigger', data=0)
     ], className="p-3")
 
 
@@ -1175,9 +1173,9 @@ def confirm_delete_account(n_clicks, account_name):
      Output('page-info', 'children')],
     [Input('account-selector', 'value'),
      Input('current-page', 'data'),
-     Input('accounts-interval', 'n_intervals')]
+     Input('table-refresh-trigger', 'data')]
 )
-def update_transaction_table(account_name, current_page, n):
+def update_transaction_table(account_name, current_page, refresh_trigger):
     """Update the transaction table for the selected account."""
     if not account_name:
         return html.P("Välj ett konto för att visa transaktioner", className="text-muted"), ""
@@ -1342,16 +1340,18 @@ def track_table_changes(current_data, previous_data):
 
 # Callback: Save table changes
 @app.callback(
-    Output('table-action-status', 'children'),
+    [Output('table-action-status', 'children'),
+     Output('table-refresh-trigger', 'data')],
     Input('save-table-changes-btn', 'n_clicks'),
     [State('transaction-table', 'data'),
-     State('account-selector', 'value')],
+     State('account-selector', 'value'),
+     State('table-refresh-trigger', 'data')],
     prevent_initial_call=True
 )
-def save_table_changes(n_clicks, table_data, account_name):
+def save_table_changes(n_clicks, table_data, account_name, current_trigger):
     """Save categorization changes from the table."""
     if not n_clicks or not table_data or not account_name:
-        return ""
+        return "", current_trigger
     
     try:
         manager = AccountManager()
@@ -1377,16 +1377,17 @@ def save_table_changes(n_clicks, table_data, account_name):
         
         if updated_count > 0:
             manager.save_transactions(data)
+            # Increment trigger to refresh table
             return dbc.Alert(
                 f"✓ {updated_count} transaktion{'er' if updated_count > 1 else ''} uppdaterad{'e' if updated_count > 1 else ''}!", 
                 color="success", 
                 dismissable=True,
                 duration=4000
-            )
+            ), (current_trigger or 0) + 1
         else:
-            return dbc.Alert("Inga ändringar att spara", color="info", dismissable=True, duration=3000)
+            return dbc.Alert("Inga ändringar att spara", color="info", dismissable=True, duration=3000), current_trigger
     except Exception as e:
-        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000)
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000), current_trigger
 
 
 # Callback: Train AI from table
