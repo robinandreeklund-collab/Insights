@@ -5,6 +5,40 @@ import yaml
 import os
 from datetime import datetime
 import uuid
+import re
+
+
+def extract_account_number(account_name: str) -> Optional[str]:
+    """Extract and normalize account number from account name.
+    
+    Extracts patterns like "1722 20 34439" from names like "MAT 1722 20 34439".
+    
+    Args:
+        account_name: Full account name that may contain account number
+        
+    Returns:
+        Normalized account number with spaces preserved or None if not found
+    """
+    if not account_name:
+        return None
+    
+    # Pattern: 4 digits, space, 2 digits, space, 5 digits
+    # Common Swedish account format
+    pattern = r'\b(\d{4})\s+(\d{2})\s+(\d{5})\b'
+    match = re.search(pattern, account_name)
+    
+    if match:
+        # Return normalized format with spaces preserved for consistency
+        return f"{match.group(1)} {match.group(2)} {match.group(3)}"
+    
+    # Also try without spaces for flexibility
+    pattern_no_space = r'\b(\d{4})(\d{2})(\d{5})\b'
+    match = re.search(pattern_no_space, account_name)
+    
+    if match:
+        return f"{match.group(1)} {match.group(2)} {match.group(3)}"
+    
+    return None
 
 
 class AccountManager:
@@ -62,6 +96,37 @@ class AccountManager:
         for account in accounts:
             if account.get('name') == name:
                 return account
+        return None
+    
+    def get_account_by_number(self, account_number: str) -> Optional[dict]:
+        """Get account by account number.
+        
+        Extracts account numbers from account names and matches them.
+        This allows matching accounts like "MAT 1722 20 34439" via just "1722 20 34439".
+        
+        Args:
+            account_number: Account number to search for (e.g., "1722 20 34439")
+            
+        Returns:
+            Account dict if found, None otherwise
+        """
+        if not account_number:
+            return None
+        
+        # Normalize the search number
+        normalized_search = account_number.replace(' ', '').strip()
+        
+        accounts = self.get_accounts()
+        for account in accounts:
+            account_name = account.get('name', '')
+            extracted_number = extract_account_number(account_name)
+            
+            if extracted_number:
+                # Compare without spaces for flexibility
+                normalized_extracted = extracted_number.replace(' ', '')
+                if normalized_extracted == normalized_search:
+                    return account
+        
         return None
     
     def create_account(self, name: str, source_file: str, balance: float = 0.0, person: str = None) -> dict:

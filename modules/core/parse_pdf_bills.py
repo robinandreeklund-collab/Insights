@@ -466,13 +466,17 @@ class PDFBillParser:
         count = 0
         
         for bill_data in bills:
+            # Get normalized account number
+            account = bill_data.get('account', None)
+            
             bill_manager.add_bill(
                 name=bill_data['name'],
                 amount=bill_data['amount'],
                 due_date=bill_data['due_date'],
                 description=bill_data.get('description', ''),
                 category=bill_data.get('category', 'Övrigt'),
-                account=bill_data.get('account', None)  # Include account if present
+                subcategory=bill_data.get('subcategory', ''),  # Include subcategory
+                account=account  # Account number will be normalized in bill_manager
             )
             count += 1
         

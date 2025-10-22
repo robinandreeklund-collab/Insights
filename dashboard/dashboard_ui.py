@@ -109,7 +109,55 @@ def create_overview_tab():
                         dcc.Graph(id='forecast-graph'),
                     ])
                 ])
-            ], width=12)
+            ], width=8),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Snabböversikt", className="card-title"),
+                        html.Div(id='quick-overview-display'),
+                    ])
+                ])
+            ], width=4)
+        ], className="mb-4"),
+        
+        # Saldo per konto
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Saldo per konto", className="card-title"),
+                        html.Div(id='account-balances-display'),
+                    ])
+                ])
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Kommande utgifter (30 dagar)", className="card-title"),
+                        html.Div(id='upcoming-expenses-display'),
+                    ])
+                ])
+            ], width=6)
+        ], className="mb-4"),
+        
+        # Inkomster per person
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Inkomster per person (denna månad)", className="card-title"),
+                        html.Div(id='income-by-person-display'),
+                    ])
+                ])
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Topputgifter (senaste 30 dagarna)", className="card-title"),
+                        html.Div(id='top-expenses-display'),
+                    ])
+                ])
+            ], width=6)
         ], className="mb-4"),
         
         # Category breakdown section
@@ -121,7 +169,15 @@ def create_overview_tab():
                         dcc.Graph(id='category-pie-chart'),
                     ])
                 ])
-            ], width=12)
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Varningar och insikter", className="card-title"),
+                        html.Div(id='alerts-insights-display'),
+                    ])
+                ])
+            ], width=6)
         ]),
         
         # Interval component for auto-refresh
@@ -345,7 +401,7 @@ def create_bills_tab():
                             dbc.Col([
                                 html.Label("Förfallodatum:", className="fw-bold"),
                                 dbc.Input(id='bill-due-date-input', type='date'),
-                            ], width=6),
+                            ], width=4),
                             dbc.Col([
                                 html.Label("Kategori:", className="fw-bold"),
                                 dcc.Dropdown(
@@ -353,13 +409,27 @@ def create_bills_tab():
                                     options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
                                     value='Övrigt'
                                 ),
-                            ], width=6),
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Underkategori:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='bill-subcategory-dropdown',
+                                    placeholder='Välj underkategori...'
+                                ),
+                            ], width=4),
                         ], className="mb-3"),
                         dbc.Row([
                             dbc.Col([
+                                html.Label("Konto:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='bill-account-dropdown',
+                                    placeholder='Välj konto (valfritt)...'
+                                ),
+                            ], width=6),
+                            dbc.Col([
                                 html.Label("Beskrivning:", className="fw-bold"),
-                                dbc.Textarea(id='bill-description-input', placeholder='Valfri beskrivning...'),
-                            ], width=12),
+                                dbc.Input(id='bill-description-input', type='text', placeholder='Valfri beskrivning...'),
+                            ], width=6),
                         ], className="mb-3"),
                         dbc.Row([
                             dbc.Col([
@@ -435,14 +505,92 @@ def create_bills_tab():
                             value='all',
                             className="mb-3"
                         ),
-                        html.Div(id='bills-table-container'),
+                        dash_table.DataTable(
+                            id='bills-table',
+                            columns=[
+                                {'name': 'ID', 'id': 'id'},
+                                {'name': 'Namn', 'id': 'name'},
+                                {'name': 'Belopp', 'id': 'amount'},
+                                {'name': 'Förfallodatum', 'id': 'due_date'},
+                                {'name': 'Status', 'id': 'status'},
+                                {'name': 'Kategori', 'id': 'category'},
+                                {'name': 'Konto', 'id': 'account'},
+                            ],
+                            data=[],
+                            style_cell={'textAlign': 'left', 'padding': '10px'},
+                            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+                            style_data_conditional=[
+                                {
+                                    'if': {'filter_query': '{status} = "overdue"'},
+                                    'backgroundColor': '#ffebee',
+                                    'color': '#c62828'
+                                },
+                                {
+                                    'if': {'filter_query': '{status} = "paid"'},
+                                    'backgroundColor': '#e8f5e9',
+                                    'color': '#2e7d32'
+                                }
+                            ],
+                            row_selectable='single',
+                            selected_rows=[]
+                        ),
                     ])
                 ])
             ], width=12)
         ]),
         
+        # Bill edit modal
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Redigera faktura")),
+            dbc.ModalBody([
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Namn:", className="fw-bold"),
+                        dbc.Input(id='edit-bill-name', type='text'),
+                    ], width=6),
+                    dbc.Col([
+                        html.Label("Belopp (SEK):", className="fw-bold"),
+                        dbc.Input(id='edit-bill-amount', type='number'),
+                    ], width=6),
+                ], className="mb-3"),
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Förfallodatum:", className="fw-bold"),
+                        dbc.Input(id='edit-bill-due-date', type='date'),
+                    ], width=4),
+                    dbc.Col([
+                        html.Label("Kategori:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='edit-bill-category',
+                            options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()]
+                        ),
+                    ], width=4),
+                    dbc.Col([
+                        html.Label("Underkategori:", className="fw-bold"),
+                        dcc.Dropdown(id='edit-bill-subcategory'),
+                    ], width=4),
+                ], className="mb-3"),
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Konto:", className="fw-bold"),
+                        dcc.Dropdown(id='edit-bill-account'),
+                    ], width=6),
+                    dbc.Col([
+                        html.Label("Beskrivning:", className="fw-bold"),
+                        dbc.Input(id='edit-bill-description', type='text'),
+                    ], width=6),
+                ], className="mb-3"),
+                html.Div(id='edit-bill-status', className="mt-2")
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Avbryt", id='edit-bill-cancel-btn', color="secondary"),
+                dbc.Button("Spara", id='edit-bill-save-btn', color="primary")
+            ])
+        ], id='edit-bill-modal', is_open=False),
+        
         # Store and interval for auto-refresh
         dcc.Store(id='selected-bill-id', data=None),
+        dcc.Store(id='edit-bill-id', data=None),
         dcc.Interval(id='bills-interval', interval=5000, n_intervals=0)
     ], className="p-3")
 
@@ -609,7 +757,7 @@ def create_history_tab():
                 dbc.Card([
                     dbc.CardBody([
                         html.H5("Största utgifter", className="card-title"),
-                        html.Div(id='top-expenses-display')
+                        html.Div(id='history-top-expenses-display')
                     ])
                 ])
             ], width=12)
@@ -726,6 +874,108 @@ def create_income_section():
             html.Div(id='income-add-status', className="mt-3")
         ])
     ])
+
+
+# Create monthly analysis tab content
+def create_monthly_analysis_tab():
+    """Create the Monthly Analysis tab with expense breakdown and transfer recommendations."""
+    return html.Div([
+        html.H3("Månadsanalys", className="mt-3 mb-4"),
+        
+        # Month/interval selector
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Välj period", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Startmånad:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='analysis-start-month',
+                                    placeholder="Välj startmånad...",
+                                    className="mb-2"
+                                )
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Slutmånad:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='analysis-end-month',
+                                    placeholder="Välj slutmånad...",
+                                    className="mb-2"
+                                )
+                            ], width=6),
+                        ]),
+                        dbc.Button("Analysera period", id='analyze-period-btn', color="primary", className="mt-2"),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Kommande fakturor denna månad
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Kommande fakturor denna månad", className="card-title"),
+                        html.Div(id='monthly-upcoming-bills-display'),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Inkomster per person och konto
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Inkomster per person och konto", className="card-title"),
+                        html.Div(id='monthly-income-breakdown-display'),
+                    ])
+                ])
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Utgiftssummering", className="card-title"),
+                        html.Div(id='monthly-expense-summary-display'),
+                    ])
+                ])
+            ], width=6)
+        ], className="mb-4"),
+        
+        # Transfer recommendations
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Förslag på överföringar till gemensamt konto", className="card-title"),
+                        html.P("Baserat på inkomster och gemensamma utgifter", className="text-muted mb-3"),
+                        
+                        # Options for calculation
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Gemensamma kategorier:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='shared-categories-selector',
+                                    options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
+                                    value=['Boende', 'Mat & Dryck'],
+                                    multi=True,
+                                    className="mb-3"
+                                )
+                            ], width=12),
+                        ]),
+                        
+                        dbc.Button("Beräkna överföringar", id='calculate-transfers-btn', color="success"),
+                        html.Div(id='transfer-recommendations-display', className="mt-3"),
+                    ])
+                ])
+            ], width=12)
+        ]),
+        
+        # Interval for auto-refresh
+        dcc.Interval(id='monthly-analysis-interval', interval=10000, n_intervals=0)
+    ], className="p-3")
 
 
 # Create settings tab content
@@ -916,6 +1166,13 @@ app.layout = dbc.Container([
             children=create_history_tab()
         ),
         
+        # Månadsanalys
+        dcc.Tab(
+            label="Månadsanalys",
+            value="monthly_analysis",
+            children=create_monthly_analysis_tab()
+        ),
+        
         # Lån
         dcc.Tab(
             label="Lån",
@@ -1079,6 +1336,143 @@ def update_overview(n):
     ])
     
     return balance_display, forecast_fig, pie_fig
+
+
+# Callback: Update Enhanced Overview Sections
+@app.callback(
+    [Output('quick-overview-display', 'children'),
+     Output('account-balances-display', 'children'),
+     Output('upcoming-expenses-display', 'children'),
+     Output('income-by-person-display', 'children'),
+     Output('top-expenses-display', 'children'),
+     Output('alerts-insights-display', 'children')],
+    Input('overview-interval', 'n_intervals')
+)
+def update_enhanced_overview(n):
+    """Update the enhanced overview sections with detailed information."""
+    from datetime import datetime, timedelta
+    
+    manager = AccountManager()
+    accounts = manager.get_accounts()
+    bill_manager = BillManager()
+    income_tracker = IncomeTracker()
+    
+    # 1. Quick Overview
+    total_balance = sum(acc.get('balance', 0) for acc in accounts)
+    num_accounts = len(accounts)
+    quick_overview = html.Div([
+        html.P([html.Strong("Totalt saldo: "), f"{total_balance:,.2f} SEK"], className="mb-2"),
+        html.P([html.Strong("Antal konton: "), str(num_accounts)], className="mb-2"),
+    ])
+    
+    # 2. Account Balances
+    if accounts:
+        account_rows = []
+        for acc in accounts:
+            person = acc.get('person', '')
+            person_text = f" ({person})" if person else ""
+            account_rows.append(
+                html.P([
+                    html.Strong(f"{acc['name']}{person_text}: "),
+                    f"{acc.get('balance', 0):,.2f} SEK"
+                ], className="mb-1")
+            )
+        account_balances = html.Div(account_rows)
+    else:
+        account_balances = html.P("Inga konton tillgängliga", className="text-muted")
+    
+    # 3. Upcoming Expenses (next 30 days from bills)
+    upcoming_bills = bill_manager.get_upcoming_bills(days=30)
+    if upcoming_bills:
+        total_upcoming = sum(b['amount'] for b in upcoming_bills)
+        upcoming_display = html.Div([
+            html.P([html.Strong("Totalt: "), f"{total_upcoming:,.2f} SEK"], className="mb-2 text-danger"),
+            html.Hr(),
+            html.Div([
+                html.P(f"{b['name']}: {b['amount']:,.2f} SEK ({b['due_date']})", className="mb-1 small")
+                for b in upcoming_bills[:5]  # Show first 5
+            ])
+        ])
+    else:
+        upcoming_display = html.P("Inga kommande fakturor", className="text-muted")
+    
+    # 4. Income by Person (this month)
+    current_month = datetime.now().strftime('%Y-%m')
+    income_by_person = income_tracker.get_income_by_person(
+        start_date=f"{current_month}-01",
+        end_date=f"{current_month}-31"
+    )
+    if income_by_person:
+        income_rows = []
+        for person, amount in income_by_person.items():
+            income_rows.append(
+                html.P([html.Strong(f"{person}: "), f"{amount:,.2f} SEK"], className="mb-1")
+            )
+        income_display = html.Div(income_rows)
+    else:
+        income_display = html.P("Inga registrerade inkomster denna månad", className="text-muted")
+    
+    # 5. Top Expenses (last 30 days)
+    transactions = manager.get_all_transactions()
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    recent_expenses = [
+        tx for tx in transactions 
+        if tx.get('amount', 0) < 0 and tx.get('date', '') >= thirty_days_ago
+    ]
+    recent_expenses.sort(key=lambda x: x.get('amount', 0))
+    
+    if recent_expenses:
+        top_5 = recent_expenses[:5]
+        expense_rows = []
+        for tx in top_5:
+            expense_rows.append(
+                html.P(
+                    f"{tx.get('description', 'N/A')}: {abs(tx.get('amount', 0)):,.2f} SEK",
+                    className="mb-1 small"
+                )
+            )
+        top_expenses_display = html.Div(expense_rows)
+    else:
+        top_expenses_display = html.P("Inga utgifter senaste 30 dagarna", className="text-muted")
+    
+    # 6. Alerts and Insights
+    alerts = []
+    
+    # Check for overdue bills
+    overdue_bills = bill_manager.get_bills(status='overdue')
+    if overdue_bills:
+        alerts.append(
+            dbc.Alert([
+                html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                f"{len(overdue_bills)} förfallna faktura(or)!"
+            ], color="danger", className="mb-2")
+        )
+    
+    # Check for low balance
+    if total_balance < 1000:
+        alerts.append(
+            dbc.Alert([
+                html.I(className="bi bi-exclamation-circle-fill me-2"),
+                "Lågt saldo!"
+            ], color="warning", className="mb-2")
+        )
+    
+    # Check for upcoming bills in next 7 days
+    upcoming_7_days = bill_manager.get_upcoming_bills(days=7)
+    if upcoming_7_days:
+        alerts.append(
+            dbc.Alert([
+                html.I(className="bi bi-info-circle-fill me-2"),
+                f"{len(upcoming_7_days)} faktura(or) förfaller inom 7 dagar"
+            ], color="info", className="mb-2")
+        )
+    
+    if not alerts:
+        alerts.append(html.P("Inga varningar för närvarande", className="text-muted"))
+    
+    alerts_display = html.Div(alerts)
+    
+    return quick_overview, account_balances, upcoming_display, income_display, top_expenses_display, alerts_display
 
 
 # Callback: Update Account Selector
@@ -1803,6 +2197,35 @@ def train_ai_from_table(n_clicks, table_data, selected_rows):
         return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000)
 
 
+# Callback: Update Bill Subcategory Options
+@app.callback(
+    Output('bill-subcategory-dropdown', 'options'),
+    Input('bill-category-dropdown', 'value')
+)
+def update_bill_subcategory_options(category):
+    """Update subcategory dropdown based on selected category."""
+    if not category:
+        return []
+    
+    subcategories = CATEGORIES.get(category, [])
+    return [{'label': sub, 'value': sub} for sub in subcategories]
+
+
+# Callback: Update Bill Account Dropdown
+@app.callback(
+    Output('bill-account-dropdown', 'options'),
+    Input('bills-interval', 'n_intervals')
+)
+def update_bill_account_dropdown(n):
+    """Update the bill account dropdown with available accounts."""
+    manager = AccountManager()
+    accounts = manager.get_accounts()
+    options = [{'label': 'Inget specifikt konto', 'value': ''}]
+    for acc in accounts:
+        options.append({'label': acc['name'], 'value': acc['name']})
+    return options
+
+
 # Callback: Add Bill
 @app.callback(
     Output('bill-add-status', 'children'),
@@ -1811,11 +2234,13 @@ def train_ai_from_table(n_clicks, table_data, selected_rows):
      State('bill-amount-input', 'value'),
      State('bill-due-date-input', 'value'),
      State('bill-category-dropdown', 'value'),
+     State('bill-subcategory-dropdown', 'value'),
+     State('bill-account-dropdown', 'value'),
      State('bill-description-input', 'value')],
     prevent_initial_call=True
 )
-def add_bill(n_clicks, name, amount, due_date, category, description):
-    """Add a new bill."""
+def add_bill(n_clicks, name, amount, due_date, category, subcategory, account, description):
+    """Add a new bill with subcategory and account support."""
     if not name or not amount or not due_date:
         return dbc.Alert("Fyll i namn, belopp och förfallodatum", color="warning")
     
@@ -1826,7 +2251,9 @@ def add_bill(n_clicks, name, amount, due_date, category, description):
             amount=float(amount),
             due_date=due_date,
             description=description or "",
-            category=category or "Övrigt"
+            category=category or "Övrigt",
+            subcategory=subcategory or "",
+            account=account or None
         )
         return dbc.Alert(f"✓ Faktura '{name}' tillagd!", color="success", dismissable=True)
     except Exception as e:
@@ -1999,7 +2426,7 @@ def update_account_summary(add_clicks, pdf_contents, match_clicks, n):
 
 # Callback: Update Bills Table
 @app.callback(
-    Output('bills-table-container', 'children'),
+    Output('bills-table', 'data'),
     [Input('bill-status-filter', 'value'),
      Input('bills-interval', 'n_intervals'),
      Input('add-bill-btn', 'n_clicks'),
@@ -2018,43 +2445,13 @@ def update_bills_table(status_filter, n, add_clicks, pdf_contents, match_clicks)
             bills = bill_manager.get_bills(status=status_filter)
         
         if not bills:
-            return html.P("Inga fakturor funna", className="text-muted")
+            return []
         
-        # Create table
-        df = pd.DataFrame(bills)
-        table = dash_table.DataTable(
-            id='bills-table',
-            columns=[
-                {'name': 'ID', 'id': 'id'},
-                {'name': 'Namn', 'id': 'name'},
-                {'name': 'Belopp', 'id': 'amount'},
-                {'name': 'Förfallodatum', 'id': 'due_date'},
-                {'name': 'Status', 'id': 'status'},
-                {'name': 'Kategori', 'id': 'category'},
-                {'name': 'Konto', 'id': 'account'},
-            ],
-            data=df.to_dict('records'),
-            style_cell={'textAlign': 'left', 'padding': '10px'},
-            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
-            style_data_conditional=[
-                {
-                    'if': {'filter_query': '{status} = "overdue"'},
-                    'backgroundColor': '#ffebee',
-                    'color': '#c62828'
-                },
-                {
-                    'if': {'filter_query': '{status} = "paid"'},
-                    'backgroundColor': '#e8f5e9',
-                    'color': '#2e7d32'
-                }
-            ],
-            row_selectable='single',
-            selected_rows=[]
-        )
-        
-        return table
+        # Return data as list of dicts
+        return bills
     except Exception as e:
-        return html.P(f"Fel vid laddning av fakturor: {str(e)}", className="text-danger")
+        print(f"Error loading bills: {str(e)}")
+        return []
 
 
 # Callback: Add Loan
@@ -2398,7 +2795,7 @@ def update_category_trend(category, n):
 
 # Callback: Top expenses display
 @app.callback(
-    Output('top-expenses-display', 'children'),
+    Output('history-top-expenses-display', 'children'),
     Input('history-month-selector', 'value'),
     Input('history-interval', 'n_intervals')
 )
@@ -2850,6 +3247,421 @@ def match_transaction_to_loan(n_clicks, selected_rows, table_data, loan_id, acco
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000)
 
+
+# Callback: Update Edit Bill Subcategory Options
+@app.callback(
+    Output('edit-bill-subcategory', 'options'),
+    Input('edit-bill-category', 'value')
+)
+def update_edit_bill_subcategory_options(category):
+    """Update edit bill subcategory dropdown based on selected category."""
+    if not category:
+        return []
+    
+    subcategories = CATEGORIES.get(category, [])
+    return [{'label': sub, 'value': sub} for sub in subcategories]
+
+
+# Callback: Update Edit Bill Account Options
+@app.callback(
+    Output('edit-bill-account', 'options'),
+    Input('bills-interval', 'n_intervals')
+)
+def update_edit_bill_account_options(n):
+    """Update the edit bill account dropdown with available accounts."""
+    manager = AccountManager()
+    accounts = manager.get_accounts()
+    options = [{'label': 'Inget specifikt konto', 'value': ''}]
+    for acc in accounts:
+        options.append({'label': acc['name'], 'value': acc['name']})
+    return options
+
+
+# Callback: Open Edit Bill Modal (from table click)
+@app.callback(
+    [Output('edit-bill-modal', 'is_open'),
+     Output('edit-bill-id', 'data'),
+     Output('edit-bill-name', 'value'),
+     Output('edit-bill-amount', 'value'),
+     Output('edit-bill-due-date', 'value'),
+     Output('edit-bill-category', 'value'),
+     Output('edit-bill-subcategory', 'value'),
+     Output('edit-bill-account', 'value'),
+     Output('edit-bill-description', 'value')],
+    [Input('bills-table', 'selected_rows'),
+     Input('edit-bill-cancel-btn', 'n_clicks'),
+     Input('edit-bill-save-btn', 'n_clicks')],
+    [State('bills-table', 'data'),
+     State('edit-bill-modal', 'is_open'),
+     State('edit-bill-id', 'data')]
+)
+def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, table_data, is_open, current_bill_id):
+    """Toggle edit bill modal and populate fields."""
+    ctx = callback_context
+    if not ctx.triggered:
+        return False, None, "", 0, "", "", "", "", ""
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if button_id == 'bills-table' and selected_rows and table_data:
+        # Load bill data
+        selected_bill = table_data[selected_rows[0]]
+        bill_id = selected_bill.get('id')
+        
+        bill_manager = BillManager()
+        bill = bill_manager.get_bill_by_id(bill_id)
+        
+        if bill:
+            return (True, bill_id, bill.get('name', ''), bill.get('amount', 0),
+                    bill.get('due_date', ''), bill.get('category', ''),
+                    bill.get('subcategory', ''), bill.get('account', ''),
+                    bill.get('description', ''))
+        
+        return True, bill_id, "", 0, "", "", "", "", ""
+    
+    elif button_id in ['edit-bill-cancel-btn', 'edit-bill-save-btn']:
+        return False, None, "", 0, "", "", "", "", ""
+    
+    return is_open, current_bill_id, "", 0, "", "", "", "", ""
+
+
+# Callback: Save Edited Bill
+@app.callback(
+    Output('edit-bill-status', 'children'),
+    Input('edit-bill-save-btn', 'n_clicks'),
+    [State('edit-bill-id', 'data'),
+     State('edit-bill-name', 'value'),
+     State('edit-bill-amount', 'value'),
+     State('edit-bill-due-date', 'value'),
+     State('edit-bill-category', 'value'),
+     State('edit-bill-subcategory', 'value'),
+     State('edit-bill-account', 'value'),
+     State('edit-bill-description', 'value')],
+    prevent_initial_call=True
+)
+def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcategory, account, description):
+    """Save changes to edited bill."""
+    if not n_clicks or not bill_id:
+        return ""
+    
+    try:
+        bill_manager = BillManager()
+        updates = {
+            'name': name,
+            'amount': float(amount) if amount else 0,
+            'due_date': due_date,
+            'category': category or 'Övrigt',
+            'subcategory': subcategory or '',
+            'account': account or None,
+            'description': description or ''
+        }
+        
+        success = bill_manager.update_bill(bill_id, updates)
+        
+        if success:
+            return dbc.Alert("✓ Faktura uppdaterad!", color="success", dismissable=True)
+        else:
+            return dbc.Alert("Kunde inte hitta fakturan", color="warning", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+# Callback: Update Monthly Analysis Month Dropdowns
+@app.callback(
+    [Output('analysis-start-month', 'options'),
+     Output('analysis-end-month', 'options')],
+    Input('monthly-analysis-interval', 'n_intervals')
+)
+def update_monthly_analysis_months(n):
+    """Update month dropdowns for monthly analysis."""
+    from modules.core.history_viewer import HistoryViewer
+    
+    try:
+        viewer = HistoryViewer()
+        months = viewer.get_all_months()
+        options = [{'label': month, 'value': month} for month in months]
+        return options, options
+    except:
+        # Fallback to current month if no data
+        from datetime import datetime
+        current_month = datetime.now().strftime('%Y-%m')
+        options = [{'label': current_month, 'value': current_month}]
+        return options, options
+
+
+# Callback: Update Monthly Upcoming Bills
+@app.callback(
+    Output('monthly-upcoming-bills-display', 'children'),
+    Input('analyze-period-btn', 'n_clicks'),
+    [State('analysis-start-month', 'value'),
+     State('analysis-end-month', 'value')],
+    prevent_initial_call=False
+)
+def update_monthly_upcoming_bills(n_clicks, start_month, end_month):
+    """Display upcoming bills for selected month."""
+    from datetime import datetime
+    
+    # Default to current month
+    if not start_month:
+        start_month = datetime.now().strftime('%Y-%m')
+    
+    bill_manager = BillManager()
+    all_bills = bill_manager.get_bills(status='pending')
+    
+    # Filter bills for the month
+    month_bills = [
+        b for b in all_bills 
+        if b.get('due_date', '').startswith(start_month)
+    ]
+    
+    if not month_bills:
+        return html.P("Inga kommande fakturor för denna månad", className="text-muted")
+    
+    total_amount = sum(b['amount'] for b in month_bills)
+    
+    bill_rows = []
+    for bill in sorted(month_bills, key=lambda x: x.get('due_date', '')):
+        bill_rows.append(
+            html.Tr([
+                html.Td(bill['name']),
+                html.Td(f"{bill['amount']:,.2f} SEK"),
+                html.Td(bill['due_date']),
+                html.Td(bill.get('category', 'N/A'))
+            ])
+        )
+    
+    return html.Div([
+        html.H6(f"Totalt: {total_amount:,.2f} SEK", className="mb-3 text-danger"),
+        dbc.Table([
+            html.Thead(html.Tr([
+                html.Th("Namn"),
+                html.Th("Belopp"),
+                html.Th("Förfallodatum"),
+                html.Th("Kategori")
+            ])),
+            html.Tbody(bill_rows)
+        ], bordered=True, hover=True, size='sm')
+    ])
+
+
+# Callback: Update Monthly Income Breakdown
+@app.callback(
+    Output('monthly-income-breakdown-display', 'children'),
+    Input('analyze-period-btn', 'n_clicks'),
+    [State('analysis-start-month', 'value'),
+     State('analysis-end-month', 'value')],
+    prevent_initial_call=False
+)
+def update_monthly_income_breakdown(n_clicks, start_month, end_month):
+    """Display income breakdown per person and account."""
+    from datetime import datetime
+    
+    # Default to current month
+    if not start_month:
+        start_month = datetime.now().strftime('%Y-%m')
+    
+    income_tracker = IncomeTracker()
+    incomes = income_tracker.get_incomes(
+        start_date=f"{start_month}-01",
+        end_date=f"{start_month}-31"
+    )
+    
+    if not incomes:
+        return html.P("Inga registrerade inkomster för denna period", className="text-muted")
+    
+    # Group by person and account
+    from collections import defaultdict
+    person_account_income = defaultdict(lambda: defaultdict(float))
+    
+    for inc in incomes:
+        person = inc.get('person', 'Okänd')
+        account = inc.get('account', 'Okänt konto')
+        amount = inc.get('amount', 0)
+        person_account_income[person][account] += amount
+    
+    # Build display
+    person_sections = []
+    for person, accounts in person_account_income.items():
+        total_person = sum(accounts.values())
+        account_rows = []
+        for account, amount in accounts.items():
+            account_rows.append(
+                html.P(f"  {account}: {amount:,.2f} SEK", className="mb-1 small")
+            )
+        
+        person_sections.append(html.Div([
+            html.H6(f"{person}: {total_person:,.2f} SEK", className="mb-2"),
+            html.Div(account_rows, className="ms-3 mb-3")
+        ]))
+    
+    return html.Div(person_sections)
+
+
+# Callback: Update Monthly Expense Summary
+@app.callback(
+    Output('monthly-expense-summary-display', 'children'),
+    Input('analyze-period-btn', 'n_clicks'),
+    [State('analysis-start-month', 'value'),
+     State('analysis-end-month', 'value')],
+    prevent_initial_call=False
+)
+def update_monthly_expense_summary(n_clicks, start_month, end_month):
+    """Display expense summary by category."""
+    from datetime import datetime
+    
+    # Default to current month
+    if not start_month:
+        start_month = datetime.now().strftime('%Y-%m')
+    
+    manager = AccountManager()
+    transactions = manager.get_all_transactions()
+    
+    # Filter expenses for the month
+    month_expenses = [
+        tx for tx in transactions
+        if tx.get('date', '').startswith(start_month) and tx.get('amount', 0) < 0
+    ]
+    
+    if not month_expenses:
+        return html.P("Inga utgifter för denna period", className="text-muted")
+    
+    # Group by category
+    from collections import defaultdict
+    category_totals = defaultdict(float)
+    
+    for tx in month_expenses:
+        category = tx.get('category', 'Okategoriserad')
+        amount = abs(tx.get('amount', 0))
+        category_totals[category] += amount
+    
+    total_expenses = sum(category_totals.values())
+    
+    # Sort by amount
+    sorted_categories = sorted(category_totals.items(), key=lambda x: x[1], reverse=True)
+    
+    category_rows = []
+    for category, amount in sorted_categories:
+        percent = (amount / total_expenses * 100) if total_expenses > 0 else 0
+        category_rows.append(
+            html.P(f"{category}: {amount:,.2f} SEK ({percent:.1f}%)", className="mb-1")
+        )
+    
+    return html.Div([
+        html.H6(f"Totalt: {total_expenses:,.2f} SEK", className="mb-3 text-danger"),
+        html.Hr(),
+        html.Div(category_rows)
+    ])
+
+
+# Callback: Calculate Transfer Recommendations
+@app.callback(
+    Output('transfer-recommendations-display', 'children'),
+    Input('calculate-transfers-btn', 'n_clicks'),
+    [State('analysis-start-month', 'value'),
+     State('shared-categories-selector', 'value')],
+    prevent_initial_call=True
+)
+def calculate_transfer_recommendations_callback(n_clicks, month, shared_categories):
+    """Calculate and display transfer recommendations."""
+    from datetime import datetime
+    from modules.core.net_balance_splitter import calculate_transfer_recommendations
+    
+    # Default to current month
+    if not month:
+        month = datetime.now().strftime('%Y-%m')
+    
+    if not shared_categories:
+        return dbc.Alert("Välj minst en gemensam kategori", color="warning")
+    
+    try:
+        # Get income by person and account
+        income_tracker = IncomeTracker()
+        incomes = income_tracker.get_incomes(
+            start_date=f"{month}-01",
+            end_date=f"{month}-31"
+        )
+        
+        from collections import defaultdict
+        income_by_person_account = defaultdict(lambda: defaultdict(float))
+        
+        for inc in incomes:
+            person = inc.get('person', 'Okänd')
+            account = inc.get('account', 'Okänt konto')
+            amount = inc.get('amount', 0)
+            income_by_person_account[person][account] += amount
+        
+        # Convert to regular dict
+        income_by_person_account = {
+            person: dict(accounts) 
+            for person, accounts in income_by_person_account.items()
+        }
+        
+        # Get expenses by category
+        manager = AccountManager()
+        transactions = manager.get_all_transactions()
+        
+        month_expenses = [
+            tx for tx in transactions
+            if tx.get('date', '').startswith(month) and tx.get('amount', 0) < 0
+        ]
+        
+        expenses_by_category = defaultdict(float)
+        for tx in month_expenses:
+            category = tx.get('category', 'Okategoriserad')
+            amount = abs(tx.get('amount', 0))
+            expenses_by_category[category] += amount
+        
+        expenses_by_category = dict(expenses_by_category)
+        
+        # Calculate recommendations
+        recommendations = calculate_transfer_recommendations(
+            income_by_person_account,
+            expenses_by_category,
+            shared_categories=shared_categories
+        )
+        
+        # Build display
+        total_shared = recommendations['total_shared_expenses']
+        persons = recommendations['persons']
+        
+        if not persons:
+            return dbc.Alert("Ingen inkomstdata tillgänglig för beräkning", color="warning")
+        
+        person_cards = []
+        for person, info in persons.items():
+            person_cards.append(
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5(person, className="card-title"),
+                        html.P([
+                            html.Strong("Total inkomst: "),
+                            f"{info['total_income']:,.2f} SEK"
+                        ], className="mb-2"),
+                        html.P([
+                            html.Strong("Andel av utgifter: "),
+                            f"{info['ratio']*100:.1f}%"
+                        ], className="mb-2"),
+                        html.Hr(),
+                        html.H6([
+                            html.Strong("Ska överföra: "),
+                            html.Span(f"{info['should_transfer']:,.2f} SEK", 
+                                     className="text-success")
+                        ], className="mb-0")
+                    ])
+                ], className="mb-3")
+            )
+        
+        return html.Div([
+            dbc.Alert([
+                html.H5("Sammanfattning", className="alert-heading"),
+                html.P(f"Totala gemensamma utgifter: {total_shared:,.2f} SEK"),
+                html.P(f"Baserat på {len(shared_categories)} gemensam{'ma' if len(shared_categories) > 1 else ''} kategori{'er' if len(shared_categories) > 1 else ''}: {', '.join(shared_categories)}")
+            ], color="info", className="mb-3"),
+            html.Div(person_cards)
+        ])
+    
+    except Exception as e:
+        return dbc.Alert(f"Fel vid beräkning: {str(e)}", color="danger")
 
 if __name__ == "__main__":
     # Register signal handler for Ctrl-C
