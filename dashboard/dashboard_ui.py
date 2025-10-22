@@ -109,7 +109,55 @@ def create_overview_tab():
                         dcc.Graph(id='forecast-graph'),
                     ])
                 ])
-            ], width=12)
+            ], width=8),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Snabböversikt", className="card-title"),
+                        html.Div(id='quick-overview-display'),
+                    ])
+                ])
+            ], width=4)
+        ], className="mb-4"),
+        
+        # Saldo per konto
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Saldo per konto", className="card-title"),
+                        html.Div(id='account-balances-display'),
+                    ])
+                ])
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Kommande utgifter (30 dagar)", className="card-title"),
+                        html.Div(id='upcoming-expenses-display'),
+                    ])
+                ])
+            ], width=6)
+        ], className="mb-4"),
+        
+        # Inkomster per person
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Inkomster per person (denna månad)", className="card-title"),
+                        html.Div(id='income-by-person-display'),
+                    ])
+                ])
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Topputgifter (senaste 30 dagarna)", className="card-title"),
+                        html.Div(id='top-expenses-display'),
+                    ])
+                ])
+            ], width=6)
         ], className="mb-4"),
         
         # Category breakdown section
@@ -121,7 +169,15 @@ def create_overview_tab():
                         dcc.Graph(id='category-pie-chart'),
                     ])
                 ])
-            ], width=12)
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Varningar och insikter", className="card-title"),
+                        html.Div(id='alerts-insights-display'),
+                    ])
+                ])
+            ], width=6)
         ]),
         
         # Interval component for auto-refresh
@@ -345,7 +401,7 @@ def create_bills_tab():
                             dbc.Col([
                                 html.Label("Förfallodatum:", className="fw-bold"),
                                 dbc.Input(id='bill-due-date-input', type='date'),
-                            ], width=6),
+                            ], width=4),
                             dbc.Col([
                                 html.Label("Kategori:", className="fw-bold"),
                                 dcc.Dropdown(
@@ -353,13 +409,27 @@ def create_bills_tab():
                                     options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
                                     value='Övrigt'
                                 ),
-                            ], width=6),
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Underkategori:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='bill-subcategory-dropdown',
+                                    placeholder='Välj underkategori...'
+                                ),
+                            ], width=4),
                         ], className="mb-3"),
                         dbc.Row([
                             dbc.Col([
+                                html.Label("Konto:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='bill-account-dropdown',
+                                    placeholder='Välj konto (valfritt)...'
+                                ),
+                            ], width=6),
+                            dbc.Col([
                                 html.Label("Beskrivning:", className="fw-bold"),
-                                dbc.Textarea(id='bill-description-input', placeholder='Valfri beskrivning...'),
-                            ], width=12),
+                                dbc.Input(id='bill-description-input', type='text', placeholder='Valfri beskrivning...'),
+                            ], width=6),
                         ], className="mb-3"),
                         dbc.Row([
                             dbc.Col([
@@ -441,8 +511,58 @@ def create_bills_tab():
             ], width=12)
         ]),
         
+        # Bill edit modal
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Redigera faktura")),
+            dbc.ModalBody([
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Namn:", className="fw-bold"),
+                        dbc.Input(id='edit-bill-name', type='text'),
+                    ], width=6),
+                    dbc.Col([
+                        html.Label("Belopp (SEK):", className="fw-bold"),
+                        dbc.Input(id='edit-bill-amount', type='number'),
+                    ], width=6),
+                ], className="mb-3"),
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Förfallodatum:", className="fw-bold"),
+                        dbc.Input(id='edit-bill-due-date', type='date'),
+                    ], width=4),
+                    dbc.Col([
+                        html.Label("Kategori:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='edit-bill-category',
+                            options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()]
+                        ),
+                    ], width=4),
+                    dbc.Col([
+                        html.Label("Underkategori:", className="fw-bold"),
+                        dcc.Dropdown(id='edit-bill-subcategory'),
+                    ], width=4),
+                ], className="mb-3"),
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Konto:", className="fw-bold"),
+                        dcc.Dropdown(id='edit-bill-account'),
+                    ], width=6),
+                    dbc.Col([
+                        html.Label("Beskrivning:", className="fw-bold"),
+                        dbc.Input(id='edit-bill-description', type='text'),
+                    ], width=6),
+                ], className="mb-3"),
+                html.Div(id='edit-bill-status', className="mt-2")
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Avbryt", id='edit-bill-cancel-btn', color="secondary"),
+                dbc.Button("Spara", id='edit-bill-save-btn', color="primary")
+            ])
+        ], id='edit-bill-modal', is_open=False),
+        
         # Store and interval for auto-refresh
         dcc.Store(id='selected-bill-id', data=None),
+        dcc.Store(id='edit-bill-id', data=None),
         dcc.Interval(id='bills-interval', interval=5000, n_intervals=0)
     ], className="p-3")
 
@@ -728,6 +848,108 @@ def create_income_section():
     ])
 
 
+# Create monthly analysis tab content
+def create_monthly_analysis_tab():
+    """Create the Monthly Analysis tab with expense breakdown and transfer recommendations."""
+    return html.Div([
+        html.H3("Månadsanalys", className="mt-3 mb-4"),
+        
+        # Month/interval selector
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Välj period", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Startmånad:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='analysis-start-month',
+                                    placeholder="Välj startmånad...",
+                                    className="mb-2"
+                                )
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Slutmånad:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='analysis-end-month',
+                                    placeholder="Välj slutmånad...",
+                                    className="mb-2"
+                                )
+                            ], width=6),
+                        ]),
+                        dbc.Button("Analysera period", id='analyze-period-btn', color="primary", className="mt-2"),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Kommande fakturor denna månad
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Kommande fakturor denna månad", className="card-title"),
+                        html.Div(id='monthly-upcoming-bills-display'),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Inkomster per person och konto
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Inkomster per person och konto", className="card-title"),
+                        html.Div(id='monthly-income-breakdown-display'),
+                    ])
+                ])
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Utgiftssummering", className="card-title"),
+                        html.Div(id='monthly-expense-summary-display'),
+                    ])
+                ])
+            ], width=6)
+        ], className="mb-4"),
+        
+        # Transfer recommendations
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Förslag på överföringar till gemensamt konto", className="card-title"),
+                        html.P("Baserat på inkomster och gemensamma utgifter", className="text-muted mb-3"),
+                        
+                        # Options for calculation
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Gemensamma kategorier:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='shared-categories-selector',
+                                    options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
+                                    value=['Boende', 'Mat & Dryck'],
+                                    multi=True,
+                                    className="mb-3"
+                                )
+                            ], width=12),
+                        ]),
+                        
+                        dbc.Button("Beräkna överföringar", id='calculate-transfers-btn', color="success"),
+                        html.Div(id='transfer-recommendations-display', className="mt-3"),
+                    ])
+                ])
+            ], width=12)
+        ]),
+        
+        # Interval for auto-refresh
+        dcc.Interval(id='monthly-analysis-interval', interval=10000, n_intervals=0)
+    ], className="p-3")
+
+
 # Create settings tab content
 def create_settings_tab():
     """Create the Settings tab with configuration options."""
@@ -914,6 +1136,13 @@ app.layout = dbc.Container([
             label="Historik",
             value="history",
             children=create_history_tab()
+        ),
+        
+        # Månadsanalys
+        dcc.Tab(
+            label="Månadsanalys",
+            value="monthly_analysis",
+            children=create_monthly_analysis_tab()
         ),
         
         # Lån

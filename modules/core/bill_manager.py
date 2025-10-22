@@ -2,8 +2,35 @@
 
 import os
 import yaml
+import re
 from datetime import datetime
 from typing import List, Dict, Optional
+
+
+def normalize_account_number(account: str) -> Optional[str]:
+    """Normalize account number from various formats.
+    
+    Extracts and normalizes patterns like "1722 20 34439" or "MAT 1722 20 34439".
+    
+    Args:
+        account: Account string (may be full name or just number)
+        
+    Returns:
+        Normalized account number with spaces, or original if no pattern found
+    """
+    if not account:
+        return None
+    
+    # Pattern: 4 digits, optional space, 2 digits, optional space, 5 digits
+    pattern = r'\b(\d{4})\s*(\d{2})\s*(\d{5})\b'
+    match = re.search(pattern, account)
+    
+    if match:
+        # Return normalized format with spaces
+        return f"{match.group(1)} {match.group(2)} {match.group(3)}"
+    
+    # If no pattern found, return the original (might be a non-standard account)
+    return account
 
 
 class BillManager:
@@ -35,7 +62,8 @@ class BillManager:
             yaml.dump({'bills': bills}, f, default_flow_style=False, allow_unicode=True)
     
     def add_bill(self, name: str, amount: float, due_date: str, 
-                 description: str = "", category: str = "Övrigt", account: str = None) -> Dict:
+                 description: str = "", category: str = "Övrigt", 
+                 subcategory: str = "", account: str = None) -> Dict:
         """Lägg till en ny faktura.
         
         Args:
@@ -44,6 +72,7 @@ class BillManager:
             due_date: Förfallodatum (YYYY-MM-DD)
             description: Beskrivning/detaljer
             category: Kategori för fakturan
+            subcategory: Underkategori för fakturan (valfritt)
             account: Kontonummer som fakturan ska belasta (valfritt)
             
         Returns:
@@ -54,6 +83,9 @@ class BillManager:
         # Generera ID baserat på antal fakturor
         bill_id = f"BILL-{len(bills) + 1:04d}"
         
+        # Normalize account number if provided
+        normalized_account = normalize_account_number(account) if account else None
+        
         bill = {
             'id': bill_id,
             'name': name,
@@ -61,7 +93,8 @@ class BillManager:
             'due_date': due_date,
             'description': description,
             'category': category,
-            'account': account,  # Added account field
+            'subcategory': subcategory,  # Added subcategory field
+            'account': normalized_account,  # Store normalized account number
             'status': 'pending',  # pending, paid, overdue
             'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'paid_at': None,
