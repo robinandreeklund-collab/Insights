@@ -4209,7 +4209,6 @@ def display_amex_bill_line_items(bill_id):
                 dash_table.DataTable(
                     id='amex-line-items-table',
                     columns=[
-                        {'name': '', 'id': 'select', 'presentation': 'markdown'},
                         {'name': 'Datum', 'id': 'date'},
                         {'name': 'Leverantör', 'id': 'vendor'},
                         {'name': 'Beskrivning', 'id': 'description'},
