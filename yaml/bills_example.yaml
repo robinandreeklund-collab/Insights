@@ -1,0 +1,66 @@
+# Exempel på fakturastruktur med nya fält
+
+# Faktura med subcategory och normaliserat kontonummer
+bills:
+  - id: BILL-0001
+    name: Elräkning December
+    amount: 850.0
+    due_date: '2025-12-31'
+    description: 'Elkostnad för december månad'
+    category: 'Boende'
+    subcategory: 'Elektricitet'  # Nytt fält
+    account: '1722 20 34439'      # Normaliserat kontonummer (utan prefix MAT)
+    status: 'pending'
+    created_at: '2025-10-22 14:30:00'
+    paid_at: null
+    matched_transaction_id: null
+    scheduled_payment_date: null
+
+  - id: BILL-0002
+    name: ICA Matinköp
+    amount: 450.0
+    due_date: '2025-10-28'
+    description: 'Extraherad från PDF'
+    category: 'Mat & Dryck'
+    subcategory: 'Matinköp'
+    account: '1709 20 72840'
+    status: 'pending'
+    created_at: '2025-10-22 14:30:00'
+    paid_at: null
+    matched_transaction_id: null
+    scheduled_payment_date: null
+
+  - id: BILL-0003
+    name: Netflix Subscription
+    amount: 119.0
+    due_date: '2025-11-01'
+    description: 'Månatlig prenumeration'
+    category: 'Nöje'
+    subcategory: 'Streaming'
+    account: '1722 20 34439'
+    status: 'pending'
+    created_at: '2025-10-22 14:30:00'
+    paid_at: null
+    matched_transaction_id: null
+    scheduled_payment_date: null
+
+  - id: BILL-0004
+    name: Telenor Mobilabonnemang
+    amount: 299.0
+    due_date: '2025-10-30'
+    description: 'Månatlig mobilkostnad'
+    category: 'Övrigt'
+    subcategory: 'Telefoni'
+    account: '1722 20 34439'
+    status: 'paid'
+    created_at: '2025-10-22 14:30:00'
+    paid_at: '2025-10-25 10:15:00'
+    matched_transaction_id: 'TX-2025-10-25-Telenor-299.0'
+    scheduled_payment_date: '2025-10-25'
+
+# Kontonummer-matchning:
+# - Fakturor skapade från PDF med kontonamn "MAT 1722 20 34439" 
+#   får normaliserat account = "1722 20 34439"
+# - Matchning sker via kontonummer, inte kontonamn
+# - account_manager.get_account_by_number("1722 20 34439") hittar kontot 
+#   även om det heter "MAT 1722 20 34439" i systemet

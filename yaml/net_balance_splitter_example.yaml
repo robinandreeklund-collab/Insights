@@ -1,0 +1,73 @@
+# Exempel på net_balance_splitter-beräkningar
+
+# Input-data för beräkning:
+income_by_person_and_account:
+  Robin:
+    '1722 20 34439': 30000.0
+  Partner:
+    '1709 20 72840': 20000.0
+
+expenses_by_category:
+  Boende: 8000.0           # Hyra, el, vatten, etc.
+  Mat & Dryck: 4000.0      # Matinköp och restaurang
+  Transport: 3000.0        # Bensin, parkering
+  Övrigt: 2000.0           # Diverse utgifter
+
+shared_categories:
+  - Boende
+  - Mat & Dryck
+
+# Output från calculate_transfer_recommendations():
+result:
+  total_shared_expenses: 12000.0  # 8000 + 4000
+  
+  persons:
+    Robin:
+      total_income: 30000.0
+      accounts:
+        '1722 20 34439': 30000.0
+      expense_share: 7200.0      # 60% av 12000
+      ratio: 0.6                 # 30000 / (30000 + 20000)
+      should_transfer: 7200.0
+    
+    Partner:
+      total_income: 20000.0
+      accounts:
+        '1709 20 72840': 20000.0
+      expense_share: 4800.0      # 40% av 12000
+      ratio: 0.4                 # 20000 / (30000 + 20000)
+      should_transfer: 4800.0
+  
+  summary: |
+    Totala gemensamma utgifter: 12,000.00 SEK
+    
+    Rekommenderade överföringar:
+      Robin: 7,200.00 SEK (60.0% av utgifter)
+      Partner: 4,800.00 SEK (40.0% av utgifter)
+
+# Med anpassade fördelningsandelar:
+custom_ratios:
+  Robin: 0.5    # 50%
+  Partner: 0.5  # 50%
+
+custom_result:
+  persons:
+    Robin:
+      should_transfer: 6000.0  # 50% av 12000
+    Partner:
+      should_transfer: 6000.0  # 50% av 12000
+
+# Användning i koden:
+# from modules.core.net_balance_splitter import calculate_transfer_recommendations
+# 
+# recommendations = calculate_transfer_recommendations(
+#     income_by_person_and_account={
+#         'Robin': {'1722 20 34439': 30000.0},
+#         'Partner': {'1709 20 72840': 20000.0}
+#     },
+#     expenses_by_category={
+#         'Boende': 8000.0,
+#         'Mat & Dryck': 4000.0
+#     },
+#     shared_categories=['Boende', 'Mat & Dryck']
+# )
