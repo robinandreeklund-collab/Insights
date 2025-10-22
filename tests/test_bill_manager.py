@@ -42,7 +42,7 @@ class TestBillManager:
         assert bill['name'] == "Elräkning December"
         assert bill['amount'] == 850.0
         assert bill['due_date'] == due_date
-        assert bill['status'] == 'pending'
+        assert bill['status'] == 'scheduled'  # Changed from 'pending' to 'scheduled'
         assert bill['id'].startswith('BILL-')
     
     def test_get_bills(self):
@@ -63,10 +63,10 @@ class TestBillManager:
         # Mark one as paid
         self.bill_manager.mark_as_paid(bill1['id'])
         
-        pending_bills = self.bill_manager.get_bills(status='pending')
+        scheduled_bills = self.bill_manager.get_bills(status='scheduled')  # Changed from 'pending'
         paid_bills = self.bill_manager.get_bills(status='paid')
         
-        assert len(pending_bills) == 1
+        assert len(scheduled_bills) == 1
         assert len(paid_bills) == 1
     
     def test_get_bill_by_id(self):
