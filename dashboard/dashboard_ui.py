@@ -2577,8 +2577,21 @@ def update_bills_table(status_filter, n, add_clicks, pdf_contents, match_clicks)
         if not bills:
             return []
         
-        # Return data as list of dicts
-        return bills
+        # Filter out nested fields that DataTable can't handle
+        # Only include the columns that are defined in the table
+        table_data = []
+        for bill in bills:
+            table_data.append({
+                'id': bill.get('id', ''),
+                'name': bill.get('name', ''),
+                'amount': bill.get('amount', 0),
+                'due_date': bill.get('due_date', ''),
+                'status': bill.get('status', ''),
+                'category': bill.get('category', ''),
+                'account': bill.get('account', '')
+            })
+        
+        return table_data
     except Exception as e:
         print(f"Error loading bills: {str(e)}")
         return []
