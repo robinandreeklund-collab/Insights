@@ -71,7 +71,8 @@ class TestAmexWorkflowIntegration:
         preview = parser.create_linkage_preview(line_items, metadata, matched_bill)
         
         assert preview['line_items_count'] == 5
-        assert preview['total_amount'] == 5234.50
+        assert preview['purchases_total'] == 5234.50
+        assert preview['net_balance'] == 5234.50  # No payments in this CSV
         assert preview['matched_bill'] is not None
         assert preview['match_confidence'] > 0.9  # High confidence match
         assert preview['will_create_new_bill'] is False

@@ -83,6 +83,7 @@ class AmexParser:
         
         # Parse line items
         line_items = []
+        all_transaction_amounts = []  # Track ALL amounts including payments for net balance
         
         for idx, row in df.iterrows():
             # Extract date (handle various formats)
@@ -110,26 +111,36 @@ class AmexParser:
             amount_col = column_map.get('amount', 'amount')
             amount_str = str(row.get(amount_col, '0'))
             
-            # Skip payment/credit transactions (negative amounts in Amex statements)
-            # These are typically "BETALNING MOTTAGEN" or "PAYMENT RECEIVED"
+            # Check if negative (payment/credit)
             is_negative = amount_str.strip().startswith('-')
+            
+            # Parse amount for net balance calculation
+            amount_str_clean = amount_str
+            if ',' in amount_str_clean and ('.' not in amount_str_clean or amount_str_clean.rindex(',') > amount_str_clean.rindex('.')):
+                amount_str_clean = amount_str_clean.replace(' ', '').replace(',', '.')
+            else:
+                amount_str_clean = amount_str_clean.replace(',', '')
+            amount_str_clean = amount_str_clean.replace('$', '').strip()
+            
+            try:
+                parsed_amount = float(amount_str_clean)
+                all_transaction_amounts.append(parsed_amount)  # Keep with sign for net balance
+            except ValueError:
+                pass
+            
+            # Skip payment/credit transactions for line items
             if is_negative:
-                continue  # Skip credits/payments
+                continue  # Skip credits/payments from line items
             
             vendor = self._extract_vendor_from_description(description)
             
-            # Parse amount
-            # Remove currency symbols, commas, and handle Swedish thousand separators
-            # Swedish format uses comma as decimal separator and space/period as thousand separator
-            # First, check if it looks like Swedish format (has comma but no period, or has both with comma last)
+            # Parse positive amount for line item
+            amount_str = amount_str.replace(' ', '').replace('$', '').replace('-', '').strip()
             if ',' in amount_str and ('.' not in amount_str or amount_str.rindex(',') > amount_str.rindex('.')):
-                # Swedish format: replace space and convert comma to period
-                amount_str = amount_str.replace(' ', '').replace(',', '.')
+                amount_str = amount_str.replace(',', '.')
             else:
-                # English format: just remove commas
                 amount_str = amount_str.replace(',', '')
             
-            amount_str = amount_str.replace('$', '').replace('-', '').strip()
             try:
                 amount = abs(float(amount_str))
             except ValueError:
@@ -150,11 +161,14 @@ class AmexParser:
             line_items.append(line_item)
         
         # Calculate metadata
-        total_amount = sum(item['amount'] for item in line_items)
+        # Net balance is sum of ALL transactions (purchases minus payments)
+        net_balance = sum(all_transaction_amounts)
+        purchases_total = sum(item['amount'] for item in line_items)
         dates = [item['date'] for item in line_items if item['date']]
         
         metadata = {
-            'total_amount': total_amount,
+            'total_amount': net_balance,  # Use net balance (purchases - payments)
+            'purchases_total': purchases_total,  # Total of purchases only
             'count': len(line_items),
             'earliest_date': min(dates) if dates else None,
             'latest_date': max(dates) if dates else None,
@@ -251,7 +265,9 @@ class AmexParser:
         bills = self.bill_manager.get_bills(status='pending')
         amex_bills = [b for b in bills if b.get('is_amex_bill', False)]
         
-        total_amount = metadata.get('total_amount', 0)
+        # Use purchases_total for matching (since bills are typically for purchases amount)
+        # Not net balance (purchases - payments)
+        purchases_amount = metadata.get('purchases_total', metadata.get('total_amount', 0))
         latest_date = metadata.get('latest_date', '')
         
         if not latest_date:
@@ -267,7 +283,7 @@ class AmexParser:
             # Check amount match
             bill_amount = bill.get('amount', 0)
             if bill_amount > 0:
-                amount_diff = abs(bill_amount - total_amount) / bill_amount
+                amount_diff = abs(bill_amount - purchases_amount) / bill_amount
                 if amount_diff <= amount_tolerance:
                     # Higher score for closer match
                     score += (1.0 - amount_diff) * 0.6
@@ -312,7 +328,8 @@ class AmexParser:
         """
         preview = {
             'line_items_count': metadata.get('count', 0),
-            'total_amount': metadata.get('total_amount', 0),
+            'purchases_total': metadata.get('purchases_total', 0),
+            'net_balance': metadata.get('total_amount', 0),
             'date_range': f"{metadata.get('earliest_date', '')} to {metadata.get('latest_date', '')}",
             'csv_filename': metadata.get('csv_filename', ''),
             'matched_bill': None,
@@ -330,11 +347,11 @@ class AmexParser:
                 'account': matched_bill.get('account')
             }
             
-            # Calculate match confidence
+            # Calculate match confidence based on purchases_total
             bill_amount = matched_bill.get('amount', 0)
-            csv_total = metadata.get('total_amount', 0)
+            purchases_total = metadata.get('purchases_total', 0)
             if bill_amount > 0:
-                amount_diff = abs(bill_amount - csv_total) / bill_amount
+                amount_diff = abs(bill_amount - purchases_total) / bill_amount
                 preview['match_confidence'] = max(0, 1.0 - amount_diff)
         
         return preview

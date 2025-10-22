@@ -92,7 +92,8 @@ class TestAmexParser:
         
         # Check metadata
         assert metadata['count'] == 5
-        assert metadata['total_amount'] == 5234.50
+        assert metadata['purchases_total'] == 5234.50  # Sum of purchases only
+        assert metadata['total_amount'] == 5234.50  # Net balance (no payments in this CSV)
         assert metadata['earliest_date'] == '2025-10-05'
         assert metadata['latest_date'] == '2025-10-18'
     
@@ -177,7 +178,8 @@ class TestAmexParser:
         preview = parser.create_linkage_preview(line_items, metadata, bill)
         
         assert preview['line_items_count'] == 5
-        assert preview['total_amount'] == 5234.50
+        assert preview['purchases_total'] == 5234.50
+        assert preview['net_balance'] == 5234.50
         assert preview['matched_bill'] is not None
         assert preview['matched_bill']['id'] == bill['id']
         assert preview['will_create_new_bill'] is False
@@ -192,7 +194,8 @@ class TestAmexParser:
         preview = parser.create_linkage_preview(line_items, metadata, None)
         
         assert preview['line_items_count'] == 5
-        assert preview['total_amount'] == 5234.50
+        assert preview['purchases_total'] == 5234.50
+        assert preview['net_balance'] == 5234.50
         assert preview['matched_bill'] is None
         assert preview['will_create_new_bill'] is True
         assert preview['match_confidence'] == 0.0

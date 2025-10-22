@@ -3867,7 +3867,10 @@ def handle_amex_csv_upload(contents, filename):
                 html.Strong("Antal raduppgifter: "), str(preview['line_items_count'])
             ]))
             preview_content.append(html.P([
-                html.Strong("Totalt belopp: "), f"{preview['total_amount']:,.2f} SEK"
+                html.Strong("Inköp totalt: "), f"{preview['purchases_total']:,.2f} SEK"
+            ]))
+            preview_content.append(html.P([
+                html.Strong("Nettosaldo (inköp - betalningar): "), f"{preview['net_balance']:,.2f} SEK"
             ]))
             preview_content.append(html.P([
                 html.Strong("Datumintervall: "), preview['date_range']
@@ -3879,7 +3882,8 @@ def handle_amex_csv_upload(contents, filename):
                     html.H6("Matchad faktura hittad!", className="alert-heading"),
                     html.P([
                         html.Strong("Faktura: "), matched_bill['name'], html.Br(),
-                        html.Strong("Belopp: "), f"{matched_bill['amount']:,.2f} SEK", html.Br(),
+                        html.Strong("Fakturabelopp: "), f"{matched_bill['amount']:,.2f} SEK", html.Br(),
+                        html.Strong("CSV inköp: "), f"{preview['purchases_total']:,.2f} SEK", html.Br(),
                         html.Strong("Förfallodatum: "), matched_bill['due_date'], html.Br(),
                         html.Strong("Matchningsgrad: "), f"{preview['match_confidence']*100:.0f}%"
                     ])
