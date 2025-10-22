@@ -1,97 +1,181 @@
 bills:
-- account: 3570 12 34567
-  amount: 1245.5
-  category: Boende
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 12 34567)'
-  due_date: '2025-11-15'
+- account: MAT 1722 20 34439
+  amount: 20034.26
+  category: Övrigt
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-27'
   id: BILL-0001
   matched_transaction_id: null
-  name: Elräkning Vattenfall
+  name: American Express Europé S.A.
   paid_at: null
   scheduled_payment_date: null
   status: pending
-- account: 3570 12 34567
-  amount: 399.0
+- account: MAT 1722 20 34439
+  amount: 2333.0
   category: Boende
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 12 34567)'
-  due_date: '2025-11-20'
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-28'
   id: BILL-0002
   matched_transaction_id: null
-  name: Telenor Mobilabonnemang
+  name: Telenor
   paid_at: null
   scheduled_payment_date: null
   status: pending
-- account: 3570 12 34567
-  amount: 449.0
+- account: MAT 1722 20 34439
+  amount: 144.0
   category: Boende
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 12 34567)'
-  due_date: '2025-11-25'
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-30'
   id: BILL-0003
   matched_transaction_id: null
-  name: Telia Internet
+  name: If Skadeförsäkring AB
   paid_at: null
   scheduled_payment_date: null
   status: pending
-- account: 3570 98 76543
-  amount: 8500.0
+- account: MAT 1722 20 34439
+  amount: 849.0
   category: Boende
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 98 76543)'
-  due_date: '2025-11-01'
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-30'
   id: BILL-0004
   matched_transaction_id: null
-  name: Hyresavi November
+  name: If Skadeförsäkring AB
   paid_at: null
   scheduled_payment_date: null
   status: pending
-- account: 3570 98 76543
-  amount: 2150.0
+- account: MAT 1722 20 34439
+  amount: 2477.0
   category: Boende
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 98 76543)'
-  due_date: '2025-11-10'
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-31'
   id: BILL-0005
   matched_transaction_id: null
-  name: Försäkring Länsförsäkringar
+  name: Hjo Energi AB
   paid_at: null
   scheduled_payment_date: null
   status: pending
-- account: 3570 55 55555
-  amount: 119.0
-  category: Nöje
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 55 55555)'
-  due_date: '2025-11-05'
+- account: MAT 1722 20 34439
+  amount: 2929.0
+  category: Transport
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-31'
   id: BILL-0006
   matched_transaction_id: null
-  name: Netflix Abonnemang
+  name: VOLKSWAGEN FINANS SVERIGE AB
   paid_at: null
   scheduled_payment_date: null
   status: pending
-- account: 3570 55 55555
-  amount: 179.0
+- account: MAT 1722 20 34439
+  amount: 808.0
   category: Boende
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 55 55555)'
-  due_date: '2025-11-08'
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-11-03'
   id: BILL-0007
   matched_transaction_id: null
-  name: Spotify Premium Family
+  name: Fortum Markets AB
   paid_at: null
   scheduled_payment_date: null
   status: pending
-- account: 3570 55 55555
-  amount: 99.0
-  category: Nöje
-  created_at: '2025-10-22 12:55:49'
-  description: 'Extraherad från PDF (Konto: 3570 55 55555)'
-  due_date: '2025-11-12'
+- account: MAT 1722 20 34439
+  amount: 322.0
+  category: Boende
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-11-03'
   id: BILL-0008
   matched_transaction_id: null
-  name: HBO Max
+  name: If Skadeförsäkring AB
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
+- account: MAT 1722 20 34439
+  amount: 166.0
+  category: Boende
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-11-03'
+  id: BILL-0009
+  matched_transaction_id: null
+  name: If Skadeförsäkring AB
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
+- account: MAT 1722 20 34439
+  amount: 335.0
+  category: Boende
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-11-03'
+  id: BILL-0010
+  matched_transaction_id: null
+  name: If Skadeförsäkring AB
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
+- account: MAT 1722 20 34439
+  amount: 290.0
+  category: Boende
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-11-03'
+  id: BILL-0011
+  matched_transaction_id: null
+  name: If Skadeförsäkring AB
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
+- account: MAT 1722 20 34439
+  amount: 1841.0
+  category: Övrigt
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-27'
+  id: BILL-0012
+  matched_transaction_id: null
+  name: Nordea-betalning
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
+- account: MAT 1722 20 34439
+  amount: 1078.0
+  category: Övrigt
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-27'
+  id: BILL-0013
+  matched_transaction_id: null
+  name: Nordea-betalning
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
+- account: MAT 1722 20 34439
+  amount: 1780.0
+  category: Övrigt
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MAT 1722 20 34439)'
+  due_date: '2025-10-27'
+  id: BILL-0014
+  matched_transaction_id: null
+  name: Nordea-betalning
+  paid_at: null
+  scheduled_payment_date: null
+  status: pending
+- account: MITT 1709 20 72840
+  amount: 149.0
+  category: Övrigt
+  created_at: '2025-10-22 13:24:37'
+  description: 'Extraherad från PDF (Konto: MITT 1709 20 72840)'
+  due_date: '2025-10-31'
+  id: BILL-0015
+  matched_transaction_id: null
+  name: A-kassan Vision
   paid_at: null
   scheduled_payment_date: null
   status: pending
