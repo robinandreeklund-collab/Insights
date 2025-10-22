@@ -1174,7 +1174,7 @@ def save_edited_account(n_clicks, old_name, new_name, person):
     if account and account.get('person', '') != (person or ''):
         result = manager.update_account(old_name, person=person or '')
         if result:
-            messages.append(f"Person uppdaterad till '{person or '(ingen)'}'")
+            messages.append(f"Person uppdaterad till: {person if person else '(ingen angiven)'}")
             changed = True
     
     if changed:
