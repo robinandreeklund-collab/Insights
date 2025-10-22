@@ -1526,54 +1526,116 @@ def add_new_subcategory(n_clicks, subcategory_name, category_name):
     prevent_initial_call=True
 )
 def save_manual_categorization(n_clicks, selected_rows, table_data, category, subcategory, account_name, current_trigger):
-    """Save manual categorization for selected transaction."""
-    if not selected_rows or not table_data or not category or not subcategory:
+    """Save manual categorization for selected transaction - REFACTORED for reliability."""
+    if not selected_rows or not table_data or not category:
         return "", current_trigger
     
     try:
         selected_tx = table_data[selected_rows[0]]
         
-        # Load all transactions
+        # Create AccountManager instance
         manager = AccountManager()
-        data = manager._load_yaml(manager.transactions_file)
-        transactions = data.get('transactions', [])
         
-        # Convert amount to float for reliable comparison
-        selected_amount = float(selected_tx.get('amount', 0))
+        # Load transactions directly from file for most up-to-date data
+        data = manager._load_yaml(manager.transactions_file)
+        if not data or 'transactions' not in data:
+            return dbc.Alert("⚠️ Kunde inte ladda transaktionsdata", color="danger", dismissable=True, duration=4000), current_trigger
+        
+        transactions = data['transactions']
+        
+        # Create a unique key for the selected transaction
+        # Use date + description as base, and amount as discriminator
+        selected_date = str(selected_tx.get('date', '')).strip()
+        selected_desc = str(selected_tx.get('description', '')).strip()
+        try:
+            selected_amount = float(selected_tx.get('amount', 0))
+        except (ValueError, TypeError):
+            selected_amount = 0.0
+        
+        # Debug logging
+        print(f"\n=== CATEGORIZATION SAVE DEBUG ===")
+        print(f"Looking for transaction:")
+        print(f"  Date: '{selected_date}'")
+        print(f"  Description: '{selected_desc}'")
+        print(f"  Amount: {selected_amount}")
+        print(f"  Category: {category}")
+        print(f"  Subcategory: {subcategory or '(ingen)'}")
         
         # Find and update the transaction
-        # Match on date, description, and amount (more reliable than account name)
         transaction_found = False
+        updated_count = 0
+        
         for tx in transactions:
-            # Convert tx amount to float as well for comparison
-            tx_amount = float(tx.get('amount', 0))
+            tx_date = str(tx.get('date', '')).strip()
+            tx_desc = str(tx.get('description', '')).strip()
+            try:
+                tx_amount = float(tx.get('amount', 0))
+            except (ValueError, TypeError):
+                tx_amount = 0.0
             
-            if (str(tx.get('date')) == str(selected_tx['date']) and 
-                str(tx.get('description')) == str(selected_tx['description']) and
-                abs(tx_amount - selected_amount) < 0.01):  # Use tolerance for float comparison
+            # Match criteria: exact date and description, and amount within tolerance
+            date_match = (tx_date == selected_date)
+            desc_match = (tx_desc == selected_desc)
+            amount_match = abs(tx_amount - selected_amount) < 0.01
+            
+            if date_match and desc_match and amount_match:
+                print(f"  ✓ Found matching transaction in YAML")
+                print(f"    Old category: {tx.get('category', 'N/A')}")
+                print(f"    Old subcategory: {tx.get('subcategory', 'N/A')}")
+                
+                # Update categorization
                 tx['category'] = category
-                tx['subcategory'] = subcategory
+                tx['subcategory'] = subcategory if subcategory else ""
                 tx['categorized_manually'] = True
+                
+                print(f"    New category: {tx['category']}")
+                print(f"    New subcategory: {tx['subcategory']}")
+                
                 transaction_found = True
-                break
+                updated_count += 1
         
         if not transaction_found:
+            print(f"  ✗ NO MATCH FOUND in {len(transactions)} transactions")
+            print(f"\nFirst 3 transactions in YAML:")
+            for i, tx in enumerate(transactions[:3]):
+                print(f"  [{i}] Date: '{tx.get('date')}', Desc: '{tx.get('description')}', Amount: {tx.get('amount')}")
+            
             return dbc.Alert(
-                f"⚠️ Kunde inte hitta transaktion att uppdatera. Försök igen.", 
-                color="warning", 
+                f"⚠️ Kunde inte hitta transaktion: '{selected_desc}' ({selected_date}, {selected_amount} SEK)", 
+                color="danger", 
                 dismissable=True, 
-                duration=4000
+                duration=5000
             ), current_trigger
         
-        # Update data with modified transactions
+        # Save the modified transactions back to file
         data['transactions'] = transactions
-        
-        # Save updated transactions
         manager.save_transactions(data)
         
-        return dbc.Alert("✓ Kategorisering sparad!", color="success", dismissable=True, duration=3000), (current_trigger or 0) + 1
+        print(f"  ✓ Saved {updated_count} transaction(s) to YAML file")
+        print(f"=== END DEBUG ===\n")
+        
+        # Trigger table refresh by incrementing trigger
+        new_trigger = (current_trigger or 0) + 1
+        
+        return dbc.Alert(
+            f"✓ Kategorisering sparad! ({category} → {subcategory or 'Ingen underkategori'})", 
+            color="success", 
+            dismissable=True, 
+            duration=3000
+        ), new_trigger
+        
     except Exception as e:
-        return dbc.Alert(f"Fel vid sparande: {str(e)}", color="danger", dismissable=True, duration=3000), current_trigger
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"\n=== ERROR IN CATEGORIZATION SAVE ===")
+        print(error_trace)
+        print(f"=== END ERROR ===\n")
+        return dbc.Alert(
+            f"⚠️ Fel vid sparande: {str(e)}", 
+            color="danger", 
+            dismissable=True, 
+            duration=5000
+        ), current_trigger
 
 
 # Callback: Train AI from table
