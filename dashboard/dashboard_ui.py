@@ -729,7 +729,7 @@ def create_history_tab():
                 dbc.Card([
                     dbc.CardBody([
                         html.H5("Största utgifter", className="card-title"),
-                        html.Div(id='top-expenses-display')
+                        html.Div(id='history-top-expenses-display')
                     ])
                 ])
             ], width=12)
@@ -2797,7 +2797,7 @@ def update_category_trend(category, n):
 
 # Callback: Top expenses display
 @app.callback(
-    Output('top-expenses-display', 'children'),
+    Output('history-top-expenses-display', 'children'),
     Input('history-month-selector', 'value'),
     Input('history-interval', 'n_intervals')
 )
