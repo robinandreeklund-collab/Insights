@@ -13,6 +13,7 @@ def extract_account_name_from_filename(filename: str) -> Optional[str]:
     
     Examples:
         "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv" -> "PERSONKONTO 880104-7591"
+        "PERSONKONTO 1709 20 72840 - 2025-10-21 09.39.41.csv" -> "PERSONKONTO 1709 20 72840"
         "path/to/PERSONKONTO 880104-7591.csv" -> "PERSONKONTO 880104-7591"
     
     Args:
@@ -25,11 +26,11 @@ def extract_account_name_from_filename(filename: str) -> Optional[str]:
     # Remove file extension
     name_without_ext = os.path.splitext(basename)[0]
     
-    # Try to extract account name pattern (e.g., "PERSONKONTO 880104-7591")
-    # Match "PERSONKONTO" followed by space and account number
-    match = re.match(r'(PERSONKONTO\s+[\d-]+)', name_without_ext)
+    # Try to extract account name pattern (e.g., "PERSONKONTO 880104-7591" or "PERSONKONTO 1709 20 72840")
+    # Match "PERSONKONTO" followed by space and account number (digits, spaces, and hyphens)
+    match = re.match(r'(PERSONKONTO\s+[\d\s-]+?)(?:\s*-\s*\d{4}-\d{2}-\d{2}|$)', name_without_ext)
     if match:
-        return match.group(1)
+        return match.group(1).strip()
     
     # If no match, return the filename without timestamp and extension
     # Remove timestamp pattern like " - 2025-10-21 15.38.56"
