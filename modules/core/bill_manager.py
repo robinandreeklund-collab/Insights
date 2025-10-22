@@ -64,8 +64,7 @@ class BillManager:
     def add_bill(self, name: str, amount: float, due_date: str, 
                  description: str = "", category: str = "Övrigt", 
                  subcategory: str = "", account: str = None,
-                 is_bill: bool = True, source: str = None,
-                 is_amex_bill: bool = False) -> Dict:
+                 is_bill: bool = True, source: str = None) -> Dict:
         """Lägg till en ny faktura.
         
         Args:
@@ -78,7 +77,6 @@ class BillManager:
             account: Kontonummer som fakturan ska belasta (valfritt)
             is_bill: True for bill entries (default), False for other scheduled items
             source: Source of the bill (e.g., 'PDF', 'manual', filename)
-            is_amex_bill: True if this is an Amex bill that will have line items
             
         Returns:
             Den nya fakturan som dict
@@ -111,9 +109,7 @@ class BillManager:
             'matched_transaction_id': None,
             'matched_to_bill_id': None,  # For reverse matching
             'scheduled_payment_date': None,
-            'imported_historical': False,  # Bills are future items
-            'is_amex_bill': is_amex_bill,  # Flag for Amex bills
-            'line_items': []  # Initialize empty line items array
+            'imported_historical': False  # Bills are future items
         }
         
         bills.append(bill)
