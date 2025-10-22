@@ -1,0 +1,30 @@
+general:
+  currency: SEK
+  date_format: YYYY-MM-DD
+  decimal_places: 2
+  theme: light
+forecast:
+  default_days: 30
+  include_bills: true
+  include_income: true
+  confidence_threshold: 0.7
+categorization:
+  auto_categorize: true
+  ai_enabled: true
+  min_confidence: 0.6
+  manual_review_threshold: 0.5
+notifications:
+  bill_reminders: true
+  reminder_days_before: 3
+  low_balance_alert: true
+  low_balance_threshold: 1000.0
+display:
+  items_per_page: 50
+  auto_refresh: true
+  refresh_interval: 5000
+  show_pie_chart: true
+  show_forecast_graph: true
+budget:
+  enabled: false
+  monthly_limit: 0.0
+  category_limits: {}
