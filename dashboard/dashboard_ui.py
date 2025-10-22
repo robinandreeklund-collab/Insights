@@ -1494,6 +1494,7 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
         transactions = data.get('transactions', [])
         
         # Find and update the transaction
+        transaction_found = False
         for tx in transactions:
             if (tx.get('date') == selected_tx['date'] and 
                 tx.get('description') == selected_tx['description'] and
@@ -1501,7 +1502,19 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
                 tx['category'] = category
                 tx['subcategory'] = subcategory
                 tx['categorized_manually'] = True
+                transaction_found = True
                 break
+        
+        if not transaction_found:
+            return dbc.Alert(
+                f"⚠️ Kunde inte hitta transaktion att uppdatera. Försök igen.", 
+                color="warning", 
+                dismissable=True, 
+                duration=4000
+            ), current_trigger
+        
+        # Update data with modified transactions
+        data['transactions'] = transactions
         
         # Save updated transactions
         manager.save_transactions(data)
