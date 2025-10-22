@@ -108,28 +108,60 @@ class PDFBillParser:
             True if text matches Nordea payment format
         """
         # Check for key indicators:
-        # 1. "Nordea" and "betalningar" in text
-        # 2. "Konto:" followed by account number
+        # 1. "Nordea" in text (case insensitive)
+        # 2. "betalning" in text
+        # 3. Account pattern like "MAT 1722 20 34439" or reference to "Nordea" accounts
         text_lower = text.lower()
-        has_nordea = 'nordea' in text_lower and 'betalning' in text_lower
-        has_account_pattern = bool(re.search(r'konto:\s*\d+', text_lower))
+        has_nordea = 'nordea' in text_lower
+        has_betalning = 'betalning' in text_lower
         
-        return has_nordea and has_account_pattern
+        # Check for account patterns typical in Nordea payment summaries
+        # Pattern: Letters followed by numbers (e.g., "MAT 1722 20 34439" or "MITT 1709 20 72840")
+        has_account_pattern = bool(re.search(r'[A-ZÅÄÖ]+\s+\d{4}\s+\d{2}\s+\d{5}', text))
+        
+        return has_nordea and (has_betalning or has_account_pattern)
     
     def _extract_nordea_payment_bills(self, text: str) -> List[Dict]:
         """Extract bills from Nordea Hantera betalningar format.
         
-        This format has bills grouped by account:
-        Konto: 3570 12 34567
-        Faktura              Belopp      Förfallodatum
-        Bill Name            1,234.56    2025-11-15
-        ...
+        Supports two formats:
+        1. Real Nordea format:
+           MAT 1722 20 34439 (11 633,77 SEK) Totalt 30 687,26 SEK
+           Recipient Name
+           2025-10-27 20 034,26 SEK
+        
+        2. Test/Simple format:
+           Konto: 3570 12 34567
+           Faktura  Belopp  Förfallodatum
+           Name     Amount  Date
         
         Args:
             text: Extracted text from PDF
             
         Returns:
             List of bill dictionaries with account information
+        """
+        # Try the simple table format first (for test compatibility)
+        simple_bills = self._extract_simple_table_format(text)
+        if simple_bills:
+            return simple_bills
+        
+        # Otherwise use the real Nordea format
+        return self._extract_real_nordea_format(text)
+    
+    def _extract_simple_table_format(self, text: str) -> List[Dict]:
+        """Extract bills from simple table format (test format).
+        
+        Format:
+        Konto: 3570 12 34567
+        Faktura              Belopp      Förfallodatum
+        Bill Name            1,245.50    2025-11-15
+        
+        Args:
+            text: Extracted text from PDF
+            
+        Returns:
+            List of bill dictionaries, or empty list if format doesn't match
         """
         bills = []
         lines = text.split('\n')
@@ -143,25 +175,20 @@ class PDFBillParser:
             # Check for account line: "Konto: 3570 12 34567"
             account_match = re.match(r'konto:\s*([\d\s]+)', line, re.IGNORECASE)
             if account_match:
-                # Extract and normalize account number
                 current_account = account_match.group(1).strip()
-                # Normalize: remove spaces, keep just digits
                 current_account = re.sub(r'\s+', ' ', current_account)
                 in_bill_section = False
                 continue
             
-            # Check for header line (indicates bill section starts)
+            # Check for header line
             if re.search(r'faktura.*belopp.*förfallodatum', line, re.IGNORECASE):
                 in_bill_section = True
                 continue
             
-            # Skip if we don't have an account yet or not in bill section
             if not current_account or not in_bill_section:
                 continue
             
             # Try to parse bill line: "Bill Name  Amount  Date"
-            # Pattern: text, amount (digits with comma/period, including thousands separator), date (YYYY-MM-DD)
-            # Allow amounts like: 1,245.50 or 8,500.00 or 399.00
             bill_pattern = r'^(.+?)\s+([\d,]+\.\d{2})\s+(\d{4}-\d{2}-\d{2})\s*$'
             bill_match = re.match(bill_pattern, line)
             
@@ -173,7 +200,6 @@ class PDFBillParser:
                 # Parse amount (remove thousands separator comma, keep decimal point)
                 amount = float(amount_str.replace(',', ''))
                 
-                # Categorize based on keywords
                 category = self._categorize_bill(name)
                 
                 bills.append({
@@ -184,6 +210,107 @@ class PDFBillParser:
                     'category': category,
                     'account': current_account
                 })
+        
+        return bills
+    
+    def _extract_real_nordea_format(self, text: str) -> List[Dict]:
+        """Extract bills from real Nordea payment summary format.
+        
+        Format:
+        MAT 1722 20 34439 (11 633,77 SEK) Totalt 30 687,26 SEK
+        Recipient Name
+        2025-10-27 20 034,26 SEK
+        
+        Args:
+            text: Extracted text from PDF
+            
+        Returns:
+            List of bill dictionaries
+        """
+        bills = []
+        lines = text.split('\n')
+        
+        current_account = None
+        i = 0
+        
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # Check for account line pattern: "MAT 1722 20 34439 (amount) Totalt amount"
+            account_pattern = r'^([A-ZÅÄÖ]+\s+\d+\s+\d+\s+\d+)\s+\('
+            account_match = re.match(account_pattern, line)
+            
+            if account_match:
+                current_account = account_match.group(1).strip()
+                i += 1
+                continue
+            
+            # Skip if we don't have an account yet
+            if not current_account:
+                i += 1
+                continue
+            
+            # Check if this line contains a date and amount
+            if re.match(r'^20\d{2}-\d{2}-\d{2}\s+', line):
+                date_match = re.match(r'^(20\d{2}-\d{2}-\d{2})\s+(.+)$', line)
+                if not date_match:
+                    i += 1
+                    continue
+                
+                due_date = date_match.group(1)
+                rest_of_line = date_match.group(2).strip()
+                
+                # Check for Nordea reference format
+                nordea_pattern = r'^Nordea\s+\d+\s+\d+\s+\d+\s+([\d\s,]+)\s*SEK\s*$'
+                nordea_match = re.match(nordea_pattern, rest_of_line)
+                
+                if nordea_match:
+                    recipient_name = "Nordea-betalning"
+                    if i > 0:
+                        prev_line = lines[i-1].strip()
+                        if prev_line and not re.match(r'^20\d{2}-\d{2}-\d{2}', prev_line):
+                            if i == 1 or not re.search(r'\d+,\d{2}\s*SEK', prev_line):
+                                recipient_name = f"Nordea ({prev_line})" if prev_line != "Aviserad betalning" else "Nordea-betalning"
+                    
+                    amount_str = nordea_match.group(1).strip()
+                else:
+                    # Normal format: amount at end
+                    amount_pattern = r'([\d\s,]+,\d{2})\s*SEK\s*$'
+                    amount_match = re.search(amount_pattern, rest_of_line)
+                    
+                    if not amount_match:
+                        i += 1
+                        continue
+                    
+                    amount_str = amount_match.group(1).strip()
+                    
+                    # Get recipient from previous line
+                    recipient_name = "Okänd mottagare"
+                    if i > 0:
+                        prev_line = lines[i-1].strip()
+                        if prev_line and not re.match(r'^\d{4}-\d{4}$', prev_line) and not re.match(r'^20\d{2}-\d{2}-\d{2}', prev_line):
+                            recipient_name = prev_line
+                
+                # Parse amount
+                amount_str = amount_str.replace(' ', '').replace(',', '.')
+                try:
+                    amount = float(amount_str)
+                except ValueError:
+                    i += 1
+                    continue
+                
+                category = self._categorize_bill(recipient_name)
+                
+                bills.append({
+                    'name': recipient_name,
+                    'amount': amount,
+                    'due_date': due_date,
+                    'description': f'Extraherad från PDF (Konto: {current_account})',
+                    'category': category,
+                    'account': current_account
+                })
+            
+            i += 1
         
         return bills
     
@@ -262,17 +389,27 @@ class PDFBillParser:
         # Check streaming/entertainment first (more specific)
         if any(word in name_lower for word in ['netflix', 'spotify', 'hbo', 'disney', 'viaplay', 'tv4']):
             return 'Nöje'
-        # Then check utilities and housing
-        elif any(word in name_lower for word in ['el', 'elektri', 'power', 'energy', 'vattenfall', 'fortum']):
+        # Check for energy/utilities
+        elif any(word in name_lower for word in ['el', 'elektri', 'power', 'energy', 'vattenfall', 'fortum', 'energi']):
             return 'Boende'
         elif any(word in name_lower for word in ['hyra', 'rent', 'housing', 'hyresavi']):
             return 'Boende'
-        elif any(word in name_lower for word in ['försäkring', 'insurance', 'länsförsäkring', 'folksam', 'if']):
+        # Insurance
+        elif any(word in name_lower for word in ['försäkring', 'insurance', 'länsförsäkring', 'folksam', 'if skade']):
             return 'Boende'
-        # Internet and telecom
+        # Internet and telecom (but not Telenor which is mobile)
         elif any(word in name_lower for word in ['internet', 'bredband', 'broadband', 'telia', 'tele2', 'comhem']):
             return 'Boende'
-        elif any(word in name_lower for word in ['mobil', 'telefon', 'phone', 'telenor', 'tre', 'hallon']):
+        elif any(word in name_lower for word in ['telenor', 'tre ', 'hallon']) and 'mobil' in name_lower:
+            return 'Övrigt'
+        # Vehicle/transportation
+        elif any(word in name_lower for word in ['volkswagen', 'volvo', 'finans', 'leasing']):
+            return 'Transport'
+        # A-kassa and similar
+        elif any(word in name_lower for word in ['a-kassa', 'akassa', 'vision']):
+            return 'Övrigt'
+        # American Express and other cards
+        elif any(word in name_lower for word in ['american express', 'amex', 'mastercard', 'visa']):
             return 'Övrigt'
         else:
             return 'Övrigt'
