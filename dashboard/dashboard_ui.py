@@ -405,12 +405,25 @@ def create_bills_tab():
             ], width=12)
         ], className="mb-4"),
         
-        # Bills display section
+        # Bills display section with account grouping
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H5("Aktiva fakturor", className="card-title"),
+                        html.H5("Fakturor per konto", className="card-title"),
+                        html.P("Fakturor grupperade efter vilket konto de ska belasta", className="text-muted"),
+                        html.Div(id='account-summary-container', className="mb-4"),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Detailed bills display section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Alla fakturor", className="card-title"),
                         dcc.Dropdown(
                             id='bill-status-filter',
                             options=[
@@ -1887,6 +1900,103 @@ def match_bills(n_clicks):
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
 
+
+# Callback: Update Account Summary
+@app.callback(
+    Output('account-summary-container', 'children'),
+    [Input('bills-interval', 'n_intervals'),
+     Input('add-bill-btn', 'n_clicks'),
+     Input('upload-pdf-bills', 'contents'),
+     Input('match-bills-btn', 'n_clicks')]
+)
+def update_account_summary(n, add_clicks, pdf_contents, match_clicks):
+    """Display summary of bills grouped by account."""
+    try:
+        bill_manager = BillManager()
+        summaries = bill_manager.get_account_summary()
+        
+        if not summaries:
+            return html.P("Inga fakturor funna", className="text-muted")
+        
+        # Create cards for each account
+        account_cards = []
+        
+        for summary in summaries:
+            account = summary['account']
+            bill_count = summary['bill_count']
+            pending_count = summary['pending_count']
+            total_amount = summary['total_amount']
+            bills = summary['bills']
+            
+            # Create a table for bills in this account
+            bills_list = []
+            for bill in bills:
+                status_badge_color = {
+                    'pending': 'warning',
+                    'paid': 'success',
+                    'overdue': 'danger'
+                }.get(bill.get('status', 'pending'), 'secondary')
+                
+                bills_list.append(
+                    html.Tr([
+                        html.Td(bill['name']),
+                        html.Td(f"{bill['amount']:.2f} SEK"),
+                        html.Td(bill['due_date']),
+                        html.Td(bill['category']),
+                        html.Td(dbc.Badge(bill.get('status', 'pending'), color=status_badge_color))
+                    ])
+                )
+            
+            # Create card for this account
+            card = dbc.Card([
+                dbc.CardHeader([
+                    html.H5([
+                        html.I(className="bi bi-bank me-2"),
+                        f"Konto: {account}"
+                    ], className="mb-0")
+                ]),
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col([
+                            html.P([
+                                html.Strong("Antal fakturor: "),
+                                html.Span(f"{bill_count} st", className="badge bg-primary ms-2")
+                            ], className="mb-2"),
+                            html.P([
+                                html.Strong("Väntande: "),
+                                html.Span(f"{pending_count} st", className="badge bg-warning text-dark ms-2")
+                            ], className="mb-2"),
+                            html.P([
+                                html.Strong("Total summa: "),
+                                html.Span(f"{total_amount:.2f} SEK", className="badge bg-info text-dark ms-2")
+                            ], className="mb-3"),
+                        ], width=12)
+                    ]),
+                    html.Hr(),
+                    html.H6("Fakturor:", className="mb-3"),
+                    dbc.Table([
+                        html.Thead([
+                            html.Tr([
+                                html.Th("Namn"),
+                                html.Th("Belopp"),
+                                html.Th("Förfallodatum"),
+                                html.Th("Kategori"),
+                                html.Th("Status")
+                            ])
+                        ]),
+                        html.Tbody(bills_list)
+                    ], bordered=True, hover=True, responsive=True, size='sm')
+                ])
+            ], className="mb-3")
+            
+            account_cards.append(card)
+        
+        return account_cards
+        
+    except Exception as e:
+        return html.P(f"Fel vid laddning av kontoöversikt: {str(e)}", className="text-danger")
+
+
 # Callback: Update Bills Table
 @app.callback(
     Output('bills-table-container', 'children'),
@@ -1921,6 +2031,7 @@ def update_bills_table(status_filter, n, add_clicks, pdf_contents, match_clicks)
                 {'name': 'Förfallodatum', 'id': 'due_date'},
                 {'name': 'Status', 'id': 'status'},
                 {'name': 'Kategori', 'id': 'category'},
+                {'name': 'Konto', 'id': 'account'},
             ],
             data=df.to_dict('records'),
             style_cell={'textAlign': 'left', 'padding': '10px'},

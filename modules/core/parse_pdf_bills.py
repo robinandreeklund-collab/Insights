@@ -259,22 +259,21 @@ class PDFBillParser:
         """
         name_lower = name.lower()
         
-        if any(word in name_lower for word in ['el', 'elektri', 'power', 'energy', 'vattenfall', 'fortum']):
+        # Check streaming/entertainment first (more specific)
+        if any(word in name_lower for word in ['netflix', 'spotify', 'hbo', 'disney', 'viaplay', 'tv4']):
+            return 'Nöje'
+        # Then check utilities and housing
+        elif any(word in name_lower for word in ['el', 'elektri', 'power', 'energy', 'vattenfall', 'fortum']):
             return 'Boende'
         elif any(word in name_lower for word in ['hyra', 'rent', 'housing', 'hyresavi']):
             return 'Boende'
+        elif any(word in name_lower for word in ['försäkring', 'insurance', 'länsförsäkring', 'folksam', 'if']):
+            return 'Boende'
+        # Internet and telecom
         elif any(word in name_lower for word in ['internet', 'bredband', 'broadband', 'telia', 'tele2', 'comhem']):
             return 'Boende'
         elif any(word in name_lower for word in ['mobil', 'telefon', 'phone', 'telenor', 'tre', 'hallon']):
             return 'Övrigt'
-        elif any(word in name_lower for word in ['försäkring', 'insurance', 'länsförsäkring', 'folksam', 'if']):
-            return 'Boende'
-        elif any(word in name_lower for word in ['netflix', 'spotify', 'hbo', 'disney', 'streaming', 'abonnemang']):
-            # Check if it's a streaming service (not just any subscription)
-            if any(word in name_lower for word in ['netflix', 'spotify', 'hbo', 'disney', 'viaplay', 'tv4']):
-                return 'Nöje'
-            else:
-                return 'Övrigt'
         else:
             return 'Övrigt'
     

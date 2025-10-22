@@ -146,3 +146,72 @@ class TestBillManager:
         bills = self.bill_manager.get_bills()
         # After get_bills(), the status should be updated to overdue
         assert any(b['status'] == 'overdue' for b in bills)
+    
+    def test_add_bill_with_account(self):
+        """Test adding bills with account information."""
+        due_date = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+        bill = self.bill_manager.add_bill(
+            name="Test Bill with Account",
+            amount=500.0,
+            due_date=due_date,
+            account="3570 12 34567"
+        )
+        
+        assert bill['account'] == "3570 12 34567"
+    
+    def test_get_bills_by_account(self):
+        """Test grouping bills by account."""
+        due_date = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+        
+        # Add bills for different accounts
+        self.bill_manager.add_bill("Bill 1", 100.0, due_date, account="3570 12 34567")
+        self.bill_manager.add_bill("Bill 2", 200.0, due_date, account="3570 12 34567")
+        self.bill_manager.add_bill("Bill 3", 300.0, due_date, account="3570 98 76543")
+        
+        bills_by_account = self.bill_manager.get_bills_by_account()
+        
+        assert len(bills_by_account) == 2  # Two different accounts
+        assert len(bills_by_account["3570 12 34567"]) == 2
+        assert len(bills_by_account["3570 98 76543"]) == 1
+    
+    def test_get_account_summary(self):
+        """Test getting account summary."""
+        due_date = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+        
+        # Add bills for different accounts
+        self.bill_manager.add_bill("Bill 1", 100.0, due_date, account="3570 12 34567")
+        self.bill_manager.add_bill("Bill 2", 200.0, due_date, account="3570 12 34567")
+        self.bill_manager.add_bill("Bill 3", 300.0, due_date, account="3570 98 76543")
+        
+        summaries = self.bill_manager.get_account_summary()
+        
+        assert len(summaries) == 2
+        
+        # Find summary for first account
+        summary1 = next(s for s in summaries if s['account'] == "3570 12 34567")
+        assert summary1['bill_count'] == 2
+        assert summary1['total_amount'] == 300.0
+        assert summary1['pending_count'] == 2
+        
+        # Find summary for second account
+        summary2 = next(s for s in summaries if s['account'] == "3570 98 76543")
+        assert summary2['bill_count'] == 1
+        assert summary2['total_amount'] == 300.0
+    
+    def test_account_summary_with_mixed_status(self):
+        """Test account summary with bills in different statuses."""
+        due_date = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+        
+        # Add bills with different statuses
+        bill1 = self.bill_manager.add_bill("Pending Bill", 100.0, due_date, account="3570 12 34567")
+        bill2 = self.bill_manager.add_bill("Another Bill", 200.0, due_date, account="3570 12 34567")
+        
+        # Mark one as paid
+        self.bill_manager.mark_as_paid(bill1['id'])
+        
+        summaries = self.bill_manager.get_account_summary()
+        summary = summaries[0]
+        
+        assert summary['bill_count'] == 2
+        assert summary['pending_count'] == 1  # Only one pending
+        assert summary['total_amount'] == 300.0
