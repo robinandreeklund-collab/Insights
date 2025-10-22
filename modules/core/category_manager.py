@@ -62,9 +62,14 @@ class CategoryManager:
         categories = data.get('categories', self.default_categories)
         
         # Ensure all default categories exist
+        modified = False
         for cat, subcats in self.default_categories.items():
             if cat not in categories:
                 categories[cat] = subcats
+                modified = True
+        
+        if modified:
+            self._save_categories(categories)
         
         return categories
     
