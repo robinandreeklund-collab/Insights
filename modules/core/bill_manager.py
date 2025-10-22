@@ -35,7 +35,7 @@ class BillManager:
             yaml.dump({'bills': bills}, f, default_flow_style=False, allow_unicode=True)
     
     def add_bill(self, name: str, amount: float, due_date: str, 
-                 description: str = "", category: str = "Övrigt") -> Dict:
+                 description: str = "", category: str = "Övrigt", account: str = None) -> Dict:
         """Lägg till en ny faktura.
         
         Args:
@@ -44,6 +44,7 @@ class BillManager:
             due_date: Förfallodatum (YYYY-MM-DD)
             description: Beskrivning/detaljer
             category: Kategori för fakturan
+            account: Kontonummer som fakturan ska belasta (valfritt)
             
         Returns:
             Den nya fakturan som dict
@@ -60,6 +61,7 @@ class BillManager:
             'due_date': due_date,
             'description': description,
             'category': category,
+            'account': account,  # Added account field
             'status': 'pending',  # pending, paid, overdue
             'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'paid_at': None,
@@ -207,3 +209,46 @@ class BillManager:
         upcoming.sort(key=lambda x: x.get('due_date', ''))
         
         return upcoming
+    
+    def get_bills_by_account(self) -> Dict[str, List[Dict]]:
+        """Gruppera fakturor per konto.
+        
+        Returns:
+            Dict med kontonummer som nycklar och listor med fakturor som värden
+        """
+        from collections import defaultdict
+        
+        bills = self.get_bills()
+        bills_by_account = defaultdict(list)
+        
+        for bill in bills:
+            account = bill.get('account', 'Inget konto angivet')
+            bills_by_account[account].append(bill)
+        
+        return dict(bills_by_account)
+    
+    def get_account_summary(self) -> List[Dict]:
+        """Få sammanfattning av fakturor per konto.
+        
+        Returns:
+            Lista med sammanfattningar för varje konto
+        """
+        bills_by_account = self.get_bills_by_account()
+        summaries = []
+        
+        for account, account_bills in bills_by_account.items():
+            total_amount = sum(bill['amount'] for bill in account_bills)
+            pending_bills = [b for b in account_bills if b.get('status') == 'pending']
+            
+            summaries.append({
+                'account': account,
+                'bill_count': len(account_bills),
+                'pending_count': len(pending_bills),
+                'total_amount': total_amount,
+                'bills': account_bills
+            })
+        
+        # Sort by account number
+        summaries.sort(key=lambda x: x['account'])
+        
+        return summaries
