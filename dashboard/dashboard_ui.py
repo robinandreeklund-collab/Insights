@@ -1494,11 +1494,12 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
         transactions = data.get('transactions', [])
         
         # Find and update the transaction
+        # Match on date, description, and amount (more reliable than account name)
         transaction_found = False
         for tx in transactions:
             if (tx.get('date') == selected_tx['date'] and 
                 tx.get('description') == selected_tx['description'] and
-                tx.get('account') == account_name):
+                tx.get('amount') == selected_tx['amount']):
                 tx['category'] = category
                 tx['subcategory'] = subcategory
                 tx['categorized_manually'] = True
