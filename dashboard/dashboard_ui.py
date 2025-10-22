@@ -3749,19 +3749,22 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
             for person, accounts in income_by_person_account.items()
         }
         
-        # Get expenses by category
-        manager = AccountManager()
-        transactions = manager.get_all_transactions()
+        # Get scheduled bills by category (upcoming expenses)
+        bill_manager = BillManager()
+        scheduled_bills = bill_manager.get_bills(status='scheduled')
+        pending_bills = bill_manager.get_bills(status='pending')
+        all_upcoming_bills = scheduled_bills + pending_bills
         
-        month_expenses = [
-            tx for tx in transactions
-            if tx.get('date', '').startswith(month) and tx.get('amount', 0) < 0
+        # Filter bills for the selected month
+        month_bills = [
+            b for b in all_upcoming_bills 
+            if b.get('due_date', '').startswith(month)
         ]
         
         expenses_by_category = defaultdict(float)
-        for tx in month_expenses:
-            category = tx.get('category', 'Okategoriserad')
-            amount = abs(tx.get('amount', 0))
+        for bill in month_bills:
+            category = bill.get('category', 'Okategoriserad')
+            amount = bill.get('amount', 0)
             expenses_by_category[category] += amount
         
         expenses_by_category = dict(expenses_by_category)
@@ -3807,12 +3810,12 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
         return html.Div([
             dbc.Alert([
                 html.H5("Sammanfattning", className="alert-heading"),
-                html.P(f"Totala gemensamma utgifter: {total_shared:,.2f} SEK"),
+                html.P(f"Totala kommande gemensamma utgifter: {total_shared:,.2f} SEK"),
                 html.P(f"Baserat på {len(shared_categories)} gemensam{'ma' if len(shared_categories) > 1 else ''} kategori{'er' if len(shared_categories) > 1 else ''}: {', '.join(shared_categories)}"),
                 html.Small([
                     "OBS: Beräkningen baseras på ",
-                    html.Strong("bokförda transaktioner"),
-                    " (från banken), inte på kommande schemalagda fakturor ovan."
+                    html.Strong("kommande schemalagda fakturor"),
+                    " för denna månad i de valda kategorierna."
                 ], className="text-muted fst-italic")
             ], color="info", className="mb-3"),
             html.Div(person_cards)
