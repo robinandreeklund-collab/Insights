@@ -76,6 +76,16 @@ I Sprint 1 satte vi upp:
 - ✅ Grundläggande enhetstester
 - ✅ Requirements och installation
 
+## 🎨 Nytt GitHub-inspirerat tema!
+
+Insights har nu ett helt nytt, modernt gränssnitt inspirerat av GitHub.com:
+- **Mörkt och ljust tema** med smidig växling
+- **Sidofältsnavigering** för enklare åtkomst
+- **Professionell design** med GitHubs färgschema och typografi
+- **Responsiv layout** som fungerar på alla enheter
+
+Se [THEME_GUIDE.md](THEME_GUIDE.md) för mer information om det nya temat.
+
 ## 🚀 Kom igång
 
 ### Snabbstart
@@ -91,6 +101,8 @@ python dashboard/dashboard_ui.py
 ```
 
 3. **Öppna i webbläsaren:** [http://127.0.0.1:8050](http://127.0.0.1:8050)
+
+4. **Byt tema:** Klicka på knappen i övre högra hörnet (🌙/☀️) för att växla mellan mörkt och ljust tema
 
 4. **Importera din första CSV-fil:**
    - Gå till fliken "Inmatning" i dashboarden
