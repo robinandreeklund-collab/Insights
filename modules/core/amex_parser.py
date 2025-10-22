@@ -27,17 +27,23 @@ class AmexParser:
         Returns:
             True if Amex format detected
         """
-        # Amex CSVs typically have these columns
-        amex_columns = ['date', 'description', 'card member', 'account #', 'amount']
         df_columns_lower = [col.lower() for col in df.columns]
         
-        # Check if we have the key Amex columns
-        has_amex_columns = all(col in df_columns_lower for col in ['date', 'description', 'amount'])
+        # Check for English Amex columns
+        has_english_amex = all(col in df_columns_lower for col in ['date', 'description', 'amount'])
+        has_english_card_member = 'card member' in df_columns_lower or 'cardmember' in df_columns_lower
         
-        # Also check for "Card Member" which is distinctive to Amex
-        has_card_member = 'card member' in df_columns_lower or 'cardmember' in df_columns_lower
+        # Check for Swedish Amex columns (Datum, Beskrivning, Kortmedlem, Konto #, Belopp)
+        has_swedish_amex = all(col in df_columns_lower for col in ['datum', 'beskrivning', 'belopp'])
+        has_swedish_card_member = 'kortmedlem' in df_columns_lower
         
-        return has_amex_columns or has_card_member
+        # Check for account column (both English and Swedish)
+        has_account = any(col in df_columns_lower for col in ['account #', 'konto #'])
+        
+        # Accept if we have either English or Swedish format
+        return (has_english_amex or has_english_card_member or 
+                has_swedish_amex or has_swedish_card_member or
+                (has_account and (has_english_amex or has_swedish_amex)))
     
     def parse_amex_csv(self, csv_path: str) -> Tuple[List[Dict], Dict]:
         """Parse an Amex CSV file and extract line items.
@@ -57,15 +63,31 @@ class AmexParser:
         if not self.detect_amex_format(df):
             raise ValueError("CSV does not appear to be in Amex format")
         
-        # Normalize column names
+        # Normalize column names to lowercase
         df.columns = [col.lower().strip() for col in df.columns]
+        
+        # Create column mapping for both English and Swedish
+        # Map to standardized names
+        column_map = {}
+        for col in df.columns:
+            if col in ['date', 'datum']:
+                column_map['date'] = col
+            elif col in ['description', 'beskrivning']:
+                column_map['description'] = col
+            elif col in ['amount', 'belopp']:
+                column_map['amount'] = col
+            elif col in ['card member', 'cardmember', 'kortmedlem']:
+                column_map['card_member'] = col
+            elif col in ['account #', 'konto #']:
+                column_map['account'] = col
         
         # Parse line items
         line_items = []
         
         for idx, row in df.iterrows():
             # Extract date (handle various formats)
-            date_str = str(row.get('date', ''))
+            date_col = column_map.get('date', 'date')
+            date_str = str(row.get(date_col, ''))
             try:
                 # Try common date formats
                 for date_format in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']:
@@ -81,15 +103,35 @@ class AmexParser:
                 date = date_str
             
             # Extract description/vendor
-            description = str(row.get('description', '')).strip()
+            desc_col = column_map.get('description', 'description')
+            description = str(row.get(desc_col, '')).strip()
+            
+            # Extract amount (before converting to check if it's a payment/credit)
+            amount_col = column_map.get('amount', 'amount')
+            amount_str = str(row.get(amount_col, '0'))
+            
+            # Skip payment/credit transactions (negative amounts in Amex statements)
+            # These are typically "BETALNING MOTTAGEN" or "PAYMENT RECEIVED"
+            is_negative = amount_str.strip().startswith('-')
+            if is_negative:
+                continue  # Skip credits/payments
+            
             vendor = self._extract_vendor_from_description(description)
             
-            # Extract amount
-            amount_str = str(row.get('amount', '0'))
-            # Remove currency symbols and commas
-            amount_str = amount_str.replace('$', '').replace(',', '').strip()
+            # Parse amount
+            # Remove currency symbols, commas, and handle Swedish thousand separators
+            # Swedish format uses comma as decimal separator and space/period as thousand separator
+            # First, check if it looks like Swedish format (has comma but no period, or has both with comma last)
+            if ',' in amount_str and ('.' not in amount_str or amount_str.rindex(',') > amount_str.rindex('.')):
+                # Swedish format: replace space and convert comma to period
+                amount_str = amount_str.replace(' ', '').replace(',', '.')
+            else:
+                # English format: just remove commas
+                amount_str = amount_str.replace(',', '')
+            
+            amount_str = amount_str.replace('$', '').replace('-', '').strip()
             try:
-                amount = abs(float(amount_str))  # Amex amounts are typically positive
+                amount = abs(float(amount_str))
             except ValueError:
                 amount = 0.0
             

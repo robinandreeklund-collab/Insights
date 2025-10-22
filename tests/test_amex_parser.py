@@ -39,6 +39,23 @@ class TestAmexParser:
         
         return csv_path
     
+    @pytest.fixture
+    def swedish_amex_csv(self, temp_dir):
+        """Create a sample Swedish Amex CSV file."""
+        csv_path = os.path.join(temp_dir, 'amex_swedish.csv')
+        data = """Datum,Beskrivning,Kortmedlem,Konto #,Belopp
+10/05/2025,COOP HJO,KARL FROJD,-31009,"164,00"
+10/08/2025,SHELL BENSIN,KARL FROJD,-31009,"650,00"
+10/12/2025,SPOTIFY STOCKHOLM,KARL FROJD,-31009,"129,00"
+10/15/2025,PAYEX*WILLYS E HANDEL,KARL FROJD,-31009,"1234,00"
+09/29/2025,"BETALNING MOTTAGEN, TACK",KARL FROJD,-31009,"-5000,00"
+10/18/2025,STADIUM SPORT,KARL FROJD,-31009,"2375,00" """
+        
+        with open(csv_path, 'w') as f:
+            f.write(data)
+        
+        return csv_path
+    
     def test_detect_amex_format_positive(self, parser):
         """Test Amex format detection with valid Amex CSV."""
         df = pd.DataFrame({
@@ -187,3 +204,36 @@ class TestAmexParser:
         
         vendor = parser._extract_vendor_from_description('SHELL PETROL STATION')
         assert 'Shell Petrol Station' in vendor
+    
+    def test_parse_swedish_amex_csv(self, parser, swedish_amex_csv):
+        """Test parsing a Swedish Amex CSV file."""
+        line_items, metadata = parser.parse_amex_csv(swedish_amex_csv)
+        
+        # Should have 5 line items (payment excluded)
+        assert len(line_items) == 5
+        assert metadata['count'] == 5
+        
+        # Check that payment was excluded
+        assert all('betalning' not in item['description'].lower() for item in line_items)
+        
+        # Check amount parsing (Swedish format with comma as decimal separator)
+        amounts = [item['amount'] for item in line_items]
+        assert 164.00 in amounts
+        assert 650.00 in amounts
+        assert 129.00 in amounts
+        
+    def test_swedish_format_detection(self, parser, swedish_amex_csv):
+        """Test detection of Swedish Amex format."""
+        import pandas as pd
+        df = pd.read_csv(swedish_amex_csv)
+        assert parser.detect_amex_format(df) is True
+    
+    def test_payment_exclusion(self, parser, swedish_amex_csv):
+        """Test that payment/credit transactions are excluded."""
+        line_items, metadata = parser.parse_amex_csv(swedish_amex_csv)
+        
+        # Verify no negative transactions
+        for item in line_items:
+            assert item['amount'] > 0
+            assert 'betalning' not in item['description'].lower()
+            assert 'payment' not in item['description'].lower()
