@@ -1320,6 +1320,22 @@ def show_categorization_form(selected_rows, table_data):
     # Reload categories to get any newly added ones
     categories = category_manager.get_categories()
     
+    # Get current category and subcategory values
+    # Handle None, empty string, or missing keys
+    current_category = selected_tx.get('category')
+    current_subcategory = selected_tx.get('subcategory')
+    
+    # If empty or None, use defaults
+    if not current_category or current_category == '':
+        current_category = 'Övrigt'
+    if not current_subcategory or current_subcategory == '':
+        current_subcategory = 'Okategoriserat'
+    
+    # Get subcategory options for the current category
+    subcategory_options = []
+    if current_category and current_category in categories:
+        subcategory_options = [{'label': subcat, 'value': subcat} for subcat in categories[current_category]]
+    
     return html.Div([
         html.H6(f"Kategorisera: {selected_tx['description']}", className="mb-3"),
         dbc.Row([
@@ -1328,7 +1344,7 @@ def show_categorization_form(selected_rows, table_data):
                 dcc.Dropdown(
                     id='category-dropdown',
                     options=[{'label': cat, 'value': cat} for cat in categories.keys()],
-                    value=selected_tx.get('category', 'Övrigt'),
+                    value=current_category,
                     className="mb-3",
                     clearable=False
                 )
@@ -1337,7 +1353,8 @@ def show_categorization_form(selected_rows, table_data):
                 html.Label("Underkategori:", className="fw-bold"),
                 dcc.Dropdown(
                     id='subcategory-dropdown',
-                    value=selected_tx.get('subcategory', 'Okategoriserat'),
+                    options=subcategory_options,
+                    value=current_subcategory,
                     className="mb-3",
                     clearable=False
                 )
