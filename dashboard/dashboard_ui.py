@@ -34,15 +34,31 @@ from modules.core.settings_panel import SettingsPanel
 from modules.core.ai_trainer import AITrainer
 from modules.core.category_manager import CategoryManager
 
-# Import icon helpers
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets'))
+# Import icon helpers using importlib to avoid sys.path modification
+import importlib.util
+import traceback
+
+icons_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'icons.py')
 try:
-    from icons import (home_icon, upload_icon, graph_icon, account_icon, 
-                      credit_card_icon, calendar_icon, chart_icon, 
-                      gear_icon, history_icon, question_icon, 
-                      moon_icon, sun_icon, beaker_icon)
-except ImportError:
+    spec = importlib.util.spec_from_file_location("icons", icons_path)
+    icons = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(icons)
+    home_icon = icons.home_icon
+    upload_icon = icons.upload_icon
+    graph_icon = icons.graph_icon
+    account_icon = icons.account_icon
+    credit_card_icon = icons.credit_card_icon
+    calendar_icon = icons.calendar_icon
+    chart_icon = icons.chart_icon
+    gear_icon = icons.gear_icon
+    history_icon = icons.history_icon
+    question_icon = icons.question_icon
+    moon_icon = icons.moon_icon
+    sun_icon = icons.sun_icon
+    beaker_icon = icons.beaker_icon
+except Exception:
     # Fallback if icons not available
+    traceback.print_exc()
     def home_icon(size=16): return ""
     def upload_icon(size=16): return ""
     def graph_icon(size=16): return ""
