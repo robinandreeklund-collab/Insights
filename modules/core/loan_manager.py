@@ -243,9 +243,12 @@ class LoanManager:
             # Check for common loan-related keywords
             loan_keywords = ['bolån', 'billån', 'lån', 'amortering', 'ränta']
             if any(keyword in description for keyword in loan_keywords):
-                # Return first active loan (this is a weak match)
-                # In a real system, you'd want more sophisticated matching
-                return loan
+                # Only auto-match if there is exactly one active loan
+                if len(loans) == 1:
+                    return loan
+                else:
+                    # Ambiguous: multiple active loans, generic keyword found
+                    return None
         
         return None
     
