@@ -17,7 +17,7 @@ def extract_account_number(account_name: str) -> Optional[str]:
         account_name: Full account name that may contain account number
         
     Returns:
-        Normalized account number (spaces removed) or None if not found
+        Normalized account number with spaces preserved or None if not found
     """
     if not account_name:
         return None
