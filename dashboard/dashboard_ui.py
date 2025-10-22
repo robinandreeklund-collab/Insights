@@ -581,10 +581,26 @@ def create_bills_tab():
                         dbc.Input(id='edit-bill-description', type='text'),
                     ], width=6),
                 ], className="mb-3"),
-                html.Div(id='edit-bill-status', className="mt-2")
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Status:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='edit-bill-status-dropdown',
+                            options=[
+                                {'label': 'Schemalagd', 'value': 'scheduled'},
+                                {'label': 'Väntande', 'value': 'pending'},
+                                {'label': 'Betald', 'value': 'paid'},
+                                {'label': 'Förfallen', 'value': 'overdue'}
+                            ]
+                        ),
+                    ], width=6),
+                ], className="mb-3"),
+                html.Div(id='edit-bill-status-message', className="mt-2")
             ]),
             dbc.ModalFooter([
-                dbc.Button("Avbryt", id='edit-bill-cancel-btn', color="secondary"),
+                dbc.Button("Avbryt", id='edit-bill-cancel-btn', color="secondary", className="me-2"),
+                dbc.Button("Markera som betald", id='edit-bill-mark-paid-btn', color="success", className="me-2"),
+                dbc.Button("Träna AI", id='edit-bill-train-ai-btn', color="info", className="me-2"),
                 dbc.Button("Spara", id='edit-bill-save-btn', color="primary")
             ])
         ], id='edit-bill-modal', is_open=False),
@@ -3301,19 +3317,21 @@ def update_edit_bill_account_options(n):
      Output('edit-bill-category', 'value'),
      Output('edit-bill-subcategory', 'value'),
      Output('edit-bill-account', 'value'),
-     Output('edit-bill-description', 'value')],
+     Output('edit-bill-description', 'value'),
+     Output('edit-bill-status-dropdown', 'value')],
     [Input('bills-table', 'selected_rows'),
      Input('edit-bill-cancel-btn', 'n_clicks'),
-     Input('edit-bill-save-btn', 'n_clicks')],
+     Input('edit-bill-save-btn', 'n_clicks'),
+     Input('edit-bill-mark-paid-btn', 'n_clicks')],
     [State('bills-table', 'data'),
      State('edit-bill-modal', 'is_open'),
      State('edit-bill-id', 'data')]
 )
-def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, table_data, is_open, current_bill_id):
+def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, mark_paid_clicks, table_data, is_open, current_bill_id):
     """Toggle edit bill modal and populate fields."""
     ctx = callback_context
     if not ctx.triggered:
-        return False, None, "", 0, "", "", "", "", ""
+        return False, None, "", 0, "", "", "", "", "", ""
     
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
@@ -3329,19 +3347,19 @@ def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, table_data
             return (True, bill_id, bill.get('name', ''), bill.get('amount', 0),
                     bill.get('due_date', ''), bill.get('category', ''),
                     bill.get('subcategory', ''), bill.get('account', ''),
-                    bill.get('description', ''))
+                    bill.get('description', ''), bill.get('status', 'scheduled'))
         
-        return True, bill_id, "", 0, "", "", "", "", ""
+        return True, bill_id, "", 0, "", "", "", "", "", ""
     
-    elif button_id in ['edit-bill-cancel-btn', 'edit-bill-save-btn']:
-        return False, None, "", 0, "", "", "", "", ""
+    elif button_id in ['edit-bill-cancel-btn', 'edit-bill-save-btn', 'edit-bill-mark-paid-btn']:
+        return False, None, "", 0, "", "", "", "", "", ""
     
-    return is_open, current_bill_id, "", 0, "", "", "", "", ""
+    return is_open, current_bill_id, "", 0, "", "", "", "", "", ""
 
 
 # Callback: Save Edited Bill
 @app.callback(
-    Output('edit-bill-status', 'children'),
+    Output('edit-bill-status-message', 'children'),
     Input('edit-bill-save-btn', 'n_clicks'),
     [State('edit-bill-id', 'data'),
      State('edit-bill-name', 'value'),
@@ -3350,10 +3368,11 @@ def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, table_data
      State('edit-bill-category', 'value'),
      State('edit-bill-subcategory', 'value'),
      State('edit-bill-account', 'value'),
-     State('edit-bill-description', 'value')],
+     State('edit-bill-description', 'value'),
+     State('edit-bill-status-dropdown', 'value')],
     prevent_initial_call=True
 )
-def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcategory, account, description):
+def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcategory, account, description, status):
     """Save changes to edited bill."""
     if not n_clicks or not bill_id:
         return ""
@@ -3367,7 +3386,8 @@ def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcat
             'category': category or 'Övrigt',
             'subcategory': subcategory or '',
             'account': account or None,
-            'description': description or ''
+            'description': description or '',
+            'status': status or 'scheduled'
         }
         
         success = bill_manager.update_bill(bill_id, updates)
@@ -3376,6 +3396,62 @@ def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcat
             return dbc.Alert("✓ Faktura uppdaterad!", color="success", dismissable=True)
         else:
             return dbc.Alert("Kunde inte hitta fakturan", color="warning", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+# Callback: Mark Bill as Paid
+@app.callback(
+    Output('edit-bill-status-message', 'children', allow_duplicate=True),
+    Input('edit-bill-mark-paid-btn', 'n_clicks'),
+    State('edit-bill-id', 'data'),
+    prevent_initial_call=True
+)
+def mark_bill_as_paid(n_clicks, bill_id):
+    """Mark bill as paid."""
+    if not n_clicks or not bill_id:
+        return ""
+    
+    try:
+        bill_manager = BillManager()
+        success = bill_manager.mark_as_paid(bill_id)
+        
+        if success:
+            return dbc.Alert("✓ Faktura markerad som betald!", color="success", dismissable=True)
+        else:
+            return dbc.Alert("Kunde inte hitta fakturan", color="warning", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+# Callback: Train AI from Bill
+@app.callback(
+    Output('edit-bill-status-message', 'children', allow_duplicate=True),
+    Input('edit-bill-train-ai-btn', 'n_clicks'),
+    [State('edit-bill-id', 'data'),
+     State('edit-bill-name', 'value'),
+     State('edit-bill-category', 'value'),
+     State('edit-bill-subcategory', 'value')],
+    prevent_initial_call=True
+)
+def train_ai_from_bill(n_clicks, bill_id, name, category, subcategory):
+    """Add bill information to AI training data."""
+    if not n_clicks or not bill_id:
+        return ""
+    
+    try:
+        from modules.core.ai_trainer import AITrainer
+        
+        trainer = AITrainer()
+        
+        # Add training sample
+        trainer.add_training_sample(
+            description=name or '',
+            category=category or 'Övrigt',
+            subcategory=subcategory or ''
+        )
+        
+        return dbc.Alert("✓ Träningsdata tillagd för AI!", color="success", dismissable=True)
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
 
