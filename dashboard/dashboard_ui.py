@@ -1465,8 +1465,8 @@ app.layout = html.Div([
 @app.callback(
     [Output('tab-content', 'children'),
      Output('current-tab', 'data')] +
-    [Output(f'nav-{tab}', 'className') for tab in ['overview', 'input', 'accounts', 'bills', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
-    [Input(f'nav-{tab}', 'n_clicks') for tab in ['overview', 'input', 'accounts', 'bills', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
+    [Output(f'nav-{tab}', 'className') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
+    [Input(f'nav-{tab}', 'n_clicks') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
     prevent_initial_call=True
 )
 def navigate_tabs(*args):
@@ -1498,7 +1498,7 @@ def navigate_tabs(*args):
     
     # Update active class for nav items
     nav_classes = []
-    for tab in ['overview', 'input', 'accounts', 'bills', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']:
+    for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']:
         if f'nav-{tab}' == button_id:
             nav_classes.append('sidebar-nav-link active')
         else:
