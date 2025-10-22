@@ -1527,6 +1527,10 @@ def add_new_subcategory(n_clicks, subcategory_name, category_name):
 )
 def save_manual_categorization(n_clicks, selected_rows, table_data, category, subcategory, account_name, current_trigger):
     """Save manual categorization for selected transaction - REFACTORED for reliability."""
+    # Check if this is actually a button click (n_clicks must be > 0)
+    if not n_clicks or n_clicks == 0:
+        raise PreventUpdate
+    
     if not selected_rows or not table_data or not category:
         return "", current_trigger
     
