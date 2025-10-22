@@ -31,6 +31,7 @@ from modules.core.income_tracker import IncomeTracker
 from modules.core.agent_interface import AgentInterface
 from modules.core.settings_panel import SettingsPanel
 from modules.core.ai_trainer import AITrainer
+from modules.core.category_manager import CategoryManager
 
 
 def clear_data_on_exit(signum=None, frame=None):
@@ -87,15 +88,9 @@ app = dash.Dash(
 )
 
 # Define category and subcategory options
-CATEGORIES = {
-    'Mat & Dryck': ['Matinköp', 'Restaurang', 'Café'],
-    'Transport': ['Bränsle & Parkering', 'Kollektivtrafik', 'Taxi'],
-    'Boende': ['Hyra & Räkningar', 'Hemförsäkring', 'El'],
-    'Shopping': ['Kläder', 'Elektronik', 'Hem & Trädgård'],
-    'Nöje': ['Bio & Teater', 'Sport', 'Hobby'],
-    'Lån': ['Amortering', 'Ränta', 'Lånebetalning'],
-    'Övrigt': ['Okategoriserat', 'Transaktioner', 'Avgifter']
-}
+# Initialize category manager and load categories
+category_manager = CategoryManager()
+CATEGORIES = category_manager.get_categories()
 
 # Create overview tab content
 def create_overview_tab():
@@ -1295,6 +1290,9 @@ def show_categorization_form(selected_rows, table_data):
     
     selected_tx = table_data[selected_rows[0]]
     
+    # Reload categories to get any newly added ones
+    categories = category_manager.get_categories()
+    
     return html.Div([
         html.H6(f"Kategorisera: {selected_tx['description']}", className="mb-3"),
         dbc.Row([
@@ -1302,7 +1300,7 @@ def show_categorization_form(selected_rows, table_data):
                 html.Label("Kategori:", className="fw-bold"),
                 dcc.Dropdown(
                     id='category-dropdown',
-                    options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
+                    options=[{'label': cat, 'value': cat} for cat in categories.keys()],
                     value=selected_tx.get('category', 'Övrigt'),
                     className="mb-3",
                     clearable=False
@@ -1319,7 +1317,31 @@ def show_categorization_form(selected_rows, table_data):
             ], width=6),
         ]),
         dbc.Button("💾 Spara kategorisering", id='save-category-btn', color="primary", className="mt-2 me-2"),
-        html.Div(id='category-save-status', className="mt-2")
+        html.Div(id='category-save-status', className="mt-2"),
+        
+        html.Hr(className="my-4"),
+        
+        # Add new category/subcategory section
+        html.H6("Hantera kategorier", className="mb-3 mt-3"),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Ny huvudkategori:", className="fw-bold"),
+                dbc.Input(id='new-category-input', placeholder="T.ex. Hälsa", className="mb-2")
+            ], width=6),
+            dbc.Col([
+                dbc.Button("➕ Lägg till kategori", id='add-category-btn', color="info", className="mt-4"),
+            ], width=6)
+        ], className="mb-3"),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Ny underkategori (lägg till i vald kategori):", className="fw-bold"),
+                dbc.Input(id='new-subcategory-input', placeholder="T.ex. Läkarbesök", className="mb-2")
+            ], width=6),
+            dbc.Col([
+                dbc.Button("➕ Lägg till underkategori", id='add-subcategory-btn', color="info", className="mt-4"),
+            ], width=6)
+        ]),
+        html.Div(id='category-management-status', className="mt-2")
     ])
 
 
@@ -1330,9 +1352,92 @@ def show_categorization_form(selected_rows, table_data):
 )
 def update_subcategory_options(category):
     """Update subcategory options based on selected category."""
-    if category and category in CATEGORIES:
-        return [{'label': subcat, 'value': subcat} for subcat in CATEGORIES[category]]
+    categories = category_manager.get_categories()
+    if category and category in categories:
+        return [{'label': subcat, 'value': subcat} for subcat in categories[category]]
     return []
+
+
+# Callback: Add New Category
+@app.callback(
+    [Output('category-management-status', 'children'),
+     Output('new-category-input', 'value')],
+    Input('add-category-btn', 'n_clicks'),
+    State('new-category-input', 'value'),
+    prevent_initial_call=True
+)
+def add_new_category(n_clicks, category_name):
+    """Add a new category."""
+    if not n_clicks or not category_name:
+        return "", ""
+    
+    try:
+        success = category_manager.add_category(category_name.strip())
+        
+        if success:
+            # Reload global CATEGORIES
+            global CATEGORIES
+            CATEGORIES = category_manager.get_categories()
+            
+            return dbc.Alert(
+                f"✓ Kategori '{category_name}' tillagd!", 
+                color="success", 
+                dismissable=True, 
+                duration=3000
+            ), ""
+        else:
+            return dbc.Alert(
+                f"Kategori '{category_name}' finns redan", 
+                color="warning", 
+                dismissable=True, 
+                duration=3000
+            ), category_name
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=3000), category_name
+
+
+# Callback: Add New Subcategory
+@app.callback(
+    [Output('category-management-status', 'children', allow_duplicate=True),
+     Output('new-subcategory-input', 'value')],
+    Input('add-subcategory-btn', 'n_clicks'),
+    [State('new-subcategory-input', 'value'),
+     State('category-dropdown', 'value')],
+    prevent_initial_call=True
+)
+def add_new_subcategory(n_clicks, subcategory_name, category_name):
+    """Add a new subcategory to the selected category."""
+    if not n_clicks or not subcategory_name or not category_name:
+        return dbc.Alert(
+            "Välj en kategori först innan du lägger till underkategori", 
+            color="warning", 
+            dismissable=True, 
+            duration=3000
+        ), subcategory_name
+    
+    try:
+        success = category_manager.add_subcategory(category_name, subcategory_name.strip())
+        
+        if success:
+            # Reload global CATEGORIES
+            global CATEGORIES
+            CATEGORIES = category_manager.get_categories()
+            
+            return dbc.Alert(
+                f"✓ Underkategori '{subcategory_name}' tillagd till '{category_name}'!", 
+                color="success", 
+                dismissable=True, 
+                duration=3000
+            ), ""
+        else:
+            return dbc.Alert(
+                f"Underkategori '{subcategory_name}' finns redan i '{category_name}'", 
+                color="warning", 
+                dismissable=True, 
+                duration=3000
+            ), subcategory_name
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=3000), subcategory_name
 
 
 # Callback: Save Manual Categorization
