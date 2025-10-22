@@ -3699,6 +3699,8 @@ def update_monthly_expense_summary(n_clicks, start_month, end_month):
     
     return html.Div([
         html.H6(f"Totalt: {total_expenses:,.2f} SEK", className="mb-3 text-danger"),
+        html.Small("Detta är totala utgifter. Välj gemensamma kategorier nedan för överföringsberäkning.", 
+                  className="text-muted fst-italic"),
         html.Hr(),
         html.Div(category_rows)
     ])
@@ -3806,7 +3808,9 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
             dbc.Alert([
                 html.H5("Sammanfattning", className="alert-heading"),
                 html.P(f"Totala gemensamma utgifter: {total_shared:,.2f} SEK"),
-                html.P(f"Baserat på {len(shared_categories)} gemensam{'ma' if len(shared_categories) > 1 else ''} kategori{'er' if len(shared_categories) > 1 else ''}: {', '.join(shared_categories)}")
+                html.P(f"Baserat på {len(shared_categories)} gemensam{'ma' if len(shared_categories) > 1 else ''} kategori{'er' if len(shared_categories) > 1 else ''}: {', '.join(shared_categories)}"),
+                html.Small("Överföringsberäkningen är endast baserad på de valda gemensamma kategorierna.", 
+                          className="text-muted fst-italic")
             ], color="info", className="mb-3"),
             html.Div(person_cards)
         ])
