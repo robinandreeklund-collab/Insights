@@ -400,7 +400,7 @@ class PDFBillParser:
         # Internet and telecom (but not Telenor which is mobile)
         elif any(word in name_lower for word in ['internet', 'bredband', 'broadband', 'telia', 'tele2', 'comhem']):
             return 'Boende'
-        elif any(word in name_lower for word in ['telenor', 'tre ', 'hallon']) and 'mobil' in name_lower:
+        elif any(word in name_lower for word in ['telenor', 'tre ', 'hallon']):
             return 'Övrigt'
         # Vehicle/transportation
         elif any(word in name_lower for word in ['volkswagen', 'volvo', 'finans', 'leasing']):
