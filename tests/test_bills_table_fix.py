@@ -18,32 +18,19 @@ def test_bills_table_data_format():
             category='Boende'
         )
         
-        # Create an Amex bill with line items
+        # Create another bill
         bill2 = bill_manager.add_bill(
-            name='American Express',
-            amount=5234.50,
-            due_date='2025-11-15',
-            is_amex_bill=True
-        )
-        
-        # Add line items to Amex bill
-        bill_manager.add_line_item(
-            bill_id=bill2['id'],
-            vendor='ICA',
-            description='Food',
-            amount=100.00,
-            date='2025-10-05',
-            category='Mat & Dryck'
+            name='Electricity Bill',
+            amount=850.00,
+            due_date='2025-11-20',
+            category='Boende'
         )
         
         # Get all bills
         bills = bill_manager.get_bills()
         
-        # Verify raw bills have line_items and is_amex_bill
-        amex_bill = [b for b in bills if b.get('is_amex_bill')][0]
-        assert 'line_items' in amex_bill
-        assert 'is_amex_bill' in amex_bill
-        assert len(amex_bill['line_items']) == 1
+        # Verify we have 2 bills
+        assert len(bills) == 2
         
         # Simulate what the dashboard callback should do:
         # Filter to only table columns
@@ -59,10 +46,8 @@ def test_bills_table_data_format():
                 'account': bill.get('account', '')
             })
         
-        # Verify filtered data doesn't have line_items or is_amex_bill
+        # Verify filtered data has only the expected fields
         for row in table_data:
-            assert 'line_items' not in row
-            assert 'is_amex_bill' not in row
             # Verify it has all the required fields
             assert 'id' in row
             assert 'name' in row

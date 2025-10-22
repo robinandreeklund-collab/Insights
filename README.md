@@ -141,12 +141,6 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - PDF-import med faktisk PDF-parsing (pdfplumber)
 - Schemaläggning av betalningar
 - Prognosintegration och historik
-- **NYtt: Amex-workflow** med CSV-import och raduppgifter
-  - Skapa Amex-fakturor manuellt (påverkar kassaflöde)
-  - Importera CSV med raduppgifter (historiska poster för analys)
-  - Automatisk koppling mellan CSV och faktura
-  - Träna AI med raduppgifter
-  - [📖 Läs mer om Amex-workflow](AMEX_WORKFLOW.md)
 
 ### 5. Historik
 - Månadssammanställningar med inkomster/utgifter/netto

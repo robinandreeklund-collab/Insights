@@ -473,54 +473,11 @@ def create_bills_tab():
                         ], className="mb-3"),
                         dbc.Row([
                             dbc.Col([
-                                dbc.Checklist(
-                                    id='bill-is-amex-checkbox',
-                                    options=[{'label': ' Detta är en Amex-faktura (för CSV import)', 'value': 'amex'}],
-                                    value=[],
-                                    className="mb-2"
-                                ),
-                            ], width=12),
-                        ]),
-                        dbc.Row([
-                            dbc.Col([
                                 dbc.Button("Lägg till faktura", id='add-bill-btn', color="primary", className="me-2"),
                                 dbc.Button("Matcha fakturor", id='match-bills-btn', color="info", className="me-2"),
                             ], width=12),
                         ]),
                         html.Div(id='bill-add-status', className="mt-3")
-                    ])
-                ])
-            ], width=12)
-        ], className="mb-4"),
-        
-        # AMEX CSV import section
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardBody([
-                        html.H5("Importera Amex CSV med raduppgifter", className="card-title"),
-                        html.P("Ladda upp Amex CSV-fil för att koppla raduppgifter till en befintlig Amex-faktura", className="text-muted"),
-                        dcc.Upload(
-                            id='upload-amex-csv',
-                            children=html.Div([
-                                html.I(className="bi bi-filetype-csv", style={'fontSize': '48px'}),
-                                html.Br(),
-                                'Dra och släpp eller klicka för att välja Amex CSV-fil'
-                            ]),
-                            style={
-                                'width': '100%',
-                                'height': '150px',
-                                'lineHeight': '150px',
-                                'borderWidth': '2px',
-                                'borderStyle': 'dashed',
-                                'borderRadius': '10px',
-                                'textAlign': 'center',
-                                'backgroundColor': '#f8f9fa'
-                            },
-                            multiple=False
-                        ),
-                        html.Div(id='amex-csv-status', className="mt-3"),
-                        html.Div(id='amex-linkage-preview', className="mt-3")
                     ])
                 ])
             ], width=12)
@@ -623,25 +580,6 @@ def create_bills_tab():
             ], width=12)
         ]),
         
-        # Amex bills with line items section
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardBody([
-                        html.H5("Amex-fakturor med raduppgifter", className="card-title"),
-                        html.P("Visa och redigera raduppgifter för Amex-fakturor", className="text-muted"),
-                        dcc.Dropdown(
-                            id='amex-bill-selector',
-                            placeholder='Välj en Amex-faktura...',
-                            className="mb-3"
-                        ),
-                        html.Div(id='amex-bill-details', className="mb-3"),
-                        html.Div(id='amex-line-items-container')
-                    ])
-                ])
-            ], width=12)
-        ], className="mb-4"),
-        
         # Bill edit modal
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Redigera faktura")),
@@ -707,21 +645,6 @@ def create_bills_tab():
             ])
         ], id='edit-bill-modal', is_open=False),
         
-        # Amex CSV linkage confirmation modal
-        dbc.Modal([
-            dbc.ModalHeader(dbc.ModalTitle("Bekräfta Amex CSV-länkning")),
-            dbc.ModalBody([
-                html.Div(id='amex-preview-content'),
-                html.Hr(),
-                html.H6("Exempel på raduppgifter:"),
-                html.Div(id='amex-sample-items')
-            ]),
-            dbc.ModalFooter([
-                dbc.Button("Avbryt", id='amex-linkage-cancel-btn', color="secondary"),
-                dbc.Button("Bekräfta och importera", id='amex-linkage-confirm-btn', color="primary")
-            ])
-        ], id='amex-linkage-modal', is_open=False, size="lg"),
-        
         # Line item edit modal
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Redigera raduppgift")),
@@ -770,7 +693,6 @@ def create_bills_tab():
         # Store and interval for auto-refresh
         dcc.Store(id='selected-bill-id', data=None),
         dcc.Store(id='edit-bill-id', data=None),
-        dcc.Store(id='amex-parsed-data', data=None),  # Store parsed Amex CSV data
         dcc.Store(id='edit-line-item-data', data=None),  # Store line item being edited
         dcc.Interval(id='bills-interval', interval=5000, n_intervals=0)
     ], className="p-3")
@@ -2535,18 +2457,16 @@ def update_bill_account_dropdown(n):
      State('bill-category-dropdown', 'value'),
      State('bill-subcategory-dropdown', 'value'),
      State('bill-account-dropdown', 'value'),
-     State('bill-description-input', 'value'),
-     State('bill-is-amex-checkbox', 'value')],
+     State('bill-description-input', 'value')],
     prevent_initial_call=True
 )
-def add_bill(n_clicks, name, amount, due_date, category, subcategory, account, description, is_amex):
-    """Add a new bill with subcategory, account, and Amex flag support."""
+def add_bill(n_clicks, name, amount, due_date, category, subcategory, account, description):
+    """Add a new bill with subcategory and account support."""
     if not name or not amount or not due_date:
         return dbc.Alert("Fyll i namn, belopp och förfallodatum", color="warning")
     
     try:
         bill_manager = BillManager()
-        is_amex_bill = 'amex' in (is_amex or [])
         
         bill = bill_manager.add_bill(
             name=name,
@@ -2555,12 +2475,10 @@ def add_bill(n_clicks, name, amount, due_date, category, subcategory, account, d
             description=description or "",
             category=category or "Övrigt",
             subcategory=subcategory or "",
-            account=account or None,
-            is_amex_bill=is_amex_bill
+            account=account or None
         )
         
-        amex_msg = " (Amex-faktura)" if is_amex_bill else ""
-        return dbc.Alert(f"✓ Faktura '{name}'{amex_msg} tillagd!", color="success", dismissable=True)
+        return dbc.Alert(f"✓ Faktura '{name}' tillagd!", color="success", dismissable=True)
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
@@ -4115,299 +4033,6 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
 
 # ==== AMEX WORKFLOW CALLBACKS ====
 
-# Callback: Handle Amex CSV Upload
-@app.callback(
-    [Output('amex-csv-status', 'children'),
-     Output('amex-parsed-data', 'data'),
-     Output('amex-linkage-modal', 'is_open'),
-     Output('amex-preview-content', 'children'),
-     Output('amex-sample-items', 'children')],
-    Input('upload-amex-csv', 'contents'),
-    State('upload-amex-csv', 'filename'),
-    prevent_initial_call=True
-)
-def handle_amex_csv_upload(contents, filename):
-    """Handle Amex CSV upload and show linkage preview."""
-    if contents is None:
-        return "", None, False, "", ""
-    
-    try:
-        from modules.core.amex_parser import AmexParser
-        
-        # Decode the uploaded file
-        content_type, content_string = contents.split(',')
-        decoded = base64.b64decode(content_string)
-        
-        # Save to temporary file
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp_file:
-            tmp_file.write(decoded)
-            tmp_path = tmp_file.name
-        
-        try:
-            # Parse Amex CSV
-            bill_manager = BillManager()
-            parser = AmexParser(bill_manager=bill_manager)
-            
-            line_items, metadata = parser.parse_amex_csv(tmp_path)
-            
-            # Find matching bill
-            matched_bill = parser.find_matching_bill(metadata)
-            
-            # Create linkage preview
-            preview = parser.create_linkage_preview(line_items, metadata, matched_bill)
-            
-            # Store parsed data for later confirmation
-            parsed_data = {
-                'line_items': line_items,
-                'metadata': metadata,
-                'matched_bill_id': matched_bill['id'] if matched_bill else None
-            }
-            
-            # Create preview content
-            preview_content = []
-            preview_content.append(html.P([
-                html.Strong("Fil: "), filename
-            ]))
-            preview_content.append(html.P([
-                html.Strong("Antal raduppgifter: "), str(preview['line_items_count'])
-            ]))
-            preview_content.append(html.P([
-                html.Strong("Inköp totalt: "), f"{preview['purchases_total']:,.2f} SEK"
-            ]))
-            preview_content.append(html.P([
-                html.Strong("Nettosaldo (inköp - betalningar): "), f"{preview['net_balance']:,.2f} SEK"
-            ]))
-            preview_content.append(html.P([
-                html.Strong("Datumintervall: "), preview['date_range']
-            ]))
-            
-            if matched_bill:
-                preview_content.append(html.Hr())
-                preview_content.append(dbc.Alert([
-                    html.H6("Matchad faktura hittad!", className="alert-heading"),
-                    html.P([
-                        html.Strong("Faktura: "), matched_bill['name'], html.Br(),
-                        html.Strong("Fakturabelopp: "), f"{matched_bill['amount']:,.2f} SEK", html.Br(),
-                        html.Strong("CSV inköp: "), f"{preview['purchases_total']:,.2f} SEK", html.Br(),
-                        html.Strong("Förfallodatum: "), matched_bill['due_date'], html.Br(),
-                        html.Strong("Matchningsgrad: "), f"{preview['match_confidence']*100:.0f}%"
-                    ])
-                ], color="success"))
-            else:
-                preview_content.append(html.Hr())
-                preview_content.append(dbc.Alert(
-                    "Ingen matchad faktura hittad. Vänligen skapa en Amex-faktura först.",
-                    color="warning"
-                ))
-            
-            # Create sample items table
-            sample_df = pd.DataFrame(preview['sample_line_items'])
-            sample_table = dash_table.DataTable(
-                columns=[
-                    {'name': 'Datum', 'id': 'date'},
-                    {'name': 'Leverantör', 'id': 'vendor'},
-                    {'name': 'Belopp', 'id': 'amount'},
-                    {'name': 'Kategori', 'id': 'category'}
-                ],
-                data=sample_df.to_dict('records'),
-                style_table={'overflowX': 'auto'},
-                style_cell={'textAlign': 'left', 'padding': '10px'},
-                style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'}
-            )
-            
-            # Open modal to show preview
-            return "", parsed_data, True, html.Div(preview_content), sample_table
-            
-        finally:
-            # Clean up temporary file
-            import os
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-        
-    except Exception as e:
-        return dbc.Alert(f"Fel vid parsning av Amex CSV: {str(e)}", color="danger"), None, False, "", ""
-
-
-# Callback: Confirm Amex CSV Linkage
-@app.callback(
-    [Output('amex-linkage-modal', 'is_open', allow_duplicate=True),
-     Output('amex-csv-status', 'children', allow_duplicate=True),
-     Output('amex-parsed-data', 'data', allow_duplicate=True)],
-    [Input('amex-linkage-confirm-btn', 'n_clicks'),
-     Input('amex-linkage-cancel-btn', 'n_clicks')],
-    State('amex-parsed-data', 'data'),
-    prevent_initial_call=True
-)
-def confirm_amex_linkage(confirm_clicks, cancel_clicks, parsed_data):
-    """Confirm and import Amex line items to matched bill."""
-    ctx = callback_context
-    if not ctx.triggered:
-        raise PreventUpdate
-    
-    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    
-    # Cancel clicked
-    if button_id == 'amex-linkage-cancel-btn':
-        return False, "", None
-    
-    # Confirm clicked
-    if button_id == 'amex-linkage-confirm-btn' and parsed_data:
-        try:
-            bill_manager = BillManager()
-            
-            matched_bill_id = parsed_data.get('matched_bill_id')
-            line_items = parsed_data.get('line_items', [])
-            
-            if not matched_bill_id:
-                return False, dbc.Alert("Ingen faktura att länka till", color="warning"), None
-            
-            # Import line items to the matched bill
-            success = bill_manager.import_line_items_from_csv(matched_bill_id, line_items)
-            
-            if success:
-                return False, dbc.Alert(
-                    f"✓ {len(line_items)} raduppgifter importerade till faktura!",
-                    color="success",
-                    dismissable=True
-                ), None
-            else:
-                return False, dbc.Alert("Fel vid import av raduppgifter", color="danger"), None
-                
-        except Exception as e:
-            return False, dbc.Alert(f"Fel: {str(e)}", color="danger"), None
-    
-    raise PreventUpdate
-
-
-# Callback: Populate Amex Bill Selector
-@app.callback(
-    Output('amex-bill-selector', 'options'),
-    [Input('bills-interval', 'n_intervals'),
-     Input('add-bill-btn', 'n_clicks'),
-     Input('amex-linkage-confirm-btn', 'n_clicks')]
-)
-def populate_amex_bill_selector(n, add_clicks, linkage_clicks):
-    """Populate dropdown with Amex bills."""
-    try:
-        bill_manager = BillManager()
-        bills = bill_manager.get_bills()
-        
-        # Filter for Amex bills
-        amex_bills = [b for b in bills if b.get('is_amex_bill', False)]
-        
-        if not amex_bills:
-            return []
-        
-        options = []
-        for bill in amex_bills:
-            label = f"{bill['name']} - {bill['amount']:,.2f} SEK ({bill['due_date']})"
-            options.append({'label': label, 'value': bill['id']})
-        
-        return options
-    except:
-        return []
-
-
-# Callback: Display Amex Bill Details and Line Items
-@app.callback(
-    [Output('amex-bill-details', 'children'),
-     Output('amex-line-items-container', 'children')],
-    Input('amex-bill-selector', 'value')
-)
-def display_amex_bill_line_items(bill_id):
-    """Display details and line items for selected Amex bill."""
-    if not bill_id:
-        return "", ""
-    
-    try:
-        bill_manager = BillManager()
-        bill = bill_manager.get_bill_by_id(bill_id)
-        
-        if not bill:
-            return dbc.Alert("Faktura hittades inte", color="warning"), ""
-        
-        # Display bill details
-        details = dbc.Alert([
-            html.H6(bill['name'], className="alert-heading"),
-            html.P([
-                html.Strong("Totalt belopp: "), f"{bill['amount']:,.2f} SEK", html.Br(),
-                html.Strong("Förfallodatum: "), bill['due_date'], html.Br(),
-                html.Strong("Status: "), bill['status'], html.Br(),
-                html.Strong("Antal raduppgifter: "), str(len(bill.get('line_items', [])))
-            ])
-        ], color="info")
-        
-        # Display line items
-        line_items = bill.get('line_items', [])
-        
-        if not line_items:
-            line_items_display = html.P("Inga raduppgifter funna. Importera från Amex CSV.", className="text-muted")
-        else:
-            # Create line items table with edit and train buttons
-            line_items_df = pd.DataFrame(line_items)
-            
-            line_items_table = html.Div([
-                html.Div([
-                    dbc.Button("Träna AI med valda rader", id='train-amex-items-btn', color="success", className="mb-3")
-                ]),
-                dash_table.DataTable(
-                    id='amex-line-items-table',
-                    columns=[
-                        {'name': 'Datum', 'id': 'date'},
-                        {'name': 'Leverantör', 'id': 'vendor'},
-                        {'name': 'Beskrivning', 'id': 'description'},
-                        {'name': 'Belopp', 'id': 'amount'},
-                        {'name': 'Kategori', 'id': 'category'},
-                        {'name': 'Underkategori', 'id': 'subcategory'}
-                    ],
-                    data=line_items_df.to_dict('records'),
-                    style_table={'overflowX': 'auto'},
-                    style_cell={'textAlign': 'left', 'padding': '10px'},
-                    style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
-                    row_selectable='multi',
-                    selected_rows=[],
-                    editable=False
-                ),
-                html.Div(id='train-amex-status', className="mt-3")
-            ])
-            
-            line_items_display = line_items_table
-        
-        return details, line_items_display
-        
-    except Exception as e:
-        return dbc.Alert(f"Fel: {str(e)}", color="danger"), ""
-
-
-# Callback: Train AI with Selected Line Items
-@app.callback(
-    Output('train-amex-status', 'children'),
-    Input('train-amex-items-btn', 'n_clicks'),
-    [State('amex-line-items-table', 'selected_rows'),
-     State('amex-line-items-table', 'data')],
-    prevent_initial_call=True
-)
-def train_ai_with_amex_items(n_clicks, selected_rows, data):
-    """Train AI with selected Amex line items."""
-    if not selected_rows or not data:
-        return dbc.Alert("Välj minst en rad att träna med", color="warning", dismissable=True)
-    
-    try:
-        # Get selected line items
-        selected_items = [data[i] for i in selected_rows]
-        
-        # Add to AI training
-        ai_trainer = AITrainer()
-        added_count = ai_trainer.add_training_samples_batch(selected_items)
-        
-        return dbc.Alert(
-            f"✓ {added_count} raduppgifter tillagda till AI-träning!",
-            color="success",
-            dismissable=True
-        )
-    except Exception as e:
-        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
 
 
 if __name__ == "__main__":
