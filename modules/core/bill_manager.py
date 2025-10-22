@@ -300,3 +300,202 @@ class BillManager:
         summaries.sort(key=lambda x: x['account'])
         
         return summaries
+    
+    # ===== LINE ITEMS MANAGEMENT FOR AMEX WORKFLOW =====
+    
+    def add_line_item(self, bill_id: str, vendor: str, description: str, 
+                     amount: float, date: str, category: str = "Övrigt",
+                     subcategory: str = "") -> Optional[Dict]:
+        """Add a line item to an Amex bill.
+        
+        Args:
+            bill_id: ID of the bill to add line item to
+            vendor: Vendor/merchant name
+            description: Line item description
+            amount: Line item amount
+            date: Transaction date (YYYY-MM-DD)
+            category: Category for the line item
+            subcategory: Subcategory for the line item
+            
+        Returns:
+            The created line item dict, or None if bill not found
+        """
+        bills = self.load_bills()
+        
+        for bill in bills:
+            if bill.get('id') == bill_id:
+                # Ensure line_items array exists
+                if 'line_items' not in bill:
+                    bill['line_items'] = []
+                
+                # Generate line item ID
+                line_item_id = f"LINE-{len(bill['line_items']) + 1:04d}"
+                
+                line_item = {
+                    'id': line_item_id,
+                    'date': date,
+                    'vendor': vendor,
+                    'description': description,
+                    'amount': amount,
+                    'category': category,
+                    'subcategory': subcategory,
+                    'is_historical_record': True,  # Always historical for Amex line items
+                    'affects_cash': False,  # Does not affect cash flow (bill total does)
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }
+                
+                bill['line_items'].append(line_item)
+                self.save_bills(bills)
+                return line_item
+        
+        return None
+    
+    def update_line_item(self, bill_id: str, line_item_id: str, updates: Dict) -> bool:
+        """Update a line item within a bill.
+        
+        Args:
+            bill_id: ID of the bill containing the line item
+            line_item_id: ID of the line item to update
+            updates: Dict with fields to update
+            
+        Returns:
+            True if update succeeded, False otherwise
+        """
+        bills = self.load_bills()
+        
+        for bill in bills:
+            if bill.get('id') == bill_id:
+                line_items = bill.get('line_items', [])
+                for i, item in enumerate(line_items):
+                    if item.get('id') == line_item_id:
+                        # Update the line item
+                        bill['line_items'][i].update(updates)
+                        self.save_bills(bills)
+                        return True
+        
+        return False
+    
+    def delete_line_item(self, bill_id: str, line_item_id: str) -> bool:
+        """Delete a line item from a bill.
+        
+        Args:
+            bill_id: ID of the bill containing the line item
+            line_item_id: ID of the line item to delete
+            
+        Returns:
+            True if deletion succeeded, False otherwise
+        """
+        bills = self.load_bills()
+        
+        for bill in bills:
+            if bill.get('id') == bill_id:
+                line_items = bill.get('line_items', [])
+                initial_count = len(line_items)
+                bill['line_items'] = [item for item in line_items 
+                                     if item.get('id') != line_item_id]
+                
+                if len(bill['line_items']) < initial_count:
+                    self.save_bills(bills)
+                    return True
+        
+        return False
+    
+    def get_line_items(self, bill_id: str) -> List[Dict]:
+        """Get all line items for a bill.
+        
+        Args:
+            bill_id: ID of the bill
+            
+        Returns:
+            List of line items
+        """
+        bill = self.get_bill_by_id(bill_id)
+        if bill:
+            return bill.get('line_items', [])
+        return []
+    
+    def import_line_items_from_csv(self, bill_id: str, line_items: List[Dict]) -> bool:
+        """Import multiple line items from CSV data.
+        
+        Args:
+            bill_id: ID of the bill to add line items to
+            line_items: List of dicts with line item data (vendor, description, amount, date, etc.)
+            
+        Returns:
+            True if import succeeded, False otherwise
+        """
+        bills = self.load_bills()
+        
+        for bill in bills:
+            if bill.get('id') == bill_id:
+                # Ensure line_items array exists
+                if 'line_items' not in bill:
+                    bill['line_items'] = []
+                
+                # Add each line item
+                for idx, item_data in enumerate(line_items):
+                    line_item_id = f"LINE-{len(bill['line_items']) + 1:04d}"
+                    
+                    line_item = {
+                        'id': line_item_id,
+                        'date': item_data.get('date', ''),
+                        'vendor': item_data.get('vendor', ''),
+                        'description': item_data.get('description', ''),
+                        'amount': item_data.get('amount', 0.0),
+                        'category': item_data.get('category', 'Övrigt'),
+                        'subcategory': item_data.get('subcategory', ''),
+                        'is_historical_record': True,
+                        'affects_cash': False,
+                        'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    
+                    bill['line_items'].append(line_item)
+                
+                self.save_bills(bills)
+                return True
+        
+        return False
+    
+    def get_all_line_items(self, category: Optional[str] = None,
+                          start_date: Optional[str] = None,
+                          end_date: Optional[str] = None) -> List[Dict]:
+        """Get all line items across all bills with optional filtering.
+        
+        Useful for creating a pseudo-account view of all Amex transactions.
+        
+        Args:
+            category: Filter by category (optional)
+            start_date: Filter by start date (YYYY-MM-DD, optional)
+            end_date: Filter by end date (YYYY-MM-DD, optional)
+            
+        Returns:
+            List of all line items with bill context
+        """
+        bills = self.load_bills()
+        all_items = []
+        
+        for bill in bills:
+            line_items = bill.get('line_items', [])
+            for item in line_items:
+                # Add bill context to each line item
+                item_with_context = item.copy()
+                item_with_context['bill_id'] = bill.get('id')
+                item_with_context['bill_name'] = bill.get('name')
+                item_with_context['bill_account'] = bill.get('account')
+                
+                # Apply filters
+                if category and item.get('category') != category:
+                    continue
+                
+                item_date = item.get('date', '')
+                if start_date and item_date < start_date:
+                    continue
+                if end_date and item_date > end_date:
+                    continue
+                
+                all_items.append(item_with_context)
+        
+        # Sort by date
+        all_items.sort(key=lambda x: x.get('date', ''), reverse=True)
+        
+        return all_items

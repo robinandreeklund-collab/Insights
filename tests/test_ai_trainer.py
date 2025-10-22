@@ -48,9 +48,75 @@ class TestAITrainer:
     def test_get_training_stats_empty(self):
         """Test getting stats when no training data."""
         stats = self.trainer.get_training_stats()
+        
         assert stats['total_samples'] == 0
         assert stats['manual_samples'] == 0
         assert stats['ready_to_train'] is False
+    
+    def test_add_training_samples_batch(self):
+        """Test adding multiple training samples from line items."""
+        line_items = [
+            {
+                'vendor': 'ICA Supermarket',
+                'description': 'Groceries',
+                'category': 'Mat & Dryck',
+                'subcategory': 'Matinköp'
+            },
+            {
+                'vendor': 'Shell',
+                'description': 'Fuel',
+                'category': 'Transport',
+                'subcategory': 'Drivmedel'
+            },
+            {
+                'vendor': 'Netflix',
+                'description': 'Streaming',
+                'category': 'Nöje',
+                'subcategory': 'Streaming'
+            }
+        ]
+        
+        added_count = self.trainer.add_training_samples_batch(line_items)
+        
+        assert added_count == 3
+        
+        # Verify all samples are added
+        data = self.trainer.get_training_data()
+        assert len(data) == 3
+        
+        # Check first sample
+        assert data[0]['description'] == 'ICA Supermarket'
+        assert data[0]['category'] == 'Mat & Dryck'
+        assert data[0]['manual'] is True
+        assert data[0]['source'] == 'amex_line_item'
+    
+    def test_add_training_samples_batch_skip_incomplete(self):
+        """Test that incomplete line items are skipped."""
+        line_items = [
+            {
+                'vendor': 'ICA',
+                'description': 'Food',
+                'category': 'Mat & Dryck',
+                'subcategory': 'Matinköp'
+            },
+            {
+                'vendor': 'Shell',
+                # Missing category - should be skipped
+            },
+            {
+                'description': 'Netflix',
+                'category': 'Nöje',
+                'subcategory': 'Streaming'
+            }
+        ]
+        
+        added_count = self.trainer.add_training_samples_batch(line_items)
+        
+        # Only 2 valid items should be added
+        assert added_count == 2
+        
+        data = self.trainer.get_training_data()
+        assert len(data) == 2
     
     def test_get_training_stats_with_data(self):
         """Test getting stats with training data."""

@@ -60,6 +60,48 @@ class AITrainer:
         data['training_data'].append(training_entry)
         self._save_yaml(self.training_data_file, data)
     
+    def add_training_samples_batch(self, line_items: List[Dict]) -> int:
+        """Add multiple training samples from line items (e.g., Amex transactions).
+        
+        Args:
+            line_items: List of dicts with description, category, subcategory
+            
+        Returns:
+            Number of samples added
+        """
+        data = self._load_yaml(self.training_data_file)
+        if 'training_data' not in data:
+            data['training_data'] = []
+        
+        added_count = 0
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        for item in line_items:
+            # Extract description - try vendor first, then description
+            description = item.get('vendor', '') or item.get('description', '')
+            category = item.get('category', '')
+            subcategory = item.get('subcategory', '')
+            
+            if not description or not category:
+                continue
+            
+            training_entry = {
+                'description': description,
+                'category': category,
+                'subcategory': subcategory,
+                'manual': True,
+                'source': 'amex_line_item',
+                'added_at': timestamp
+            }
+            
+            data['training_data'].append(training_entry)
+            added_count += 1
+        
+        if added_count > 0:
+            self._save_yaml(self.training_data_file, data)
+        
+        return added_count
+    
     def get_training_stats(self) -> Dict:
         """Get statistics about training data.
         
