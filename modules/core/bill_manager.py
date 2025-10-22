@@ -16,7 +16,7 @@ def normalize_account_number(account: str) -> Optional[str]:
         account: Account string (may be full name or just number)
         
     Returns:
-        Normalized account number with spaces, or original if no pattern found
+        Normalized account number with spaces, original string if no pattern found, or None if account is empty
     """
     if not account:
         return None
