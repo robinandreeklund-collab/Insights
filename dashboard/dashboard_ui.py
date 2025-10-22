@@ -2,6 +2,7 @@
 
 import dash
 from dash import html, dcc, Input, Output, State, callback_context, dash_table
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import signal
 import sys
@@ -207,7 +208,9 @@ def create_accounts_tab():
             dbc.ModalHeader(dbc.ModalTitle("Redigera konto")),
             dbc.ModalBody([
                 html.Label("Kontonamn:", className="fw-bold mb-2"),
-                dbc.Input(id='edit-account-name-input', type='text', placeholder='Kontonamn'),
+                dbc.Input(id='edit-account-name-input', type='text', placeholder='Kontonamn', className="mb-3"),
+                html.Label("Person/Ägare:", className="fw-bold mb-2"),
+                dbc.Input(id='edit-account-person-input', type='text', placeholder='T.ex. Robin'),
                 html.Div(id='edit-account-status', className="mt-2")
             ]),
             dbc.ModalFooter([
@@ -1073,13 +1076,21 @@ def update_account_selector(n):
     """Update the account selector dropdown."""
     manager = AccountManager()
     accounts = manager.get_accounts()
-    return [{'label': acc['name'], 'value': acc['name']} for acc in accounts]
+    # Display person name if available
+    return [
+        {
+            'label': f"{acc['name']}{' (' + acc.get('person', '') + ')' if acc.get('person') else ''}", 
+            'value': acc['name']
+        } 
+        for acc in accounts
+    ]
 
 
 # Callback: Open Edit Account Modal
 @app.callback(
     [Output('edit-account-modal', 'is_open'),
-     Output('edit-account-name-input', 'value')],
+     Output('edit-account-name-input', 'value'),
+     Output('edit-account-person-input', 'value')],
     [Input('edit-account-btn', 'n_clicks'),
      Input('edit-account-cancel-btn', 'n_clicks'),
      Input('edit-account-save-btn', 'n_clicks')],
@@ -1087,19 +1098,24 @@ def update_account_selector(n):
      State('edit-account-modal', 'is_open')]
 )
 def toggle_edit_account_modal(edit_clicks, cancel_clicks, save_clicks, selected_account, is_open):
-    """Toggle edit account modal."""
+    """Toggle edit account modal and populate fields."""
     ctx = callback_context
     if not ctx.triggered:
-        return False, ""
+        return False, "", ""
     
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
     if button_id == 'edit-account-btn' and selected_account:
-        return True, selected_account
+        # Load account data to populate fields
+        manager = AccountManager()
+        account = manager.get_account_by_name(selected_account)
+        if account:
+            return True, account.get('name', ''), account.get('person', '')
+        return True, selected_account, ""
     elif button_id in ['edit-account-cancel-btn', 'edit-account-save-btn']:
-        return False, ""
+        return False, "", ""
     
-    return is_open, selected_account or ""
+    return is_open, selected_account or "", ""
 
 
 # Callback: Save Edited Account
@@ -1107,21 +1123,40 @@ def toggle_edit_account_modal(edit_clicks, cancel_clicks, save_clicks, selected_
     Output('edit-account-status', 'children'),
     Input('edit-account-save-btn', 'n_clicks'),
     [State('account-selector', 'value'),
-     State('edit-account-name-input', 'value')]
+     State('edit-account-name-input', 'value'),
+     State('edit-account-person-input', 'value')]
 )
-def save_edited_account(n_clicks, old_name, new_name):
-    """Save edited account name."""
+def save_edited_account(n_clicks, old_name, new_name, person):
+    """Save edited account name and person."""
     if not n_clicks or not old_name or not new_name:
         return ""
     
-    if old_name == new_name:
-        return dbc.Alert("Inget ändrat", color="info", dismissable=True)
-    
     manager = AccountManager()
-    result = manager.update_account(old_name, new_name=new_name)
     
-    if result:
-        return dbc.Alert(f"Konto uppdaterat från '{old_name}' till '{new_name}'", color="success", dismissable=True)
+    # Check what changed
+    changed = False
+    messages = []
+    
+    # Update name if changed
+    if old_name != new_name:
+        result = manager.update_account(old_name, new_name=new_name)
+        if result:
+            messages.append(f"Namn ändrat från '{old_name}' till '{new_name}'")
+            changed = True
+            old_name = new_name  # Update for person change
+    
+    # Update person field
+    account = manager.get_account_by_name(old_name)
+    if account and account.get('person', '') != (person or ''):
+        result = manager.update_account(old_name, person=person or '')
+        if result:
+            messages.append(f"Person uppdaterad till '{person or '(ingen)'}'")
+            changed = True
+    
+    if changed:
+        return dbc.Alert(". ".join(messages), color="success", dismissable=True)
+    else:
+        return dbc.Alert("Inget ändrat", color="info", dismissable=True)
     else:
         return dbc.Alert("Kunde inte uppdatera konto", color="danger", dismissable=True)
 
@@ -2309,7 +2344,7 @@ def load_settings_on_tab_open(tab):
     """Load current settings when settings tab is opened."""
     if tab != 'settings':
         # Return current values without changing anything
-        raise dash.exceptions.PreventUpdate
+        raise PreventUpdate
     
     try:
         panel = SettingsPanel()
@@ -2347,7 +2382,7 @@ def load_settings_on_tab_open(tab):
         )
     except Exception as e:
         print(f"Error loading settings: {e}")
-        raise dash.exceptions.PreventUpdate
+        raise PreventUpdate
 
 
 # Callback: Save settings
