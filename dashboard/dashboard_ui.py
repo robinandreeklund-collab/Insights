@@ -505,7 +505,35 @@ def create_bills_tab():
                             value='all',
                             className="mb-3"
                         ),
-                        html.Div(id='bills-table-container'),
+                        dash_table.DataTable(
+                            id='bills-table',
+                            columns=[
+                                {'name': 'ID', 'id': 'id'},
+                                {'name': 'Namn', 'id': 'name'},
+                                {'name': 'Belopp', 'id': 'amount'},
+                                {'name': 'Förfallodatum', 'id': 'due_date'},
+                                {'name': 'Status', 'id': 'status'},
+                                {'name': 'Kategori', 'id': 'category'},
+                                {'name': 'Konto', 'id': 'account'},
+                            ],
+                            data=[],
+                            style_cell={'textAlign': 'left', 'padding': '10px'},
+                            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+                            style_data_conditional=[
+                                {
+                                    'if': {'filter_query': '{status} = "overdue"'},
+                                    'backgroundColor': '#ffebee',
+                                    'color': '#c62828'
+                                },
+                                {
+                                    'if': {'filter_query': '{status} = "paid"'},
+                                    'backgroundColor': '#e8f5e9',
+                                    'color': '#2e7d32'
+                                }
+                            ],
+                            row_selectable='single',
+                            selected_rows=[]
+                        ),
                     ])
                 ])
             ], width=12)
@@ -2398,7 +2426,7 @@ def update_account_summary(add_clicks, pdf_contents, match_clicks, n):
 
 # Callback: Update Bills Table
 @app.callback(
-    Output('bills-table-container', 'children'),
+    Output('bills-table', 'data'),
     [Input('bill-status-filter', 'value'),
      Input('bills-interval', 'n_intervals'),
      Input('add-bill-btn', 'n_clicks'),
@@ -2417,43 +2445,13 @@ def update_bills_table(status_filter, n, add_clicks, pdf_contents, match_clicks)
             bills = bill_manager.get_bills(status=status_filter)
         
         if not bills:
-            return html.P("Inga fakturor funna", className="text-muted")
+            return []
         
-        # Create table
-        df = pd.DataFrame(bills)
-        table = dash_table.DataTable(
-            id='bills-table',
-            columns=[
-                {'name': 'ID', 'id': 'id'},
-                {'name': 'Namn', 'id': 'name'},
-                {'name': 'Belopp', 'id': 'amount'},
-                {'name': 'Förfallodatum', 'id': 'due_date'},
-                {'name': 'Status', 'id': 'status'},
-                {'name': 'Kategori', 'id': 'category'},
-                {'name': 'Konto', 'id': 'account'},
-            ],
-            data=df.to_dict('records'),
-            style_cell={'textAlign': 'left', 'padding': '10px'},
-            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
-            style_data_conditional=[
-                {
-                    'if': {'filter_query': '{status} = "overdue"'},
-                    'backgroundColor': '#ffebee',
-                    'color': '#c62828'
-                },
-                {
-                    'if': {'filter_query': '{status} = "paid"'},
-                    'backgroundColor': '#e8f5e9',
-                    'color': '#2e7d32'
-                }
-            ],
-            row_selectable='single',
-            selected_rows=[]
-        )
-        
-        return table
+        # Return data as list of dicts
+        return bills
     except Exception as e:
-        return html.P(f"Fel vid laddning av fakturor: {str(e)}", className="text-danger")
+        print(f"Error loading bills: {str(e)}")
+        return []
 
 
 # Callback: Add Loan
