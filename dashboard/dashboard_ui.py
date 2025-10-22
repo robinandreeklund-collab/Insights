@@ -1178,9 +1178,10 @@ def confirm_delete_account(n_clicks, account_name):
      Output('page-info', 'children')],
     [Input('account-selector', 'value'),
      Input('current-page', 'data'),
-     Input('table-refresh-trigger', 'data')]
+     Input('table-refresh-trigger', 'data')],
+    State('selected-transaction-id', 'data')
 )
-def update_transaction_table(account_name, current_page, refresh_trigger):
+def update_transaction_table(account_name, current_page, refresh_trigger, selected_tx_id):
     """Update the transaction table for the selected account."""
     if not account_name:
         return html.P("Välj ett konto för att visa transaktioner", className="text-muted"), ""
@@ -1202,6 +1203,15 @@ def update_transaction_table(account_name, current_page, refresh_trigger):
     
     # Create table (non-editable, selection-based)
     df = pd.DataFrame(page_transactions)
+    
+    # Try to find and re-select the previously selected transaction
+    selected_rows = []
+    if selected_tx_id:
+        for idx, tx in enumerate(page_transactions):
+            tx_id = f"{tx.get('date')}_{tx.get('description')}_{tx.get('amount')}"
+            if tx_id == selected_tx_id:
+                selected_rows = [idx]
+                break
     
     table = dash_table.DataTable(
         id='transaction-table',
@@ -1235,7 +1245,7 @@ def update_transaction_table(account_name, current_page, refresh_trigger):
             }
         ],
         row_selectable='single',
-        selected_rows=[]
+        selected_rows=selected_rows
     )
     
     page_info = f"Sida {current_page + 1} av {total_pages} ({len(transactions)} transaktioner)"
@@ -1275,6 +1285,23 @@ def handle_pagination(prev_clicks, next_clicks, current_page, account_name):
         return current_page + 1
     
     return current_page
+
+
+# Callback: Store Selected Transaction ID
+@app.callback(
+    Output('selected-transaction-id', 'data'),
+    [Input('transaction-table', 'selected_rows'),
+     Input('transaction-table', 'data')]
+)
+def store_selected_transaction(selected_rows, table_data):
+    """Store the ID of the selected transaction for persistence across refreshes."""
+    if not selected_rows or not table_data:
+        return None
+    
+    selected_tx = table_data[selected_rows[0]]
+    # Create a unique ID from date, description, and amount
+    tx_id = f"{selected_tx.get('date')}_{selected_tx.get('description')}_{selected_tx.get('amount')}"
+    return tx_id
 
 
 # Callback: Show Categorization Form
