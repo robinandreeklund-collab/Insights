@@ -1090,7 +1090,7 @@ def update_account_selector(n):
     # Display person name if available
     return [
         {
-            'label': f"{acc['name']}{' (' + acc.get('person', '') + ')' if acc.get('person') else ''}", 
+            'label': f"{acc['name']} ({acc.get('person', '')})" if acc.get('person') else acc['name'],
             'value': acc['name']
         } 
         for acc in accounts
