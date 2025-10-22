@@ -1074,7 +1074,17 @@ def update_overview(n):
     Input('accounts-interval', 'n_intervals')
 )
 def update_account_selector(n):
-    """Update the account selector dropdown."""
+    """Update the account selector dropdown with account names and persons.
+    
+    Displays accounts in format: "Account Name (Person)" if person is set,
+    otherwise just "Account Name".
+    
+    Args:
+        n: Interval counter (unused but required by Dash)
+        
+    Returns:
+        List of dropdown options with label and value
+    """
     manager = AccountManager()
     accounts = manager.get_accounts()
     # Display person name if available
@@ -1128,7 +1138,20 @@ def toggle_edit_account_modal(edit_clicks, cancel_clicks, save_clicks, selected_
      State('edit-account-person-input', 'value')]
 )
 def save_edited_account(n_clicks, old_name, new_name, person):
-    """Save edited account name and person."""
+    """Save edited account name and person field.
+    
+    Handles updating both the account name and person/owner field.
+    Provides detailed feedback about what changed.
+    
+    Args:
+        n_clicks: Number of button clicks (trigger)
+        old_name: Original account name
+        new_name: New account name
+        person: Person/owner name for the account
+        
+    Returns:
+        Alert component with success/info message
+    """
     if not n_clicks or not old_name or not new_name:
         return ""
     
@@ -1682,7 +1705,17 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
     Input('accounts-interval', 'n_intervals')
 )
 def update_training_readiness(n):
-    """Update training readiness indicator."""
+    """Update training readiness indicator in accounts tab.
+    
+    Shows a visual indicator of whether AI training is ready based on
+    the number of manual categorizations available.
+    
+    Args:
+        n: Interval counter (unused but required by Dash)
+        
+    Returns:
+        Alert component showing training readiness status
+    """
     try:
         trainer = AITrainer()
         stats = trainer.get_training_stats()

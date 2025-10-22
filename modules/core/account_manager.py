@@ -225,7 +225,8 @@ class AccountManager:
         Args:
             old_name: Current account name
             new_name: New account name (optional)
-            **kwargs: Additional fields to update (balance, source_file, etc.)
+            **kwargs: Additional fields to update (balance, source_file, person, etc.)
+                     Common fields: person (owner name), balance (current balance)
             
         Returns:
             Updated account dictionary or None if not found
