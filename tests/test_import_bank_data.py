@@ -28,6 +28,14 @@ class TestImportBankData:
         # Test without timestamp
         filename3 = "PERSONKONTO 123456-7890.csv"
         assert extract_account_name_from_filename(filename3) == "PERSONKONTO 123456-7890"
+        
+        # Test with spaces in account number (Issue #1)
+        filename4 = "PERSONKONTO 1709 20 72840 - 2025-10-21 09.39.41.csv"
+        assert extract_account_name_from_filename(filename4) == "PERSONKONTO 1709 20 72840"
+        
+        # Test with spaces and no timestamp
+        filename5 = "PERSONKONTO 1709 20 72840.csv"
+        assert extract_account_name_from_filename(filename5) == "PERSONKONTO 1709 20 72840"
     
     def test_detect_format_nordea(self):
         """Test detection of Nordea format."""
