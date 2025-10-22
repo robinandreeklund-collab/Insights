@@ -1203,6 +1203,17 @@ def update_transaction_table(account_name, current_page, n):
     # Prepare dropdown options for categories
     category_options = [{'label': cat, 'value': cat} for cat in CATEGORIES.keys()]
     
+    # Prepare conditional dropdown options for subcategories based on category
+    subcategory_dropdowns = []
+    for category, subcats in CATEGORIES.items():
+        subcategory_dropdowns.append({
+            'if': {
+                'filter_query': '{category} = "' + category + '"',
+                'column_id': 'subcategory'
+            },
+            'options': [{'label': subcat, 'value': subcat} for subcat in subcats]
+        })
+    
     table = dash_table.DataTable(
         id='transaction-table',
         columns=[
@@ -1219,15 +1230,18 @@ def update_transaction_table(account_name, current_page, n):
             {
                 'name': 'Underkategori', 
                 'id': 'subcategory', 
-                'editable': True
+                'editable': True,
+                'presentation': 'dropdown'
             },
         ],
         data=df.to_dict('records'),
         dropdown={
             'category': {
-                'options': category_options
+                'options': category_options,
+                'clearable': False
             }
         },
+        dropdown_conditional=subcategory_dropdowns,
         style_cell={'textAlign': 'left', 'padding': '10px'},
         style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
         style_data_conditional=[
