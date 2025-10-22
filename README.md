@@ -2,9 +2,21 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 4
+## 🎯 Projektstatus: Sprint 5
 
-**Sprint 4 Status:** Faktura- och lånehantering implementerad!
+**Sprint 5 Status:** Avancerad analys, historik och AI i Insights implementerad!
+
+Sprint 5 har implementerat:
+- ✅ Agentdriven analys och simulering med naturligt språk
+- ✅ Historik med månadssammanställningar, kategoritrender och saldohistorik
+- ✅ Kontohantering med möjlighet att redigera konton
+- ✅ Inkomsthantering med manuell registrering per person och konto
+- ✅ Förbättrad PDF-fakturaimport med faktisk PDF-parsing (med pdfplumber)
+- ✅ AI-träningslogik från manuell kategorisering
+- ✅ Settings panel med konfigurerbara inställningar
+- ✅ Omfattande tester för alla nya moduler (142 passing tests)
+
+**Sprint 4 Status (tidigare):** Faktura- och lånehantering implementerad!
 
 Sprint 4 har implementerat:
 - ✅ Fakturor-tab med fakturahantering
@@ -99,14 +111,15 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 ### 4. Fakturor
 - Aktiva och hanterade fakturor
 - Automatisk matchning mot transaktioner
-- PDF-import (placeholder för demo)
+- PDF-import med faktisk PDF-parsing (pdfplumber)
 - Schemaläggning av betalningar
 - Prognosintegration och historik
 
 ### 5. Historik
-- Månadssammanställningar
-- Kategoritrender över tid
-- Topptransaktioner och saldohistorik
+- Månadssammanställningar med inkomster/utgifter/netto
+- Kategoritrender över tid (6 månader)
+- Topptransaktioner och största utgifter
+- Saldohistorik per konto
 
 ### 6. Lån
 - Lägg till lån med ränta och bindningstid
@@ -114,10 +127,25 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - Simulera ränteförändringar och bindningstidens slut
 - Månadsvis amorteringsplan
 
-### 7. Frågebaserad analys
+### 7. Frågebaserad analys med AI
+- Naturligt språkgränssnitt för ekonomifrågor
 - "Vad händer om räntan ökar med 2%?"
-- "Hur mycket har vi kvar i november?"
-- "Visa alla fakturor i oktober"
+- "Hur mycket saldo har jag?"
+- "Visa alla fakturor"
+- "Största utgifter denna månad"
+- Automatisk routing till rätt modul
+
+### 8. Inkomsthantering
+- Registrera inkomster per person
+- Spåra inkomster per konto
+- Månadssammanställningar
+- Prognoser baserat på historik
+
+### 9. Inställningar
+- Konfigurera valuta och decimaler
+- Anpassa visningsinställningar
+- Aktivera/inaktivera notifieringar
+- Justera gränsvärden och trösklar
 
 ## 🛠️ Installation
 
@@ -280,7 +308,94 @@ tx = manager.categorize_transaction(tx, "Mat & Dryck", "Matinköp")
 manager.train_ai_from_manual_input(tx)
 ```
 
-### 7. Hantera fakturor och lån (via Dashboard eller Python - Sprint 4)
+### 7. Frågebaserad analys med AI (Sprint 5)
+
+**Via Dashboard:**
+1. Gå till fliken "Frågebaserad analys"
+2. Skriv din fråga i naturligt språk, t.ex.:
+   - "Hur mycket saldo har jag?"
+   - "Visa alla fakturor"
+   - "Simulera ränta 4.5%"
+   - "Största utgifter denna månad"
+3. Klicka "Skicka fråga"
+4. Agenten analyserar din fråga och genererar ett svar
+
+**Via Python:**
+```python
+from modules.core.agent_interface import AgentInterface
+
+agent = AgentInterface()
+response = agent.process_query("Hur mycket har jag kvar i november?")
+print(response)
+```
+
+### 8. Visa historik och trender (Sprint 5)
+
+**Via Dashboard:**
+1. Gå till fliken "Historik"
+2. Välj månad från dropdown
+3. Se månadssammanfattning med inkomster, utgifter och netto
+4. Välj kategori för att se trend över 6 månader
+5. Bläddra i största utgifter för vald månad
+
+**Via Python:**
+```python
+from modules.core.history_viewer import HistoryViewer
+
+viewer = HistoryViewer()
+
+# Månadssammanfattning
+summary = viewer.get_monthly_summary('2025-01')
+print(f"Inkomster: {summary['income']} SEK")
+print(f"Utgifter: {summary['expenses']} SEK")
+print(f"Netto: {summary['net']} SEK")
+
+# Kategoritrend
+trend = viewer.get_category_trend('Mat & Dryck', months=6)
+for month_data in trend:
+    print(f"{month_data['month']}: {month_data['amount']} SEK")
+
+# Största utgifter
+top = viewer.get_top_expenses('2025-01', top_n=10)
+for tx in top:
+    print(f"{tx['description']}: {abs(tx['amount'])} SEK")
+```
+
+### 9. Hantera inkomster (Sprint 5)
+
+**Via Dashboard:**
+1. Gå till fliken "Inmatning"
+2. Scrolla ner till "Lägg till inkomst"
+3. Fyll i person, konto, belopp, datum och beskrivning
+4. Klicka "Lägg till inkomst"
+
+**Via Python:**
+```python
+from modules.core.income_tracker import IncomeTracker
+
+tracker = IncomeTracker()
+
+# Lägg till inkomst
+tracker.add_income(
+    person='Robin',
+    account='PERSONKONTO 880104-7591',
+    amount=30000.0,
+    date='2025-01-25',
+    description='Monthly salary',
+    category='Lön'
+)
+
+# Hämta månadsink omst
+monthly = tracker.get_monthly_income('2025-01')
+print(f"Total inkomst: {monthly} SEK")
+
+# Prognos
+forecast = tracker.forecast_income(months=3)
+for pred in forecast:
+    print(f"{pred['month']}: {pred['predicted_amount']} SEK")
+```
+
+### 10. Hantera fakturor och lån (via Dashboard eller Python - Sprint 4)
 
 **Via Dashboard:**
 1. Gå till fliken "Fakturor"
@@ -373,7 +488,7 @@ Insights är byggt för att vara:
   - [x] Kontoutdragsvy med paginering
   - [x] Manuell kategorisering via UI
   - [x] Realtidsuppdateringar
-- [ ] Sprint 4: Fakturor och lånhantering
+- [x] Sprint 4: Fakturor och lånhantering
   - [x] Fakturahantering (lägg till, visa, redigera, ta bort)
   - [x] PDF-fakturaimport (placeholder-implementation)
   - [x] Automatisk fakturamatchning mot transaktioner
@@ -382,7 +497,16 @@ Insights är byggt för att vara:
   - [x] Återbetalningsvisualisering
   - [x] Ränteförändringssimuleringar
   - [x] Tester för faktura- och lånehantering
-- [ ] Sprint 5: Agentdriven analys och simulering
+- [x] Sprint 5: Avancerad analys, historik och AI
+  - [x] Agentdriven analys med naturligt språk (agent_interface)
+  - [x] Historik och statistik (history_viewer)
+  - [x] Kontohantering med redigering
+  - [x] Inkomsthantering (income_tracker)
+  - [x] Förbättrad PDF-fakturaimport med pdfplumber
+  - [x] AI-träning från manuell kategorisering
+  - [x] Settings panel med konfigurerbara inställningar
+  - [x] Dashboard-integration av alla nya funktioner
+  - [x] Omfattande tester (142 passing tests)
 
 ## 🤝 Bidra
 
