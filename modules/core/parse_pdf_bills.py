@@ -79,6 +79,117 @@ class PDFBillParser:
     def _extract_bills_from_text(self, text: str) -> List[Dict]:
         """Extract bill information from PDF text.
         
+        Supports:
+        1. Simple format: Just bills with amounts and dates
+        2. Nordea "Hantera betalningar" format: Bills grouped by account
+        
+        Args:
+            text: Extracted text from PDF
+            
+        Returns:
+            List of bill dictionaries
+        """
+        from datetime import datetime, timedelta
+        
+        # Check if this is a Nordea "Hantera betalningar" format
+        if self._is_nordea_payment_format(text):
+            return self._extract_nordea_payment_bills(text)
+        
+        # Otherwise, use the legacy simple extraction
+        return self._extract_simple_bills(text)
+    
+    def _is_nordea_payment_format(self, text: str) -> bool:
+        """Check if text is in Nordea Hantera betalningar format.
+        
+        Args:
+            text: Extracted text from PDF
+            
+        Returns:
+            True if text matches Nordea payment format
+        """
+        # Check for key indicators:
+        # 1. "Nordea" and "betalningar" in text
+        # 2. "Konto:" followed by account number
+        text_lower = text.lower()
+        has_nordea = 'nordea' in text_lower and 'betalning' in text_lower
+        has_account_pattern = bool(re.search(r'konto:\s*\d+', text_lower))
+        
+        return has_nordea and has_account_pattern
+    
+    def _extract_nordea_payment_bills(self, text: str) -> List[Dict]:
+        """Extract bills from Nordea Hantera betalningar format.
+        
+        This format has bills grouped by account:
+        Konto: 3570 12 34567
+        Faktura              Belopp      Förfallodatum
+        Bill Name            1,234.56    2025-11-15
+        ...
+        
+        Args:
+            text: Extracted text from PDF
+            
+        Returns:
+            List of bill dictionaries with account information
+        """
+        bills = []
+        lines = text.split('\n')
+        
+        current_account = None
+        in_bill_section = False
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            
+            # Check for account line: "Konto: 3570 12 34567"
+            account_match = re.match(r'konto:\s*([\d\s]+)', line, re.IGNORECASE)
+            if account_match:
+                # Extract and normalize account number
+                current_account = account_match.group(1).strip()
+                # Normalize: remove spaces, keep just digits
+                current_account = re.sub(r'\s+', ' ', current_account)
+                in_bill_section = False
+                continue
+            
+            # Check for header line (indicates bill section starts)
+            if re.search(r'faktura.*belopp.*förfallodatum', line, re.IGNORECASE):
+                in_bill_section = True
+                continue
+            
+            # Skip if we don't have an account yet or not in bill section
+            if not current_account or not in_bill_section:
+                continue
+            
+            # Try to parse bill line: "Bill Name  Amount  Date"
+            # Pattern: text, amount (digits with comma/period, including thousands separator), date (YYYY-MM-DD)
+            # Allow amounts like: 1,245.50 or 8,500.00 or 399.00
+            bill_pattern = r'^(.+?)\s+([\d,]+\.\d{2})\s+(\d{4}-\d{2}-\d{2})\s*$'
+            bill_match = re.match(bill_pattern, line)
+            
+            if bill_match:
+                name = bill_match.group(1).strip()
+                amount_str = bill_match.group(2)
+                due_date = bill_match.group(3)
+                
+                # Parse amount (remove thousands separator comma, keep decimal point)
+                amount = float(amount_str.replace(',', ''))
+                
+                # Categorize based on keywords
+                category = self._categorize_bill(name)
+                
+                bills.append({
+                    'name': name,
+                    'amount': amount,
+                    'due_date': due_date,
+                    'description': f'Extraherad från PDF (Konto: {current_account})',
+                    'category': category,
+                    'account': current_account
+                })
+        
+        return bills
+    
+    def _extract_simple_bills(self, text: str) -> List[Dict]:
+        """Extract bills using simple pattern matching (legacy method).
+        
         Args:
             text: Extracted text from PDF
             
@@ -89,9 +200,6 @@ class PDFBillParser:
         
         bills = []
         
-        # Simple pattern matching for common bill formats
-        # Pattern: Amount (various formats) and due date
-        
         # Find amounts: 123.45, 123,45, 123 kr, etc.
         amount_pattern = r'(\d{1,6}[.,]\d{2})\s*(?:kr|SEK)?'
         amounts = re.findall(amount_pattern, text)
@@ -99,9 +207,6 @@ class PDFBillParser:
         # Find dates: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY
         date_pattern = r'(\d{4}-\d{2}-\d{2}|\d{2}[/\.]\d{2}[/\.]\d{4})'
         dates = re.findall(date_pattern, text)
-        
-        # Find common bill keywords for categorization
-        text_lower = text.lower()
         
         # Try to extract structured information
         if amounts:
@@ -130,24 +235,8 @@ class PDFBillParser:
                     due_date = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
                 
                 # Categorize based on keywords
-                category = 'Övrigt'
                 name = f'Faktura {i+1}'
-                
-                if any(word in text_lower for word in ['el', 'elektri', 'power', 'energy']):
-                    category = 'Boende'
-                    name = 'Elräkning'
-                elif any(word in text_lower for word in ['hyra', 'rent', 'housing']):
-                    category = 'Boende'
-                    name = 'Hyra'
-                elif any(word in text_lower for word in ['internet', 'bredband', 'broadband']):
-                    category = 'Boende'
-                    name = 'Internet'
-                elif any(word in text_lower for word in ['mobil', 'telefon', 'phone']):
-                    category = 'Övrigt'
-                    name = 'Mobilabonnemang'
-                elif any(word in text_lower for word in ['försäkring', 'insurance']):
-                    category = 'Boende'
-                    name = 'Försäkring'
+                category = self._categorize_bill(name)
                 
                 bills.append({
                     'name': name,
@@ -158,6 +247,36 @@ class PDFBillParser:
                 })
         
         return bills
+    
+    def _categorize_bill(self, name: str) -> str:
+        """Categorize a bill based on its name.
+        
+        Args:
+            name: Bill name or description
+            
+        Returns:
+            Category name
+        """
+        name_lower = name.lower()
+        
+        if any(word in name_lower for word in ['el', 'elektri', 'power', 'energy', 'vattenfall', 'fortum']):
+            return 'Boende'
+        elif any(word in name_lower for word in ['hyra', 'rent', 'housing', 'hyresavi']):
+            return 'Boende'
+        elif any(word in name_lower for word in ['internet', 'bredband', 'broadband', 'telia', 'tele2', 'comhem']):
+            return 'Boende'
+        elif any(word in name_lower for word in ['mobil', 'telefon', 'phone', 'telenor', 'tre', 'hallon']):
+            return 'Övrigt'
+        elif any(word in name_lower for word in ['försäkring', 'insurance', 'länsförsäkring', 'folksam', 'if']):
+            return 'Boende'
+        elif any(word in name_lower for word in ['netflix', 'spotify', 'hbo', 'disney', 'streaming', 'abonnemang']):
+            # Check if it's a streaming service (not just any subscription)
+            if any(word in name_lower for word in ['netflix', 'spotify', 'hbo', 'disney', 'viaplay', 'tv4']):
+                return 'Nöje'
+            else:
+                return 'Övrigt'
+        else:
+            return 'Övrigt'
     
     def _get_example_bills(self) -> List[Dict]:
         """Returnera exempel-fakturor för demonstration.
@@ -215,7 +334,8 @@ class PDFBillParser:
                 amount=bill_data['amount'],
                 due_date=bill_data['due_date'],
                 description=bill_data.get('description', ''),
-                category=bill_data.get('category', 'Övrigt')
+                category=bill_data.get('category', 'Övrigt'),
+                account=bill_data.get('account', None)  # Include account if present
             )
             count += 1
         
