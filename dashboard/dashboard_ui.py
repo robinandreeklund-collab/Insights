@@ -1904,12 +1904,12 @@ def match_bills(n_clicks):
 # Callback: Update Account Summary
 @app.callback(
     Output('account-summary-container', 'children'),
-    [Input('bills-interval', 'n_intervals'),
-     Input('add-bill-btn', 'n_clicks'),
+    [Input('add-bill-btn', 'n_clicks'),
      Input('upload-pdf-bills', 'contents'),
-     Input('match-bills-btn', 'n_clicks')]
+     Input('match-bills-btn', 'n_clicks')],
+    [State('bills-interval', 'n_intervals')]
 )
-def update_account_summary(n, add_clicks, pdf_contents, match_clicks):
+def update_account_summary(add_clicks, pdf_contents, match_clicks, n):
     """Display summary of bills grouped by account."""
     try:
         bill_manager = BillManager()
