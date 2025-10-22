@@ -306,7 +306,10 @@ def create_accounts_tab():
         dcc.Store(id='current-page', data=0),
         dcc.Store(id='selected-transaction-id', data=None),
         dcc.Store(id='table-changes', data={}),
-        dcc.Store(id='table-refresh-trigger', data=0)
+        dcc.Store(id='table-refresh-trigger', data=0),
+        
+        # Interval for auto-refresh of dropdowns (not the table data)
+        dcc.Interval(id='accounts-interval', interval=5000, n_intervals=0)
     ], className="p-3")
 
 
