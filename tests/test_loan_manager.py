@@ -180,3 +180,77 @@ class TestLoanManager:
         )
         
         assert loan['fixed_rate_end_date'] == "2030-01-01"
+    
+    def test_match_transaction_to_loan_with_id(self):
+        """Test matching a transaction to a specific loan."""
+        # Create a loan
+        loan = self.loan_manager.add_loan(
+            name="Bolån",
+            principal=100000.0,
+            interest_rate=3.5,
+            start_date="2025-01-01",
+            term_months=360
+        )
+        
+        # Create a transaction
+        transaction = {
+            'description': 'Lånebetalning',
+            'amount': -5000.0,
+            'date': '2025-01-15'
+        }
+        
+        # Match transaction to loan
+        result = self.loan_manager.match_transaction_to_loan(transaction, loan['id'])
+        
+        assert result is not None
+        assert result['matched'] is True
+        assert result['loan_id'] == loan['id']
+        assert result['amount'] == 5000.0
+        assert result['new_balance'] == 95000.0
+    
+    def test_match_transaction_to_loan_auto(self):
+        """Test auto-matching a transaction to a loan."""
+        # Create a loan
+        loan = self.loan_manager.add_loan(
+            name="Bolån",
+            principal=50000.0,
+            interest_rate=3.0,
+            start_date="2025-01-01",
+            term_months=240
+        )
+        
+        # Create a transaction with loan name in description
+        transaction = {
+            'description': 'Bolån amortering',
+            'amount': -2000.0,
+            'date': '2025-02-01'
+        }
+        
+        # Auto-match transaction
+        result = self.loan_manager.match_transaction_to_loan(transaction)
+        
+        assert result is not None
+        assert result['matched'] is True
+        assert result['loan_id'] == loan['id']
+        assert result['amount'] == 2000.0
+    
+    def test_get_loan_payment_history(self):
+        """Test getting payment history for a loan."""
+        # Create a loan and add payments
+        loan = self.loan_manager.add_loan(
+            name="Billån",
+            principal=30000.0,
+            interest_rate=5.0,
+            start_date="2025-01-01",
+            term_months=60
+        )
+        
+        self.loan_manager.add_payment(loan['id'], 1000.0, '2025-01-15')
+        self.loan_manager.add_payment(loan['id'], 1000.0, '2025-02-15')
+        
+        # Get payment history
+        history = self.loan_manager.get_loan_payment_history(loan['id'])
+        
+        assert len(history) == 2
+        assert history[0]['amount'] == 1000.0
+        assert history[1]['amount'] == 1000.0

@@ -178,6 +178,91 @@ class LoanManager:
         
         return self.update_loan(loan_id, updates)
     
+    def match_transaction_to_loan(self, transaction: Dict, loan_id: str = None) -> Optional[Dict]:
+        """Match a transaction to a loan and update the loan balance.
+        
+        Args:
+            transaction: Transaction dictionary with amount, date, description, etc.
+            loan_id: Optional specific loan ID to match to. If None, tries to auto-match.
+            
+        Returns:
+            Dictionary with match result, or None if no match
+        """
+        # If loan_id is specified, use that loan
+        if loan_id:
+            loan = self.get_loan_by_id(loan_id)
+            if not loan:
+                return None
+        else:
+            # Try to auto-match based on description
+            loan = self._auto_match_loan(transaction)
+            if not loan:
+                return None
+        
+        # Extract payment amount (negative amounts for payments)
+        amount = abs(float(transaction.get('amount', 0)))
+        date = transaction.get('date', datetime.now().strftime('%Y-%m-%d'))
+        
+        # Register payment
+        success = self.add_payment(loan['id'], amount, date)
+        
+        if success:
+            return {
+                'matched': True,
+                'loan_id': loan['id'],
+                'loan_name': loan['name'],
+                'amount': amount,
+                'date': date,
+                'new_balance': max(0, loan.get('current_balance', 0) - amount)
+            }
+        
+        return None
+    
+    def _auto_match_loan(self, transaction: Dict) -> Optional[Dict]:
+        """Try to automatically match a transaction to a loan based on description.
+        
+        Args:
+            transaction: Transaction dictionary
+            
+        Returns:
+            Matched loan or None
+        """
+        description = transaction.get('description', '').lower()
+        loans = self.get_loans(status='active')
+        
+        # Look for loan name or ID in transaction description
+        for loan in loans:
+            loan_name = loan.get('name', '').lower()
+            loan_id = loan.get('id', '').lower()
+            
+            if loan_name and loan_name in description:
+                return loan
+            if loan_id and loan_id in description:
+                return loan
+            
+            # Check for common loan-related keywords
+            loan_keywords = ['bolån', 'billån', 'lån', 'amortering', 'ränta']
+            if any(keyword in description for keyword in loan_keywords):
+                # Return first active loan (this is a weak match)
+                # In a real system, you'd want more sophisticated matching
+                return loan
+        
+        return None
+    
+    def get_loan_payment_history(self, loan_id: str) -> List[Dict]:
+        """Get payment history for a loan.
+        
+        Args:
+            loan_id: Loan ID
+            
+        Returns:
+            List of payments
+        """
+        loan = self.get_loan_by_id(loan_id)
+        if loan:
+            return loan.get('payments', [])
+        return []
+    
     def calculate_monthly_payment(self, principal: float, interest_rate: float, 
                                   term_months: int) -> float:
         """Beräkna månatlig betalning för annuitetslån.

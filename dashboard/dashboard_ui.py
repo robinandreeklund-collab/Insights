@@ -93,6 +93,7 @@ CATEGORIES = {
     'Boende': ['Hyra & Räkningar', 'Hemförsäkring', 'El'],
     'Shopping': ['Kläder', 'Elektronik', 'Hem & Trädgård'],
     'Nöje': ['Bio & Teater', 'Sport', 'Hobby'],
+    'Lån': ['Amortering', 'Ränta', 'Lånebetalning'],
     'Övrigt': ['Okategoriserat', 'Transaktioner', 'Avgifter']
 }
 
@@ -269,6 +270,33 @@ def create_accounts_tab():
                             dbc.Badge("Ingen ändring", id='changes-badge', color="secondary")
                         ]),
                         html.Div(id='table-action-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Loan matching section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Lånmatchning", className="card-title"),
+                        html.P("Matcha valda transaktioner till lån för att automatiskt uppdatera lånesaldon.", 
+                               className="text-muted mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Välj lån:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='loan-match-dropdown',
+                                    placeholder="Välj ett lån att matcha till...",
+                                    className="mb-2"
+                                )
+                            ], width=8),
+                            dbc.Col([
+                                dbc.Button("Matcha till lån", id='match-loan-btn', color="info", className="mt-4"),
+                            ], width=4)
+                        ]),
+                        html.Div(id='loan-match-status', className="mt-3")
                     ])
                 ])
             ], width=12)
@@ -1160,8 +1188,9 @@ def update_transaction_table(account_name, current_page, n):
     if not transactions:
         return html.P("Inga transaktioner funna", className="text-muted"), ""
     
-    # Pagination
-    per_page = 50
+    # Pagination - use settings
+    panel = SettingsPanel()
+    per_page = panel.get_setting('display', 'items_per_page') or 50
     current_page = current_page or 0
     total_pages = (len(transactions) - 1) // per_page + 1
     start_idx = current_page * per_page
@@ -1251,7 +1280,8 @@ def handle_pagination(prev_clicks, next_clicks, current_page, account_name):
     
     manager = AccountManager()
     transactions = manager.get_account_transactions(account_name)
-    per_page = 50
+    panel = SettingsPanel()
+    per_page = panel.get_setting('display', 'items_per_page') or 50
     total_pages = (len(transactions) - 1) // per_page + 1
     
     if button_id == 'prev-page-btn' and current_page > 0:
@@ -1996,6 +2026,63 @@ def add_income(n_clicks, person, account, amount, date, description, category):
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
 
+# Callback: Load settings when tab is opened
+@app.callback(
+    [Output('settings-currency', 'value'),
+     Output('settings-decimals', 'value'),
+     Output('settings-items-per-page', 'value'),
+     Output('settings-refresh-interval', 'value'),
+     Output('settings-display-options', 'value'),
+     Output('settings-notifications', 'value'),
+     Output('settings-reminder-days', 'value'),
+     Output('settings-low-balance-threshold', 'value')],
+    Input('main-tabs', 'value')
+)
+def load_settings_on_tab_open(tab):
+    """Load current settings when settings tab is opened."""
+    if tab != 'settings':
+        # Return current values without changing anything
+        raise dash.exceptions.PreventUpdate
+    
+    try:
+        panel = SettingsPanel()
+        settings = panel.load_settings()
+        
+        general = settings.get('general', {})
+        display = settings.get('display', {})
+        notifications = settings.get('notifications', {})
+        
+        # Build display options list
+        display_opts = []
+        if display.get('auto_refresh', True):
+            display_opts.append('auto_refresh')
+        if display.get('show_pie_chart', True):
+            display_opts.append('show_pie')
+        if display.get('show_forecast_graph', True):
+            display_opts.append('show_forecast')
+        
+        # Build notifications list
+        notif_opts = []
+        if notifications.get('bill_reminders', True):
+            notif_opts.append('bill_reminders')
+        if notifications.get('low_balance_alert', True):
+            notif_opts.append('low_balance')
+        
+        return (
+            general.get('currency', 'SEK'),
+            general.get('decimal_places', 2),
+            display.get('items_per_page', 50),
+            display.get('refresh_interval', 5000) // 1000,  # Convert from ms to seconds
+            display_opts,
+            notif_opts,
+            notifications.get('reminder_days_before', 3),
+            notifications.get('low_balance_threshold', 1000.0)
+        )
+    except Exception as e:
+        print(f"Error loading settings: {e}")
+        raise dash.exceptions.PreventUpdate
+
+
 # Callback: Save settings
 @app.callback(
     Output('settings-save-status', 'children'),
@@ -2012,7 +2099,7 @@ def add_income(n_clicks, person, account, amount, date, description, category):
 )
 def save_settings(n_clicks, currency, decimals, items_per_page, refresh_interval, 
                   display_options, notifications, reminder_days, low_balance_threshold):
-    """Save settings."""
+    """Save settings and apply them to the system."""
     try:
         panel = SettingsPanel()
         
@@ -2037,9 +2124,13 @@ def save_settings(n_clicks, currency, decimals, items_per_page, refresh_interval
         }
         
         panel.update_settings(updates)
-        return dbc.Alert("Inställningar sparade!", color="success")
+        return dbc.Alert([
+            html.H5("✓ Inställningar sparade!", className="alert-heading"),
+            html.P("Inställningarna tillämpas nu i systemet. Vissa ändringar kan kräva en omladdning av sidan.", 
+                   className="mb-0")
+        ], color="success", dismissable=True, duration=6000)
     except Exception as e:
-        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000)
 
 
 # Callback: Reset settings
@@ -2195,6 +2286,78 @@ def view_training_data(n_clicks):
         ], color="info", dismissable=True, duration=10000)
     except Exception as e:
         return dbc.Alert(f"Fel vid visning: {str(e)}", color="danger", dismissable=True, duration=6000)
+
+
+# Callback: Update loan dropdown options
+@app.callback(
+    Output('loan-match-dropdown', 'options'),
+    Input('accounts-interval', 'n_intervals')
+)
+def update_loan_dropdown(n):
+    """Update loan dropdown with active loans."""
+    try:
+        loan_manager = LoanManager()
+        loans = loan_manager.get_loans(status='active')
+        
+        return [
+            {'label': f"{loan['name']} (Saldo: {loan.get('current_balance', 0):,.2f} SEK)", 
+             'value': loan['id']} 
+            for loan in loans
+        ]
+    except Exception as e:
+        print(f"Error loading loans: {e}")
+        return []
+
+
+# Callback: Match transaction to loan
+@app.callback(
+    Output('loan-match-status', 'children'),
+    Input('match-loan-btn', 'n_clicks'),
+    [State('transaction-table', 'selected_rows'),
+     State('transaction-table', 'data'),
+     State('loan-match-dropdown', 'value'),
+     State('account-selector', 'value')],
+    prevent_initial_call=True
+)
+def match_transaction_to_loan(n_clicks, selected_rows, table_data, loan_id, account_name):
+    """Match selected transaction to a loan."""
+    if not n_clicks or not selected_rows or not table_data or not loan_id:
+        return dbc.Alert("Välj en transaktion och ett lån att matcha till", color="warning", dismissable=True, duration=4000)
+    
+    try:
+        selected_tx = table_data[selected_rows[0]]
+        
+        loan_manager = LoanManager()
+        result = loan_manager.match_transaction_to_loan(selected_tx, loan_id)
+        
+        if result and result.get('matched'):
+            # Also update the transaction category
+            manager = AccountManager()
+            data = manager._load_yaml(manager.transactions_file)
+            transactions = data.get('transactions', [])
+            
+            for tx in transactions:
+                if (tx.get('date') == selected_tx['date'] and 
+                    tx.get('description') == selected_tx['description'] and
+                    tx.get('account') == account_name):
+                    tx['category'] = 'Lån'
+                    tx['subcategory'] = 'Lånebetalning'
+                    tx['loan_id'] = loan_id
+                    tx['loan_matched'] = True
+                    break
+            
+            manager.save_transactions(data)
+            
+            return dbc.Alert([
+                html.H5("✓ Transaktion matchad till lån!", className="alert-heading"),
+                html.P(f"Lån: {result['loan_name']}"),
+                html.P(f"Belopp: {result['amount']:,.2f} SEK"),
+                html.P(f"Nytt saldo: {result['new_balance']:,.2f} SEK", className="mb-0")
+            ], color="success", dismissable=True, duration=8000)
+        else:
+            return dbc.Alert("Kunde inte matcha transaktion till lån", color="danger", dismissable=True, duration=4000)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000)
 
 
 if __name__ == "__main__":
