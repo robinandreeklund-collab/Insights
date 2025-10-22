@@ -30,6 +30,7 @@ from modules.core.history_viewer import HistoryViewer
 from modules.core.income_tracker import IncomeTracker
 from modules.core.agent_interface import AgentInterface
 from modules.core.settings_panel import SettingsPanel
+from modules.core.ai_trainer import AITrainer
 
 
 def clear_data_on_exit(signum=None, frame=None):
@@ -780,6 +781,31 @@ def create_settings_tab():
             ], width=12)
         ], className="mb-4"),
         
+        # AI Training settings
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("AI-träning för kategorisering", className="card-title"),
+                        html.P("Träna AI-modellen från manuella kategoriseringar för att förbättra automatisk kategorisering.", 
+                               className="text-muted"),
+                        
+                        html.Div(id='ai-training-stats', className="mb-3"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Visa träningsdata", id='view-training-data-btn', color="info", className="me-2"),
+                                dbc.Button("Starta träning", id='start-training-btn', color="success", className="me-2"),
+                                dbc.Button("Rensa träningsdata", id='clear-training-data-btn', color="warning"),
+                            ], width=12)
+                        ]),
+                        
+                        html.Div(id='ai-training-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
         # Save button
         dbc.Row([
             dbc.Col([
@@ -787,7 +813,10 @@ def create_settings_tab():
                 dbc.Button("Återställ till standard", id='reset-settings-btn', color="secondary", size="lg", className="ms-2"),
                 html.Div(id='settings-save-status', className="mt-3")
             ], width=12)
-        ])
+        ]),
+        
+        # Interval for AI training stats update
+        dcc.Interval(id='ai-training-interval', interval=10000, n_intervals=0)
     ], className="p-3")
 
 
@@ -1956,6 +1985,145 @@ def reset_settings(n_clicks):
         return dbc.Alert("Inställningar återställda till standard!", color="info")
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Update AI Training Stats
+@app.callback(
+    Output('ai-training-stats', 'children'),
+    Input('ai-training-interval', 'n_intervals')
+)
+def update_ai_training_stats(n):
+    """Update AI training statistics."""
+    try:
+        trainer = AITrainer()
+        stats = trainer.get_training_stats()
+        
+        if stats['total_samples'] == 0:
+            return dbc.Alert("Ingen träningsdata tillgänglig ännu. Börja med att kategorisera transaktioner manuellt.", 
+                           color="info", className="mb-0")
+        
+        ready_badge = dbc.Badge("Redo att träna", color="success") if stats['ready_to_train'] else dbc.Badge(
+            f"Behöver {stats['min_samples_needed'] - stats['manual_samples']} fler manuella kategoriseringar", 
+            color="warning"
+        )
+        
+        return html.Div([
+            html.P([
+                html.Strong("Träningsstatus: "), ready_badge
+            ], className="mb-2"),
+            html.P([
+                html.Strong("Totalt antal träningsprover: "), f"{stats['total_samples']} ",
+                html.Small(f"({stats['manual_samples']} manuella)", className="text-muted")
+            ], className="mb-2"),
+            html.P([
+                html.Strong("Kategorier: "), 
+                ", ".join([f"{cat} ({count})" for cat, count in stats['categories'].items()])
+            ], className="mb-0") if stats['categories'] else None
+        ])
+    except Exception as e:
+        return dbc.Alert(f"Fel vid hämtning av statistik: {str(e)}", color="danger", className="mb-0")
+
+
+# Callback: Start AI Training
+@app.callback(
+    Output('ai-training-status', 'children'),
+    Input('start-training-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def start_ai_training(n_clicks):
+    """Start AI training from manual samples."""
+    if not n_clicks:
+        return ""
+    
+    try:
+        trainer = AITrainer()
+        result = trainer.train_from_samples()
+        
+        if result['success']:
+            return dbc.Alert([
+                html.H5("Träning genomförd!", className="alert-heading"),
+                html.P(result['message']),
+                html.Hr(),
+                html.P([
+                    "Kategorier som tränats: ",
+                    ", ".join(result.get('categories_trained', []))
+                ], className="mb-0") if result.get('categories_trained') else None
+            ], color="success", dismissable=True, duration=8000)
+        else:
+            return dbc.Alert(result['message'], color="warning", dismissable=True, duration=6000)
+    except Exception as e:
+        return dbc.Alert(f"Fel vid träning: {str(e)}", color="danger", dismissable=True, duration=6000)
+
+
+# Callback: Clear Training Data
+@app.callback(
+    Output('ai-training-status', 'children', allow_duplicate=True),
+    Input('clear-training-data-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def clear_training_data(n_clicks):
+    """Clear all training data."""
+    if not n_clicks:
+        return ""
+    
+    try:
+        trainer = AITrainer()
+        trainer.clear_training_data()
+        
+        return dbc.Alert(
+            "Träningsdata rensad! AI-genererade regler behålls. Använd 'Ta bort AI-regler' om du vill ta bort dem också.",
+            color="info", 
+            dismissable=True, 
+            duration=6000
+        )
+    except Exception as e:
+        return dbc.Alert(f"Fel vid rensning: {str(e)}", color="danger", dismissable=True, duration=6000)
+
+
+# Callback: View Training Data
+@app.callback(
+    Output('ai-training-status', 'children', allow_duplicate=True),
+    Input('view-training-data-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def view_training_data(n_clicks):
+    """View training data samples."""
+    if not n_clicks:
+        return ""
+    
+    try:
+        trainer = AITrainer()
+        training_data = trainer.get_training_data()
+        
+        if not training_data:
+            return dbc.Alert("Ingen träningsdata tillgänglig", color="info", dismissable=True, duration=4000)
+        
+        # Show last 5 samples
+        recent_samples = training_data[-5:]
+        
+        table_rows = []
+        for sample in recent_samples:
+            table_rows.append(html.Tr([
+                html.Td(sample.get('description', '')[:50]),
+                html.Td(sample.get('category', '')),
+                html.Td(sample.get('subcategory', '')),
+                html.Td(sample.get('added_at', ''))
+            ]))
+        
+        return dbc.Alert([
+            html.H5(f"Senaste {len(recent_samples)} träningsprover", className="alert-heading"),
+            dbc.Table([
+                html.Thead(html.Tr([
+                    html.Th("Beskrivning"),
+                    html.Th("Kategori"),
+                    html.Th("Underkategori"),
+                    html.Th("Tillagd")
+                ])),
+                html.Tbody(table_rows)
+            ], bordered=True, striped=True, size="sm")
+        ], color="info", dismissable=True, duration=10000)
+    except Exception as e:
+        return dbc.Alert(f"Fel vid visning: {str(e)}", color="danger", dismissable=True, duration=6000)
 
 
 if __name__ == "__main__":
