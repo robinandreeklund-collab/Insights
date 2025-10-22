@@ -82,9 +82,20 @@ def detect_format(data: pd.DataFrame) -> str:
         data: DataFrame with bank data
         
     Returns:
-        String indicating the detected format (e.g., 'nordea', 'swedbank')
+        String indicating the detected format (e.g., 'nordea', 'amex', 'swedbank')
     """
     columns = [col.lower() for col in data.columns]
+    
+    # Amex format detection (check first to avoid false positives)
+    amex_indicators = ['card member', 'cardmember']
+    if any(indicator in columns for indicator in amex_indicators):
+        return 'amex'
+    
+    # Also check for typical Amex column combination
+    if 'date' in columns and 'description' in columns and 'amount' in columns:
+        # If no typical bank columns but has these, might be Amex
+        if 'bokföringsdag' not in columns and 'belopp' not in columns:
+            return 'amex'
     
     # Nordea format detection
     # Swedish: Bokföringsdag, Belopp, Avsändare, Mottagare, Namn, Rubrik, Saldo, Valuta

@@ -15,6 +15,7 @@ bills:
     paid_at: null
     matched_transaction_id: null
     scheduled_payment_date: null
+    line_items: []  # Tom lista för vanliga fakturor
 
   - id: BILL-0002
     name: ICA Matinköp
@@ -29,6 +30,7 @@ bills:
     paid_at: null
     matched_transaction_id: null
     scheduled_payment_date: null
+    line_items: []
 
   - id: BILL-0003
     name: Netflix Subscription
@@ -43,6 +45,7 @@ bills:
     paid_at: null
     matched_transaction_id: null
     scheduled_payment_date: null
+    line_items: []
 
   - id: BILL-0004
     name: Telenor Mobilabonnemang
@@ -57,7 +60,111 @@ bills:
     paid_at: '2025-10-25 10:15:00'
     matched_transaction_id: 'TX-2025-10-25-Telenor-299.0'
     scheduled_payment_date: '2025-10-25'
+    line_items: []
 
+  # AMEX WORKFLOW EXAMPLE
+  # Amex bill created manually - affects cash flow forecast only
+  - id: BILL-0005
+    name: American Express
+    amount: 5234.50
+    due_date: '2025-11-15'
+    description: 'Amex bill - scheduled payment'
+    category: 'Övrigt'
+    subcategory: 'Kreditkort'
+    account: '1722 20 34439'
+    status: 'pending'
+    created_at: '2025-10-22 15:00:00'
+    paid_at: null
+    matched_transaction_id: null
+    scheduled_payment_date: '2025-11-14'
+    is_amex_bill: true  # Flag to identify Amex bills
+    line_items:  # Line items from CSV import (historical records)
+      - id: 'LINE-0001'
+        date: '2025-10-05'
+        vendor: 'ICA Supermarket'
+        description: 'Groceries'
+        amount: 856.50
+        category: 'Mat & Dryck'
+        subcategory: 'Matinköp'
+        is_historical_record: true  # Used for analysis, not cash flow
+        affects_cash: false  # Does not affect cash balance
+        created_at: '2025-10-22 15:05:00'
+      
+      - id: 'LINE-0002'
+        date: '2025-10-08'
+        vendor: 'Shell'
+        description: 'Fuel'
+        amount: 650.00
+        category: 'Transport'
+        subcategory: 'Drivmedel'
+        is_historical_record: true
+        affects_cash: false
+        created_at: '2025-10-22 15:05:00'
+      
+      - id: 'LINE-0003'
+        date: '2025-10-12'
+        vendor: 'Netflix'
+        description: 'Monthly subscription'
+        amount: 119.00
+        category: 'Nöje'
+        subcategory: 'Streaming'
+        is_historical_record: true
+        affects_cash: false
+        created_at: '2025-10-22 15:05:00'
+      
+      - id: 'LINE-0004'
+        date: '2025-10-18'
+        vendor: 'Willys'
+        description: 'Groceries'
+        amount: 1234.00
+        category: 'Mat & Dryck'
+        subcategory: 'Matinköp'
+        is_historical_record: true
+        affects_cash: false
+        created_at: '2025-10-22 15:05:00'
+      
+      - id: 'LINE-0005'
+        date: '2025-10-20'
+        vendor: 'Stadium'
+        description: 'Sports equipment'
+        amount: 2375.00
+        category: 'Shopping'
+        subcategory: 'Sport'
+        is_historical_record: true
+        affects_cash: false
+        created_at: '2025-10-22 15:05:00'
+
+# AMEX WORKFLOW NOTES:
+# 
+# 1. Manual Bill Creation:
+#    - User creates Amex bill with total amount, due date, account
+#    - Bill is saved with status='pending' and is_amex_bill=true
+#    - Bill total affects cash flow forecast (appears in upcoming bills)
+#    - Line items array is initially empty
+# 
+# 2. CSV Import with Linkage:
+#    - User uploads Amex CSV with line items
+#    - System detects Amex format
+#    - System proposes linking to existing Amex bill (match by date/amount/account)
+#    - User previews and confirms linkage
+#    - Line items saved with is_historical_record=true, affects_cash=false
+# 
+# 3. Historical Records:
+#    - Line items are used for category analysis, monthly summaries
+#    - Line items can be edited (category, subcategory, vendor)
+#    - Line items can be selected for AI training
+#    - Line items DO NOT affect cash flow (to avoid double-counting)
+# 
+# 4. Bank Payment Matching:
+#    - When bank payment transaction is imported, it matches to bill
+#    - Bill is marked as paid, affects cash balance (once)
+#    - Line items remain as historical records for analysis
+# 
+# 5. Optional Pseudo-Account:
+#    - Create special "Amex" account to view all line items as history
+#    - Line items appear as transactions in this account
+#    - Useful for viewing detailed Amex spending patterns
+# 
 # Kontonummer-matchning:
 # - Fakturor skapade från PDF med kontonamn "MAT 1722 20 34439" 
 #   får normaliserat account = "1722 20 34439"
