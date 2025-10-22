@@ -60,7 +60,7 @@ Comprehensive CSS theme including:
 - Responsive media queries
 - Utility classes
 
-### 2. `assets/icons.py` (244 lines)
+### 2. `assets/icons.py` (148 lines)
 Icon helper functions:
 - SVG icon templates inspired by Octicons
 - Helper functions for each icon type
