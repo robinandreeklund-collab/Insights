@@ -24,6 +24,7 @@ from modules.core.forecast_engine import get_forecast_summary, get_category_brea
 from modules.core.import_bank_data import import_csv
 from modules.core.categorize_expenses import auto_categorize
 from modules.core.bill_manager import BillManager
+from modules.core.credit_card_manager import CreditCardManager
 from modules.core.loan_manager import LoanManager
 from modules.core.parse_pdf_bills import PDFBillParser
 from modules.core.bill_matcher import BillMatcher
@@ -699,6 +700,126 @@ def create_bills_tab():
 
 
 # Create loans tab content
+
+# Create credit cards tab content
+def create_credit_cards_tab():
+    """Create the credit cards management tab."""
+    return html.Div([
+        html.H2("Kreditkortshantering", className="mb-4"),
+        
+        # Add new credit card section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Lägg till nytt kreditkort", className="card-title"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Kortnamn:", className="fw-bold"),
+                                dbc.Input(id='card-name-input', type='text', placeholder='t.ex. Amex Platinum'),
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Korttyp:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='card-type-dropdown',
+                                    options=[
+                                        {'label': 'American Express', 'value': 'American Express'},
+                                        {'label': 'Visa', 'value': 'Visa'},
+                                        {'label': 'Mastercard', 'value': 'Mastercard'},
+                                        {'label': 'Annat', 'value': 'Other'}
+                                    ],
+                                    placeholder='Välj korttyp'
+                                ),
+                            ], width=6),
+                        ], className="mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Sista 4 siffror:", className="fw-bold"),
+                                dbc.Input(id='card-last-four-input', type='text', placeholder='1234', maxLength=4),
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Kreditgräns (SEK):", className="fw-bold"),
+                                dbc.Input(id='card-limit-input', type='number', placeholder='50000'),
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Färg:", className="fw-bold"),
+                                dbc.Input(id='card-color-input', type='color', value='#1f77b4'),
+                            ], width=4),
+                        ], className="mb-3"),
+                        dbc.Button("Lägg till kort", id='add-card-btn', color="primary"),
+                        html.Div(id='card-add-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Credit cards overview section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Mina kreditkort", className="card-title"),
+                        html.Div(id='credit-cards-overview')
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # CSV Import section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Importera transaktioner från CSV", className="card-title"),
+                        dcc.Dropdown(
+                            id='card-import-selector',
+                            placeholder='Välj kort för import...',
+                            className="mb-3"
+                        ),
+                        dcc.Upload(
+                            id='upload-card-csv',
+                            children=html.Div([
+                                html.I(className="bi bi-filetype-csv", style={'fontSize': '48px'}),
+                                html.Br(),
+                                'Dra och släpp eller klicka för att välja CSV-fil'
+                            ]),
+                            style={
+                                'width': '100%',
+                                'height': '150px',
+                                'lineHeight': '150px',
+                                'borderWidth': '2px',
+                                'borderStyle': 'dashed',
+                                'borderRadius': '10px',
+                                'textAlign': 'center',
+                                'backgroundColor': '#f8f9fa'
+                            },
+                            multiple=False
+                        ),
+                        html.Div(id='card-csv-import-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Card details and transactions section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Kortdetaljer och transaktioner", className="card-title"),
+                        dcc.Dropdown(
+                            id='card-details-selector',
+                            placeholder='Välj kort för detaljer...',
+                            className="mb-3"
+                        ),
+                        html.Div(id='card-details-container')
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+    ], className="p-3")
+
+
 def create_loans_tab():
     """Create the Loans tab with loan management and simulation."""
     return html.Div([
@@ -1294,6 +1415,12 @@ app.layout = html.Div([
                     ], className="sidebar-nav-item"),
                     html.Li([
                         html.A([
+                            html.Span("💎", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Kreditkort", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-credit-cards", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
                             html.Span("📜", className="sidebar-nav-icon", style={'display': 'inline-block'}),
                             html.Span("Historik", style={'marginLeft': '8px'}),
                         ], href="#", id="nav-history", className="sidebar-nav-link"),
@@ -1356,6 +1483,7 @@ def navigate_tabs(*args):
         'nav-input': ('input', create_input_tab()),
         'nav-accounts': ('accounts', create_accounts_tab()),
         'nav-bills': ('bills', create_bills_tab()),
+        'nav-credit-cards': ('credit-cards', create_credit_cards_tab()),
         'nav-history': ('history', create_history_tab()),
         'nav-monthly-analysis': ('monthly-analysis', create_monthly_analysis_tab()),
         'nav-loans': ('loans', create_loans_tab()),
@@ -4032,6 +4160,247 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
 
 
 # ==== AMEX WORKFLOW CALLBACKS ====
+
+
+
+
+# ===== CREDIT CARD CALLBACKS =====
+
+# Credit Card Callbacks
+
+# Callback: Add Credit Card
+@app.callback(
+    Output('card-add-status', 'children'),
+    Input('add-card-btn', 'n_clicks'),
+    [State('card-name-input', 'value'),
+     State('card-type-dropdown', 'value'),
+     State('card-last-four-input', 'value'),
+     State('card-limit-input', 'value'),
+     State('card-color-input', 'value')],
+    prevent_initial_call=True
+)
+def add_credit_card(n_clicks, name, card_type, last_four, limit, color):
+    """Add a new credit card."""
+    if not name or not card_type or not last_four or not limit:
+        return dbc.Alert("Fyll i alla fält", color="warning")
+    
+    try:
+        manager = CreditCardManager()
+        card = manager.add_card(
+            name=name,
+            card_type=card_type,
+            last_four=last_four,
+            credit_limit=float(limit),
+            display_color=color or "#1f77b4",
+            icon="credit-card"
+        )
+        
+        return dbc.Alert(f"✓ Kreditkort '{name}' tillagt!", color="success", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Update Credit Cards Overview
+@app.callback(
+    [Output('credit-cards-overview', 'children'),
+     Output('card-import-selector', 'options'),
+     Output('card-details-selector', 'options')],
+    Input('add-card-btn', 'n_clicks')
+)
+def update_cards_overview(n_clicks):
+    """Update the credit cards overview display and dropdowns."""
+    try:
+        manager = CreditCardManager()
+        cards = manager.get_cards(status='active')
+        
+        if not cards:
+            return (
+                html.P("Inga kreditkort tillagda än. Lägg till ditt första kort ovan.", className="text-muted"),
+                [],
+                []
+            )
+        
+        # Create card summary cards
+        card_elements = []
+        dropdown_options = []
+        
+        for card in cards:
+            summary = manager.get_card_summary(card['id'])
+            
+            # Card display
+            card_elem = dbc.Card([
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col([
+                            html.H5(f"{card['name']} (****{card['last_four']})", className="mb-1"),
+                            html.P(card['card_type'], className="text-muted mb-2"),
+                        ], width=8),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="bi bi-credit-card", style={'fontSize': '32px', 'color': card.get('display_color', '#1f77b4')})
+                            ], style={'textAlign': 'right'})
+                        ], width=4),
+                    ]),
+                    html.Hr(),
+                    dbc.Row([
+                        dbc.Col([
+                            html.Small("Aktuellt saldo:", className="text-muted d-block"),
+                            html.Strong(f"{summary['current_balance']:,.2f} SEK", className="d-block fs-5"),
+                        ], width=4),
+                        dbc.Col([
+                            html.Small("Tillgänglig kredit:", className="text-muted d-block"),
+                            html.Strong(f"{summary['available_credit']:,.2f} SEK", className="d-block fs-5"),
+                        ], width=4),
+                        dbc.Col([
+                            html.Small("Utnyttjande:", className="text-muted d-block"),
+                            html.Strong(f"{summary['utilization_percent']:.1f}%", className="d-block fs-5"),
+                        ], width=4),
+                    ]),
+                    html.Div([
+                        dbc.Progress(value=summary['utilization_percent'], max=100, 
+                                   color="danger" if summary['utilization_percent'] > 70 else ("warning" if summary['utilization_percent'] > 30 else "success"),
+                                   className="mt-2")
+                    ]),
+                    html.Hr(),
+                    dbc.Row([
+                        dbc.Col([
+                            html.Small(f"Transaktioner: {summary['total_transactions']}", className="text-muted"),
+                        ], width=6),
+                        dbc.Col([
+                            html.Small(f"Totalt spenderat: {summary['total_spent']:,.2f} SEK", className="text-muted"),
+                        ], width=6),
+                    ]),
+                ])
+            ], className="mb-3", style={'borderLeft': f"4px solid {card.get('display_color', '#1f77b4')}"})
+            
+            card_elements.append(card_elem)
+            
+            # Add to dropdown options
+            dropdown_options.append({
+                'label': f"{card['name']} (****{card['last_four']})",
+                'value': card['id']
+            })
+        
+        return html.Div(card_elements), dropdown_options, dropdown_options
+        
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger"), [], []
+
+
+# Callback: Import CSV Transactions
+@app.callback(
+    Output('card-csv-import-status', 'children'),
+    Input('upload-card-csv', 'contents'),
+    [State('upload-card-csv', 'filename'),
+     State('card-import-selector', 'value')],
+    prevent_initial_call=True
+)
+def import_card_csv(contents, filename, card_id):
+    """Import transactions from uploaded CSV file."""
+    if contents is None or not card_id:
+        return dbc.Alert("Välj ett kort först", color="warning")
+    
+    try:
+        # Decode the uploaded file
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        
+        # Save to temporary file
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp_file:
+            tmp_file.write(decoded)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Import transactions
+            manager = CreditCardManager()
+            count = manager.import_transactions_from_csv(card_id, tmp_path)
+            
+            return dbc.Alert(
+                f"✓ {count} transaktioner importerade från {filename}!",
+                color="success",
+                dismissable=True
+            )
+        finally:
+            # Clean up temporary file
+            import os
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+    
+    except Exception as e:
+        return dbc.Alert(f"Fel vid import: {str(e)}", color="danger")
+
+
+# Callback: Display Card Details and Transactions
+@app.callback(
+    Output('card-details-container', 'children'),
+    Input('card-details-selector', 'value')
+)
+def display_card_details(card_id):
+    """Display detailed information and transactions for selected card."""
+    if not card_id:
+        return ""
+    
+    try:
+        manager = CreditCardManager()
+        summary = manager.get_card_summary(card_id)
+        transactions = manager.get_transactions(card_id)
+        
+        # Summary section
+        summary_elem = dbc.Alert([
+            html.H6(f"{summary['name']} (****{summary['card_type']})", className="alert-heading"),
+            html.P([
+                html.Strong("Saldo: "), f"{summary['current_balance']:,.2f} SEK", html.Br(),
+                html.Strong("Kreditgräns: "), f"{summary['credit_limit']:,.2f} SEK", html.Br(),
+                html.Strong("Tillgänglig kredit: "), f"{summary['available_credit']:,.2f} SEK", html.Br(),
+                html.Strong("Utnyttjande: "), f"{summary['utilization_percent']:.1f}%", html.Br(),
+            ])
+        ], color="info", className="mb-3")
+        
+        # Category breakdown
+        if summary['category_breakdown']:
+            category_data = [{'Kategori': cat, 'Belopp': amount} 
+                           for cat, amount in summary['category_breakdown'].items()]
+            category_df = pd.DataFrame(category_data)
+            
+            category_elem = html.Div([
+                html.H6("Utgifter per kategori"),
+                dash_table.DataTable(
+                    data=category_df.to_dict('records'),
+                    columns=[{'name': col, 'id': col} for col in category_df.columns],
+                    style_table={'overflowX': 'auto'},
+                    style_cell={'textAlign': 'left', 'padding': '10px'},
+                    style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'}
+                )
+            ], className="mb-3")
+        else:
+            category_elem = ""
+        
+        # Transactions table
+        if transactions:
+            tx_df = pd.DataFrame(transactions)
+            # Select relevant columns
+            display_cols = ['date', 'vendor', 'description', 'amount', 'category', 'subcategory']
+            tx_df = tx_df[[col for col in display_cols if col in tx_df.columns]]
+            
+            transactions_elem = html.Div([
+                html.H6(f"Transaktioner ({len(transactions)})"),
+                dash_table.DataTable(
+                    data=tx_df.to_dict('records'),
+                    columns=[{'name': col.title(), 'id': col} for col in tx_df.columns],
+                    style_table={'overflowX': 'auto'},
+                    style_cell={'textAlign': 'left', 'padding': '10px'},
+                    style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
+                    page_size=20
+                )
+            ])
+        else:
+            transactions_elem = html.P("Inga transaktioner funna. Importera från CSV.", className="text-muted")
+        
+        return html.Div([summary_elem, category_elem, transactions_elem])
+        
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
 
 

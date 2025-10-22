@@ -142,19 +142,30 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - Schemaläggning av betalningar
 - Prognosintegration och historik
 
-### 5. Historik
+### 5. Kreditkort
+- **NYtt: Kreditkortshantering** med generellt stöd för alla korttyper (Amex, Visa, Mastercard, etc)
+  - Lägg till kreditkortskonton med namn, typ, kreditgräns, färg och ikon
+  - CSV-import av transaktioner från kontoutdrag (generiskt format med Date, Description, Amount)
+  - Automatisk kategorisering av kreditkortstransaktioner
+  - Visa aktuellt saldo, tillgänglig kredit och utnyttjandegrad per kort
+  - Kategorifördelning och topp-leverantörer per kort
+  - Transaktionshistorik med filtrering
+  - AI-träning på kreditkortstransaktioner (via automatisk kategorisering)
+  - Betalningsmatching mot bankkonto (uppdaterar kortsaldo automatiskt)
+
+### 6. Historik
 - Månadssammanställningar med inkomster/utgifter/netto
 - Kategoritrender över tid (6 månader)
 - Topptransaktioner och största utgifter
 - Saldohistorik per konto
 
-### 6. Lån
+### 7. Lån
 - Lägg till lån med ränta och bindningstid
 - Visualisera återbetalning och saldo
 - Simulera ränteförändringar och bindningstidens slut
 - Månadsvis amorteringsplan
 
-### 7. Frågebaserad analys med AI
+### 8. Frågebaserad analys med AI
 - Naturligt språkgränssnitt för ekonomifrågor
 - "Vad händer om räntan ökar med 2%?"
 - "Hur mycket saldo har jag?"
@@ -162,7 +173,7 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - "Största utgifter denna månad"
 - Automatisk routing till rätt modul
 
-### 8. Inkomsthantering
+### 9. Inkomsthantering
 - Registrera inkomster per person
 - Spåra inkomster per konto
 - Månadssammanställningar
