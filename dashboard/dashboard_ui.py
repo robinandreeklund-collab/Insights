@@ -34,6 +34,29 @@ from modules.core.settings_panel import SettingsPanel
 from modules.core.ai_trainer import AITrainer
 from modules.core.category_manager import CategoryManager
 
+# Import icon helpers
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets'))
+try:
+    from icons import (home_icon, upload_icon, graph_icon, account_icon, 
+                      credit_card_icon, calendar_icon, chart_icon, 
+                      gear_icon, history_icon, question_icon, 
+                      moon_icon, sun_icon, beaker_icon)
+except ImportError:
+    # Fallback if icons not available
+    def home_icon(size=16): return ""
+    def upload_icon(size=16): return ""
+    def graph_icon(size=16): return ""
+    def account_icon(size=16): return ""
+    def credit_card_icon(size=16): return ""
+    def calendar_icon(size=16): return ""
+    def chart_icon(size=16): return ""
+    def gear_icon(size=16): return ""
+    def history_icon(size=16): return ""
+    def question_icon(size=16): return ""
+    def moon_icon(size=16): return ""
+    def sun_icon(size=16): return ""
+    def beaker_icon(size=16): return ""
+
 
 def clear_data_on_exit(signum=None, frame=None):
     """Clear transactions, accounts, bills, and loans data files on exit.
@@ -81,11 +104,12 @@ def clear_data_on_exit(signum=None, frame=None):
 
 
 
-# Initialize Dash app
+# Initialize Dash app with custom CSS
 app = dash.Dash(
     __name__,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
-    suppress_callback_exceptions=True
+    suppress_callback_exceptions=True,
+    assets_folder='../assets'
 )
 
 # Define category and subcategory options
@@ -1275,80 +1299,185 @@ def create_settings_tab():
     ], className="p-3")
 
 
-# Main app layout
-app.layout = dbc.Container([
-    html.H1("Insights – Hushållsekonomi Dashboard", className="text-center my-4"),
-    
-    # Storage components for state management and real-time updates
+# Main app layout with GitHub-inspired design
+app.layout = html.Div([
+    # Storage components for state management
     dcc.Store(id='bills-update-trigger', storage_type='memory'),
     dcc.Store(id='incomes-update-trigger', storage_type='memory'),
     dcc.Store(id='transactions-update-trigger', storage_type='memory'),
+    dcc.Store(id='theme-store', storage_type='local', data='dark'),
+    dcc.Store(id='current-tab', storage_type='memory', data='overview'),
     
-    dcc.Tabs(id="main-tabs", value="overview", children=[
-        # Ekonomisk översikt
-        dcc.Tab(
-            label="Ekonomisk översikt",
-            value="overview",
-            children=create_overview_tab()
-        ),
+    # Top Navigation Bar
+    html.Div([
+        html.Div([
+            html.Div([
+                html.Span("📊", style={'fontSize': '24px', 'marginRight': '8px'}),
+                html.Span("Insights", style={'fontWeight': '600', 'fontSize': '16px'}),
+                html.Span(" / Hushållsekonomi", className="top-navbar-repo"),
+            ], className="top-navbar-brand"),
+            html.Div([
+                html.Button([
+                    html.Span(id='theme-icon', children="🌙"),
+                ], id='theme-toggle-btn', className="theme-toggle"),
+            ], className="top-navbar-actions"),
+        ], style={'display': 'flex', 'alignItems': 'center', 'width': '100%'}),
+    ], className="top-navbar"),
+    
+    # Container with sidebar and main content
+    html.Div([
+        # Sidebar Navigation
+        html.Div([
+            html.Nav([
+                html.Ul([
+                    html.Li([
+                        html.A([
+                            html.Span("🏠", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Ekonomisk översikt", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-overview", className="sidebar-nav-link active"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("📤", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Inmatning", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-input", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("👤", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Konton", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-accounts", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("💳", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Fakturor", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-bills", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("📜", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Historik", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-history", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("📅", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Månadsanalys", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-monthly-analysis", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("📈", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Lån", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-loans", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("❓", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Frågebaserad analys", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-agent", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
+                            html.Span("⚙️", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Inställningar", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-settings", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                ], className="sidebar-nav"),
+            ]),
+        ], className="sidebar"),
         
-        # Inmatning
-        dcc.Tab(
-            label="Inmatning",
-            value="input",
-            children=create_input_tab()
-        ),
-        
-        # Konton
-        dcc.Tab(
-            label="Konton",
-            value="accounts",
-            children=create_accounts_tab()
-        ),
-        
-        # Fakturor
-        dcc.Tab(
-            label="Fakturor",
-            value="bills",
-            children=create_bills_tab()
-        ),
-        
-        # Historik
-        dcc.Tab(
-            label="Historik",
-            value="history",
-            children=create_history_tab()
-        ),
-        
-        # Månadsanalys
-        dcc.Tab(
-            label="Månadsanalys",
-            value="monthly_analysis",
-            children=create_monthly_analysis_tab()
-        ),
-        
-        # Lån
-        dcc.Tab(
-            label="Lån",
-            value="loans",
-            children=create_loans_tab()
-        ),
-        
-        # Frågebaserad analys
-        dcc.Tab(
-            label="Frågebaserad analys",
-            value="agent",
-            children=create_agent_tab()
-        ),
-        
-        # Inställningar
-        dcc.Tab(
-            label="Inställningar",
-            value="settings",
-            children=create_settings_tab()
-        ),
-    ])
-], fluid=True)
+        # Main Content Area
+        html.Div([
+            html.Div(id='tab-content', children=create_overview_tab()),
+        ], className="main-content"),
+    ], className="insights-container"),
+], style={'backgroundColor': 'var(--gh-canvas-default)'})
+
+
+# Navigation callbacks
+@app.callback(
+    [Output('tab-content', 'children'),
+     Output('current-tab', 'data')] +
+    [Output(f'nav-{tab}', 'className') for tab in ['overview', 'input', 'accounts', 'bills', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
+    [Input(f'nav-{tab}', 'n_clicks') for tab in ['overview', 'input', 'accounts', 'bills', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
+    prevent_initial_call=True
+)
+def navigate_tabs(*args):
+    """Handle sidebar navigation clicks."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    # Map navigation IDs to tab content
+    tab_map = {
+        'nav-overview': ('overview', create_overview_tab()),
+        'nav-input': ('input', create_input_tab()),
+        'nav-accounts': ('accounts', create_accounts_tab()),
+        'nav-bills': ('bills', create_bills_tab()),
+        'nav-history': ('history', create_history_tab()),
+        'nav-monthly-analysis': ('monthly-analysis', create_monthly_analysis_tab()),
+        'nav-loans': ('loans', create_loans_tab()),
+        'nav-agent': ('agent', create_agent_tab()),
+        'nav-settings': ('settings', create_settings_tab()),
+    }
+    
+    if button_id not in tab_map:
+        raise PreventUpdate
+    
+    tab_id, content = tab_map[button_id]
+    
+    # Update active class for nav items
+    nav_classes = []
+    for tab in ['overview', 'input', 'accounts', 'bills', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']:
+        if f'nav-{tab}' == button_id:
+            nav_classes.append('sidebar-nav-link active')
+        else:
+            nav_classes.append('sidebar-nav-link')
+    
+    return [content, tab_id] + nav_classes
+
+
+# Theme toggle callback
+@app.callback(
+    Output('theme-store', 'data'),
+    Output('theme-icon', 'children'),
+    Input('theme-toggle-btn', 'n_clicks'),
+    State('theme-store', 'data'),
+    prevent_initial_call=True
+)
+def toggle_theme(n_clicks, current_theme):
+    """Toggle between light and dark themes."""
+    if n_clicks is None:
+        raise PreventUpdate
+    
+    # Toggle theme
+    new_theme = 'light' if current_theme == 'dark' else 'dark'
+    
+    # Update icon - moon for dark theme (toggle to light), sun for light theme (toggle to dark)
+    icon = "☀️" if new_theme == 'dark' else "🌙"
+    
+    return new_theme, icon
+
+
+# Apply theme to body
+app.clientside_callback(
+    """
+    function(theme) {
+        if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('theme-store', 'modified_timestamp'),
+    Input('theme-store', 'data')
+)
 
 
 # Callback: CSV Upload
