@@ -33,12 +33,17 @@ from modules.core.settings_panel import SettingsPanel
 
 
 def clear_data_on_exit(signum=None, frame=None):
-    """Clear transactions and accounts data files on exit."""
+    """Clear transactions, accounts, bills, and loans data files on exit.
+    
+    Note: training_data.yaml is preserved to maintain AI learning.
+    """
     print("\n\nClearing data files before exit...")
     
     yaml_dir = "yaml"
     transactions_file = os.path.join(yaml_dir, "transactions.yaml")
     accounts_file = os.path.join(yaml_dir, "accounts.yaml")
+    bills_file = os.path.join(yaml_dir, "bills.yaml")
+    loans_file = os.path.join(yaml_dir, "loans.yaml")
     
     try:
         # Reset transactions.yaml
@@ -53,11 +58,24 @@ def clear_data_on_exit(signum=None, frame=None):
                 yaml.dump({'accounts': []}, f, default_flow_style=False, allow_unicode=True)
             print(f"✓ Cleared {accounts_file}")
         
-        print("Data files cleared successfully!")
+        # Reset bills.yaml
+        if os.path.exists(bills_file):
+            with open(bills_file, 'w', encoding='utf-8') as f:
+                yaml.dump({'bills': []}, f, default_flow_style=False, allow_unicode=True)
+            print(f"✓ Cleared {bills_file}")
+        
+        # Reset loans.yaml
+        if os.path.exists(loans_file):
+            with open(loans_file, 'w', encoding='utf-8') as f:
+                yaml.dump({'loans': []}, f, default_flow_style=False, allow_unicode=True)
+            print(f"✓ Cleared {loans_file}")
+        
+        print("Data files cleared successfully! (training_data.yaml preserved)")
     except Exception as e:
         print(f"Error clearing data files: {e}")
     
     sys.exit(0)
+
 
 
 # Initialize Dash app
@@ -168,7 +186,7 @@ def create_accounts_tab():
     return html.Div([
         html.H3("Konton", className="mt-3 mb-4"),
         
-        # Account selector
+        # Account selector and management
         dbc.Row([
             dbc.Col([
                 html.Label("Välj konto:", className="fw-bold"),
@@ -177,8 +195,43 @@ def create_accounts_tab():
                     placeholder="Välj ett konto...",
                     className="mb-3"
                 )
+            ], width=6),
+            dbc.Col([
+                html.Label("Hantera konto:", className="fw-bold"),
+                html.Div([
+                    dbc.Button("Redigera konto", id='edit-account-btn', size="sm", color="primary", className="me-2"),
+                    dbc.Button("Ta bort konto", id='delete-account-btn', size="sm", color="danger"),
+                ], className="mt-2")
             ], width=6)
         ]),
+        
+        # Account edit modal
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Redigera konto")),
+            dbc.ModalBody([
+                html.Label("Kontonamn:", className="fw-bold mb-2"),
+                dbc.Input(id='edit-account-name-input', type='text', placeholder='Kontonamn'),
+                html.Div(id='edit-account-status', className="mt-2")
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Avbryt", id='edit-account-cancel-btn', color="secondary"),
+                dbc.Button("Spara", id='edit-account-save-btn', color="primary")
+            ])
+        ], id='edit-account-modal', is_open=False),
+        
+        # Delete confirmation modal
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Bekräfta borttagning")),
+            dbc.ModalBody([
+                html.P(id='delete-account-confirm-text'),
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Avbryt", id='delete-account-cancel-btn', color="secondary"),
+                dbc.Button("Ta bort", id='delete-account-confirm-btn', color="danger")
+            ])
+        ], id='delete-account-modal', is_open=False),
+        
+        html.Div(id='account-action-status', className="mt-2"),
         
         # Transaction browser
         dbc.Row([
@@ -953,6 +1006,102 @@ def update_account_selector(n):
     manager = AccountManager()
     accounts = manager.get_accounts()
     return [{'label': acc['name'], 'value': acc['name']} for acc in accounts]
+
+
+# Callback: Open Edit Account Modal
+@app.callback(
+    [Output('edit-account-modal', 'is_open'),
+     Output('edit-account-name-input', 'value')],
+    [Input('edit-account-btn', 'n_clicks'),
+     Input('edit-account-cancel-btn', 'n_clicks'),
+     Input('edit-account-save-btn', 'n_clicks')],
+    [State('account-selector', 'value'),
+     State('edit-account-modal', 'is_open')]
+)
+def toggle_edit_account_modal(edit_clicks, cancel_clicks, save_clicks, selected_account, is_open):
+    """Toggle edit account modal."""
+    ctx = callback_context
+    if not ctx.triggered:
+        return False, ""
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if button_id == 'edit-account-btn' and selected_account:
+        return True, selected_account
+    elif button_id in ['edit-account-cancel-btn', 'edit-account-save-btn']:
+        return False, ""
+    
+    return is_open, selected_account or ""
+
+
+# Callback: Save Edited Account
+@app.callback(
+    Output('edit-account-status', 'children'),
+    Input('edit-account-save-btn', 'n_clicks'),
+    [State('account-selector', 'value'),
+     State('edit-account-name-input', 'value')]
+)
+def save_edited_account(n_clicks, old_name, new_name):
+    """Save edited account name."""
+    if not n_clicks or not old_name or not new_name:
+        return ""
+    
+    if old_name == new_name:
+        return dbc.Alert("Inget ändrat", color="info", dismissable=True)
+    
+    manager = AccountManager()
+    result = manager.update_account(old_name, new_name=new_name)
+    
+    if result:
+        return dbc.Alert(f"Konto uppdaterat från '{old_name}' till '{new_name}'", color="success", dismissable=True)
+    else:
+        return dbc.Alert("Kunde inte uppdatera konto", color="danger", dismissable=True)
+
+
+# Callback: Open Delete Account Modal
+@app.callback(
+    [Output('delete-account-modal', 'is_open'),
+     Output('delete-account-confirm-text', 'children')],
+    [Input('delete-account-btn', 'n_clicks'),
+     Input('delete-account-cancel-btn', 'n_clicks'),
+     Input('delete-account-confirm-btn', 'n_clicks')],
+    [State('account-selector', 'value'),
+     State('delete-account-modal', 'is_open')]
+)
+def toggle_delete_account_modal(delete_clicks, cancel_clicks, confirm_clicks, selected_account, is_open):
+    """Toggle delete account modal."""
+    ctx = callback_context
+    if not ctx.triggered:
+        return False, ""
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if button_id == 'delete-account-btn' and selected_account:
+        return True, f"Är du säker på att du vill ta bort kontot '{selected_account}'? Alla transaktioner för detta konto kommer att behållas men kontot kommer att försvinna från listan."
+    elif button_id in ['delete-account-cancel-btn', 'delete-account-confirm-btn']:
+        return False, ""
+    
+    return is_open, ""
+
+
+# Callback: Confirm Delete Account
+@app.callback(
+    Output('account-action-status', 'children'),
+    Input('delete-account-confirm-btn', 'n_clicks'),
+    State('account-selector', 'value')
+)
+def confirm_delete_account(n_clicks, account_name):
+    """Delete the selected account."""
+    if not n_clicks or not account_name:
+        return ""
+    
+    manager = AccountManager()
+    success = manager.delete_account(account_name)
+    
+    if success:
+        return dbc.Alert(f"Konto '{account_name}' har tagits bort", color="success", dismissable=True, duration=4000)
+    else:
+        return dbc.Alert("Kunde inte ta bort konto", color="danger", dismissable=True, duration=4000)
 
 
 # Callback: Update Transaction Table
