@@ -255,21 +255,29 @@ def create_accounts_tab():
             ], width=12)
         ], className="mb-4"),
         
-        # Manual categorization section
+        # Categorization actions section
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H5("Manuell kategorisering", className="card-title"),
-                        html.Div(id='categorization-form')
+                        html.H5("Kategoriseringsåtgärder", className="card-title"),
+                        html.P("Redigera kategori och underkategori direkt i tabellen ovan. Klicka i cellerna för att ändra.", 
+                               className="text-muted mb-3"),
+                        html.Div([
+                            dbc.Button("💾 Spara ändringar", id='save-table-changes-btn', color="primary", className="me-2"),
+                            dbc.Button("🤖 Träna med AI", id='train-from-table-btn', color="success", className="me-2"),
+                            dbc.Badge("Ingen ändring", id='changes-badge', color="secondary")
+                        ]),
+                        html.Div(id='table-action-status', className="mt-3")
                     ])
                 ])
             ], width=12)
         ]),
         
-        # Store for current page
+        # Store for current page and table changes
         dcc.Store(id='current-page', data=0),
         dcc.Store(id='selected-transaction-id', data=None),
+        dcc.Store(id='table-changes', data={}),
         
         # Interval for auto-refresh
         dcc.Interval(id='accounts-interval', interval=5000, n_intervals=0)
@@ -1160,19 +1168,37 @@ def update_transaction_table(account_name, current_page, n):
     end_idx = min(start_idx + per_page, len(transactions))
     page_transactions = transactions[start_idx:end_idx]
     
-    # Create table
+    # Create table with editable category columns
     df = pd.DataFrame(page_transactions)
+    
+    # Prepare dropdown options for categories
+    category_options = [{'label': cat, 'value': cat} for cat in CATEGORIES.keys()]
+    
     table = dash_table.DataTable(
         id='transaction-table',
         columns=[
-            {'name': 'Datum', 'id': 'date'},
-            {'name': 'Beskrivning', 'id': 'description'},
-            {'name': 'Belopp', 'id': 'amount'},
-            {'name': 'Saldo', 'id': 'balance'},
-            {'name': 'Kategori', 'id': 'category'},
-            {'name': 'Underkategori', 'id': 'subcategory'},
+            {'name': 'Datum', 'id': 'date', 'editable': False},
+            {'name': 'Beskrivning', 'id': 'description', 'editable': False},
+            {'name': 'Belopp', 'id': 'amount', 'editable': False},
+            {'name': 'Saldo', 'id': 'balance', 'editable': False},
+            {
+                'name': 'Kategori', 
+                'id': 'category', 
+                'editable': True,
+                'presentation': 'dropdown'
+            },
+            {
+                'name': 'Underkategori', 
+                'id': 'subcategory', 
+                'editable': True
+            },
         ],
         data=df.to_dict('records'),
+        dropdown={
+            'category': {
+                'options': category_options
+            }
+        },
         style_cell={'textAlign': 'left', 'padding': '10px'},
         style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
         style_data_conditional=[
@@ -1183,10 +1209,19 @@ def update_transaction_table(account_name, current_page, n):
             {
                 'if': {'filter_query': '{amount} > 0'},
                 'color': '#28a745'
+            },
+            {
+                'if': {'column_id': 'category'},
+                'backgroundColor': '#e8f4f8'
+            },
+            {
+                'if': {'column_id': 'subcategory'},
+                'backgroundColor': '#e8f4f8'
             }
         ],
         row_selectable='single',
-        selected_rows=[]
+        selected_rows=[],
+        editable=True
     )
     
     page_info = f"Sida {current_page + 1} av {total_pages} ({len(transactions)} transaktioner)"
@@ -1227,100 +1262,136 @@ def handle_pagination(prev_clicks, next_clicks, current_page, account_name):
     return current_page
 
 
-# Callback: Show Categorization Form
+# Callback: Track table changes and update badge
 @app.callback(
-    Output('categorization-form', 'children'),
-    [Input('transaction-table', 'selected_rows'),
-     Input('transaction-table', 'data')]
+    [Output('table-changes', 'data'),
+     Output('changes-badge', 'children'),
+     Output('changes-badge', 'color')],
+    Input('transaction-table', 'data'),
+    State('transaction-table', 'data_previous'),
+    prevent_initial_call=True
 )
-def show_categorization_form(selected_rows, table_data):
-    """Show the categorization form when a transaction is selected."""
-    if not selected_rows or not table_data:
-        return html.P("Välj en transaktion i tabellen ovan för att kategorisera den manuellt", className="text-muted")
+def track_table_changes(current_data, previous_data):
+    """Track changes in the transaction table."""
+    if not current_data or not previous_data:
+        return {}, "Ingen ändring", "secondary"
     
-    selected_tx = table_data[selected_rows[0]]
+    changes = {}
+    for i, (curr_row, prev_row) in enumerate(zip(current_data, previous_data)):
+        if curr_row.get('category') != prev_row.get('category') or \
+           curr_row.get('subcategory') != prev_row.get('subcategory'):
+            changes[i] = {
+                'date': curr_row.get('date'),
+                'description': curr_row.get('description'),
+                'old_category': prev_row.get('category'),
+                'new_category': curr_row.get('category'),
+                'old_subcategory': prev_row.get('subcategory'),
+                'new_subcategory': curr_row.get('subcategory')
+            }
     
-    return html.Div([
-        html.H6(f"Kategorisera: {selected_tx['description']}", className="mb-3"),
-        dbc.Row([
-            dbc.Col([
-                html.Label("Kategori:", className="fw-bold"),
-                dcc.Dropdown(
-                    id='category-dropdown',
-                    options=[{'label': cat, 'value': cat} for cat in CATEGORIES.keys()],
-                    value=selected_tx.get('category', 'Övrigt'),
-                    className="mb-3"
-                )
-            ], width=6),
-            dbc.Col([
-                html.Label("Underkategori:", className="fw-bold"),
-                dcc.Dropdown(
-                    id='subcategory-dropdown',
-                    value=selected_tx.get('subcategory', 'Okategoriserat'),
-                    className="mb-3"
-                )
-            ], width=6),
-        ]),
-        dbc.Button("Spara kategorisering", id='save-category-btn', color="primary", className="mt-2"),
-        html.Div(id='category-save-status', className="mt-2")
-    ])
+    if changes:
+        count = len(changes)
+        return changes, f"{count} ändring{'ar' if count > 1 else ''}", "warning"
+    
+    return {}, "Ingen ändring", "secondary"
 
 
-# Callback: Update Subcategory Options
+# Callback: Save table changes
 @app.callback(
-    Output('subcategory-dropdown', 'options'),
-    Input('category-dropdown', 'value')
-)
-def update_subcategory_options(category):
-    """Update subcategory options based on selected category."""
-    if category and category in CATEGORIES:
-        return [{'label': subcat, 'value': subcat} for subcat in CATEGORIES[category]]
-    return []
-
-
-# Callback: Save Manual Categorization
-@app.callback(
-    Output('category-save-status', 'children'),
-    [Input('save-category-btn', 'n_clicks')],
-    [State('transaction-table', 'selected_rows'),
-     State('transaction-table', 'data'),
-     State('category-dropdown', 'value'),
-     State('subcategory-dropdown', 'value'),
+    Output('table-action-status', 'children'),
+    Input('save-table-changes-btn', 'n_clicks'),
+    [State('transaction-table', 'data'),
      State('account-selector', 'value')],
     prevent_initial_call=True
 )
-def save_manual_categorization(n_clicks, selected_rows, table_data, category, subcategory, account_name):
-    """Save manual categorization for selected transaction."""
-    if not selected_rows or not table_data or not category or not subcategory:
+def save_table_changes(n_clicks, table_data, account_name):
+    """Save categorization changes from the table."""
+    if not n_clicks or not table_data or not account_name:
         return ""
     
     try:
-        selected_tx = table_data[selected_rows[0]]
-        
-        # Load all transactions
         manager = AccountManager()
         data = manager._load_yaml(manager.transactions_file)
         transactions = data.get('transactions', [])
         
-        # Find and update the transaction
-        for tx in transactions:
-            if (tx.get('date') == selected_tx['date'] and 
-                tx.get('description') == selected_tx['description'] and
-                tx.get('account') == account_name):
-                tx['category'] = category
-                tx['subcategory'] = subcategory
-                tx['categorized_manually'] = True
-                
-                # Train AI from manual input
-                manager.train_ai_from_manual_input(tx)
-                break
+        updated_count = 0
+        for table_row in table_data:
+            # Find matching transaction in the full list
+            for tx in transactions:
+                if (tx.get('date') == table_row.get('date') and 
+                    tx.get('description') == table_row.get('description') and
+                    tx.get('account') == account_name):
+                    
+                    # Check if category changed
+                    if tx.get('category') != table_row.get('category') or \
+                       tx.get('subcategory') != table_row.get('subcategory'):
+                        tx['category'] = table_row.get('category')
+                        tx['subcategory'] = table_row.get('subcategory')
+                        tx['categorized_manually'] = True
+                        updated_count += 1
+                    break
         
-        # Save updated transactions
-        manager.save_transactions(data)  # Use public method to save transactions
-        
-        return dbc.Alert("✓ Kategorisering sparad!", color="success", dismissable=True)
+        if updated_count > 0:
+            manager.save_transactions(data)
+            return dbc.Alert(
+                f"✓ {updated_count} transaktion{'er' if updated_count > 1 else ''} uppdaterad{'e' if updated_count > 1 else ''}!", 
+                color="success", 
+                dismissable=True,
+                duration=4000
+            )
+        else:
+            return dbc.Alert("Inga ändringar att spara", color="info", dismissable=True, duration=3000)
     except Exception as e:
-        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000)
+
+
+# Callback: Train AI from table
+@app.callback(
+    Output('table-action-status', 'children', allow_duplicate=True),
+    Input('train-from-table-btn', 'n_clicks'),
+    [State('transaction-table', 'data'),
+     State('transaction-table', 'selected_rows')],
+    prevent_initial_call=True
+)
+def train_ai_from_table(n_clicks, table_data, selected_rows):
+    """Train AI from manually categorized transactions in the table."""
+    if not n_clicks or not table_data:
+        return ""
+    
+    try:
+        trainer = AITrainer()
+        
+        # If rows are selected, train only from selected rows
+        rows_to_train = []
+        if selected_rows:
+            rows_to_train = [table_data[i] for i in selected_rows]
+        else:
+            # Train from all rows in current view
+            rows_to_train = table_data
+        
+        # Add training samples
+        added_count = 0
+        for row in rows_to_train:
+            # Only add if category and subcategory are present
+            if row.get('category') and row.get('subcategory'):
+                trainer.add_training_sample(
+                    description=row.get('description', ''),
+                    category=row.get('category'),
+                    subcategory=row.get('subcategory')
+                )
+                added_count += 1
+        
+        if added_count > 0:
+            return dbc.Alert([
+                html.H5("✓ Träningsdata tillagd!", className="alert-heading"),
+                html.P(f"{added_count} transaktion{'er' if added_count > 1 else ''} tillagd{'a' if added_count > 1 else ''} till träningsdata."),
+                html.Hr(),
+                html.P("Gå till Inställningar → AI-träning för att starta träningen.", className="mb-0")
+            ], color="success", dismissable=True, duration=8000)
+        else:
+            return dbc.Alert("Inga kategoriserade transaktioner att träna från", color="warning", dismissable=True, duration=4000)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=5000)
 
 
 # Callback: Add Bill
