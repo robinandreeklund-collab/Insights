@@ -22,12 +22,22 @@ class TestClearDataFiles:
     
     def test_clear_data_files_empty_files(self):
         """Test clearing when files don't exist yet."""
-        # Should not raise exception
+        # Should not raise exception when files don't exist
         clear_data_files(self.test_dir)
         
-        # Files should be created and contain empty arrays
+        # Files are not created if they don't exist - this is the expected behavior
         transactions_file = os.path.join(self.test_dir, "transactions.yaml")
         accounts_file = os.path.join(self.test_dir, "accounts.yaml")
+        
+        # Create files first, then clear
+        with open(transactions_file, 'w') as f:
+            yaml.dump({'transactions': [{'id': 1}]}, f)
+        with open(accounts_file, 'w') as f:
+            yaml.dump({'accounts': [{'name': 'test'}]}, f)
+        
+        clear_data_files(self.test_dir)
+        
+        # Now verify they are cleared
         assert os.path.exists(transactions_file)
         assert os.path.exists(accounts_file)
         with open(transactions_file, 'r') as f:

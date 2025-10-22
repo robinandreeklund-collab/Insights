@@ -206,9 +206,15 @@ class PDFBillParser:
                     'name': name,
                     'amount': amount,
                     'due_date': due_date,
+                    'bill_due_date': due_date,
                     'description': f'Extraherad från PDF (Konto: {current_account})',
                     'category': category,
-                    'account': current_account
+                    'account': current_account,
+                    'account_number': current_account,
+                    'is_bill': True,
+                    'status': 'scheduled',
+                    'source': 'PDF',
+                    'imported_historical': False
                 })
         
         return bills
@@ -306,9 +312,15 @@ class PDFBillParser:
                     'name': recipient_name,
                     'amount': amount,
                     'due_date': due_date,
+                    'bill_due_date': due_date,
                     'description': f'Extraherad från PDF (Konto: {current_account})',
                     'category': category,
-                    'account': current_account
+                    'account': current_account,
+                    'account_number': current_account,
+                    'is_bill': True,
+                    'status': 'scheduled',
+                    'source': 'PDF',
+                    'imported_historical': False
                 })
             
             i += 1
@@ -430,22 +442,43 @@ class PDFBillParser:
                 'name': 'Elräkning December 2025',
                 'amount': 850.0,
                 'due_date': (today + timedelta(days=14)).strftime('%Y-%m-%d'),
+                'bill_due_date': (today + timedelta(days=14)).strftime('%Y-%m-%d'),
                 'description': 'Elkostnad för december månad',
-                'category': 'Boende'
+                'category': 'Boende',
+                'account': None,
+                'account_number': None,
+                'is_bill': True,
+                'status': 'scheduled',
+                'source': 'PDF',
+                'imported_historical': False
             },
             {
                 'name': 'Mobilabonnemang',
                 'amount': 299.0,
                 'due_date': (today + timedelta(days=20)).strftime('%Y-%m-%d'),
+                'bill_due_date': (today + timedelta(days=20)).strftime('%Y-%m-%d'),
                 'description': 'Månatlig mobilkostnad',
-                'category': 'Övrigt'
+                'category': 'Övrigt',
+                'account': None,
+                'account_number': None,
+                'is_bill': True,
+                'status': 'scheduled',
+                'source': 'PDF',
+                'imported_historical': False
             },
             {
                 'name': 'Internet & TV',
                 'amount': 449.0,
                 'due_date': (today + timedelta(days=25)).strftime('%Y-%m-%d'),
+                'bill_due_date': (today + timedelta(days=25)).strftime('%Y-%m-%d'),
                 'description': 'Bredband och TV-paket',
-                'category': 'Boende'
+                'category': 'Boende',
+                'account': None,
+                'account_number': None,
+                'is_bill': True,
+                'status': 'scheduled',
+                'source': 'PDF',
+                'imported_historical': False
             }
         ]
         
@@ -475,8 +508,10 @@ class PDFBillParser:
                 due_date=bill_data['due_date'],
                 description=bill_data.get('description', ''),
                 category=bill_data.get('category', 'Övrigt'),
-                subcategory=bill_data.get('subcategory', ''),  # Include subcategory
-                account=account  # Account number will be normalized in bill_manager
+                subcategory=bill_data.get('subcategory', ''),
+                account=account,
+                is_bill=bill_data.get('is_bill', True),
+                source=bill_data.get('source', 'PDF')
             )
             count += 1
         

@@ -159,12 +159,14 @@ def normalize_columns(data: pd.DataFrame, format: str) -> pd.DataFrame:
     return df
 
 
-def import_csv(csv_path: str) -> Tuple[str, pd.DataFrame]:
+def import_csv(csv_path: str, treat_future_as_scheduled: bool = True) -> Tuple[str, pd.DataFrame]:
     """
     Import a CSV file and return account name and normalized transactions.
     
     Args:
         csv_path: Path to the CSV file
+        treat_future_as_scheduled: If True, future-dated transactions are marked as 'scheduled',
+                                   otherwise as 'posted' (default: True)
         
     Returns:
         Tuple of (account_name, normalized_dataframe)
@@ -179,4 +181,44 @@ def import_csv(csv_path: str) -> Tuple[str, pd.DataFrame]:
     format_type = detect_format(df)
     normalized_df = normalize_columns(df, format_type)
     
+    # Add metadata fields
+    normalized_df = add_transaction_metadata(normalized_df, csv_path, treat_future_as_scheduled)
+    
     return account_name, normalized_df
+
+
+def add_transaction_metadata(df: pd.DataFrame, source_path: str, treat_future_as_scheduled: bool = True) -> pd.DataFrame:
+    """
+    Add metadata fields to transaction dataframe.
+    
+    Args:
+        df: DataFrame with normalized transactions
+        source_path: Source file path
+        treat_future_as_scheduled: If True, future-dated transactions are 'scheduled'
+        
+    Returns:
+        DataFrame with added metadata fields
+    """
+    df = df.copy()
+    
+    # Get current date for status determination
+    today = pd.Timestamp.now().normalize()
+    
+    # Add metadata fields
+    df['source'] = os.path.basename(source_path)
+    df['source_uploaded_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    df['is_bill'] = False  # CSV imports are bank transactions, not bills
+    df['bill_due_date'] = None
+    df['account_number'] = None  # Will be set by account matching if needed
+    df['matched_to_bill_id'] = None
+    df['imported_historical'] = True  # CSV imports are historical bank data
+    
+    # Determine status based on transaction date
+    if 'date' in df.columns:
+        df['status'] = df['date'].apply(
+            lambda d: 'scheduled' if (pd.notna(d) and d > today and treat_future_as_scheduled) else 'posted'
+        )
+    else:
+        df['status'] = 'posted'  # Default to posted if no date column
+    
+    return df

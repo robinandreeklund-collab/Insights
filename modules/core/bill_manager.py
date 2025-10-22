@@ -63,7 +63,8 @@ class BillManager:
     
     def add_bill(self, name: str, amount: float, due_date: str, 
                  description: str = "", category: str = "Övrigt", 
-                 subcategory: str = "", account: str = None, 
+                 subcategory: str = "", account: str = None,
+                 is_bill: bool = True, source: str = None,
                  is_amex_bill: bool = False) -> Dict:
         """Lägg till en ny faktura.
         
@@ -75,6 +76,8 @@ class BillManager:
             category: Kategori för fakturan
             subcategory: Underkategori för fakturan (valfritt)
             account: Kontonummer som fakturan ska belasta (valfritt)
+            is_bill: True for bill entries (default), False for other scheduled items
+            source: Source of the bill (e.g., 'PDF', 'manual', filename)
             is_amex_bill: True if this is an Amex bill that will have line items
             
         Returns:
@@ -93,15 +96,22 @@ class BillManager:
             'name': name,
             'amount': amount,
             'due_date': due_date,
+            'bill_due_date': due_date,  # Explicit field for due date
             'description': description,
             'category': category,
-            'subcategory': subcategory,  # Added subcategory field
-            'account': normalized_account,  # Store normalized account number
-            'status': 'pending',  # pending, paid, overdue
+            'subcategory': subcategory,
+            'account': normalized_account,
+            'account_number': normalized_account,  # Explicit field for matching
+            'status': 'scheduled',  # scheduled, posted, paid, overdue
+            'is_bill': is_bill,
+            'source': source or 'manual',
+            'source_uploaded_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'paid_at': None,
             'matched_transaction_id': None,
+            'matched_to_bill_id': None,  # For reverse matching
             'scheduled_payment_date': None,
+            'imported_historical': False,  # Bills are future items
             'is_amex_bill': is_amex_bill,  # Flag for Amex bills
             'line_items': []  # Initialize empty line items array
         }
@@ -114,7 +124,7 @@ class BillManager:
         """Hämta fakturor, filtrerat på status om angivet.
         
         Args:
-            status: 'pending', 'paid', 'overdue', eller None för alla
+            status: 'scheduled', 'pending', 'posted', 'paid', 'overdue', eller None för alla
             
         Returns:
             Lista med fakturor
@@ -128,7 +138,8 @@ class BillManager:
         today = datetime.now().strftime('%Y-%m-%d')
         status_changed = False
         for bill in bills:
-            if bill.get('status') == 'pending' and bill.get('due_date', '') < today:
+            # Update both 'pending' and 'scheduled' to 'overdue' if past due
+            if bill.get('status') in ['pending', 'scheduled'] and bill.get('due_date', '') < today:
                 bill['status'] = 'overdue'
                 status_changed = True
         
@@ -227,7 +238,10 @@ class BillManager:
         """
         from datetime import timedelta
         
-        bills = self.get_bills(status='pending')
+        # Get all bills that are not yet paid (pending, scheduled, or overdue)
+        bills = self.get_bills()
+        bills = [b for b in bills if b.get('status') in ['pending', 'scheduled', 'overdue']]
+        
         today = datetime.now()
         future_date = today + timedelta(days=days)
         
@@ -275,7 +289,8 @@ class BillManager:
         
         for account, account_bills in bills_by_account.items():
             total_amount = sum(bill['amount'] for bill in account_bills)
-            pending_bills = [b for b in account_bills if b.get('status') == 'pending']
+            # Count both 'pending' and 'scheduled' as unpaid
+            pending_bills = [b for b in account_bills if b.get('status') in ['pending', 'scheduled']]
             
             summaries.append({
                 'account': account,

@@ -541,6 +541,7 @@ def create_bills_tab():
                             id='bill-status-filter',
                             options=[
                                 {'label': 'Alla', 'value': 'all'},
+                                {'label': 'Schemalagda', 'value': 'scheduled'},
                                 {'label': 'Väntande', 'value': 'pending'},
                                 {'label': 'Betalda', 'value': 'paid'},
                                 {'label': 'Förfallna', 'value': 'overdue'}
@@ -642,10 +643,26 @@ def create_bills_tab():
                         dbc.Input(id='edit-bill-description', type='text'),
                     ], width=6),
                 ], className="mb-3"),
-                html.Div(id='edit-bill-status', className="mt-2")
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Status:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='edit-bill-status-dropdown',
+                            options=[
+                                {'label': 'Schemalagd', 'value': 'scheduled'},
+                                {'label': 'Väntande', 'value': 'pending'},
+                                {'label': 'Betald', 'value': 'paid'},
+                                {'label': 'Förfallen', 'value': 'overdue'}
+                            ]
+                        ),
+                    ], width=6),
+                ], className="mb-3"),
+                html.Div(id='edit-bill-status-message', className="mt-2")
             ]),
             dbc.ModalFooter([
-                dbc.Button("Avbryt", id='edit-bill-cancel-btn', color="secondary"),
+                dbc.Button("Avbryt", id='edit-bill-cancel-btn', color="secondary", className="me-2"),
+                dbc.Button("Markera som betald", id='edit-bill-mark-paid-btn', color="success", className="me-2"),
+                dbc.Button("Träna AI", id='edit-bill-train-ai-btn', color="info", className="me-2"),
                 dbc.Button("Spara", id='edit-bill-save-btn', color="primary")
             ])
         ], id='edit-bill-modal', is_open=False),
@@ -1041,11 +1058,19 @@ def create_monthly_analysis_tab():
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H5("Kommande fakturor denna månad", className="card-title"),
+                        html.H5("Kommande fakturor denna månad (Scheduled)", className="card-title"),
                         html.Div(id='monthly-upcoming-bills-display'),
                     ])
                 ])
-            ], width=12)
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Bokförda transaktioner denna månad (Posted)", className="card-title"),
+                        html.Div(id='monthly-posted-transactions-display'),
+                    ])
+                ])
+            ], width=6)
         ], className="mb-4"),
         
         # Inkomster per person och konto
@@ -1253,6 +1278,11 @@ def create_settings_tab():
 # Main app layout
 app.layout = dbc.Container([
     html.H1("Insights – Hushållsekonomi Dashboard", className="text-center my-4"),
+    
+    # Storage components for state management and real-time updates
+    dcc.Store(id='bills-update-trigger', storage_type='memory'),
+    dcc.Store(id='incomes-update-trigger', storage_type='memory'),
+    dcc.Store(id='transactions-update-trigger', storage_type='memory'),
     
     dcc.Tabs(id="main-tabs", value="overview", children=[
         # Ekonomisk översikt
@@ -3430,19 +3460,21 @@ def update_edit_bill_account_options(n):
      Output('edit-bill-category', 'value'),
      Output('edit-bill-subcategory', 'value'),
      Output('edit-bill-account', 'value'),
-     Output('edit-bill-description', 'value')],
+     Output('edit-bill-description', 'value'),
+     Output('edit-bill-status-dropdown', 'value')],
     [Input('bills-table', 'selected_rows'),
      Input('edit-bill-cancel-btn', 'n_clicks'),
-     Input('edit-bill-save-btn', 'n_clicks')],
+     Input('edit-bill-save-btn', 'n_clicks'),
+     Input('edit-bill-mark-paid-btn', 'n_clicks')],
     [State('bills-table', 'data'),
      State('edit-bill-modal', 'is_open'),
      State('edit-bill-id', 'data')]
 )
-def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, table_data, is_open, current_bill_id):
+def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, mark_paid_clicks, table_data, is_open, current_bill_id):
     """Toggle edit bill modal and populate fields."""
     ctx = callback_context
     if not ctx.triggered:
-        return False, None, "", 0, "", "", "", "", ""
+        return False, None, "", 0, "", "", "", "", "", ""
     
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
@@ -3458,19 +3490,19 @@ def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, table_data
             return (True, bill_id, bill.get('name', ''), bill.get('amount', 0),
                     bill.get('due_date', ''), bill.get('category', ''),
                     bill.get('subcategory', ''), bill.get('account', ''),
-                    bill.get('description', ''))
+                    bill.get('description', ''), bill.get('status', 'scheduled'))
         
-        return True, bill_id, "", 0, "", "", "", "", ""
+        return True, bill_id, "", 0, "", "", "", "", "", ""
     
-    elif button_id in ['edit-bill-cancel-btn', 'edit-bill-save-btn']:
-        return False, None, "", 0, "", "", "", "", ""
+    elif button_id in ['edit-bill-cancel-btn', 'edit-bill-save-btn', 'edit-bill-mark-paid-btn']:
+        return False, None, "", 0, "", "", "", "", "", ""
     
-    return is_open, current_bill_id, "", 0, "", "", "", "", ""
+    return is_open, current_bill_id, "", 0, "", "", "", "", "", ""
 
 
 # Callback: Save Edited Bill
 @app.callback(
-    Output('edit-bill-status', 'children'),
+    Output('edit-bill-status-message', 'children'),
     Input('edit-bill-save-btn', 'n_clicks'),
     [State('edit-bill-id', 'data'),
      State('edit-bill-name', 'value'),
@@ -3479,10 +3511,11 @@ def toggle_edit_bill_modal(selected_rows, cancel_clicks, save_clicks, table_data
      State('edit-bill-category', 'value'),
      State('edit-bill-subcategory', 'value'),
      State('edit-bill-account', 'value'),
-     State('edit-bill-description', 'value')],
+     State('edit-bill-description', 'value'),
+     State('edit-bill-status-dropdown', 'value')],
     prevent_initial_call=True
 )
-def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcategory, account, description):
+def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcategory, account, description, status):
     """Save changes to edited bill."""
     if not n_clicks or not bill_id:
         return ""
@@ -3496,7 +3529,8 @@ def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcat
             'category': category or 'Övrigt',
             'subcategory': subcategory or '',
             'account': account or None,
-            'description': description or ''
+            'description': description or '',
+            'status': status or 'scheduled'
         }
         
         success = bill_manager.update_bill(bill_id, updates)
@@ -3505,6 +3539,62 @@ def save_edited_bill(n_clicks, bill_id, name, amount, due_date, category, subcat
             return dbc.Alert("✓ Faktura uppdaterad!", color="success", dismissable=True)
         else:
             return dbc.Alert("Kunde inte hitta fakturan", color="warning", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+# Callback: Mark Bill as Paid
+@app.callback(
+    Output('edit-bill-status-message', 'children', allow_duplicate=True),
+    Input('edit-bill-mark-paid-btn', 'n_clicks'),
+    State('edit-bill-id', 'data'),
+    prevent_initial_call=True
+)
+def mark_bill_as_paid(n_clicks, bill_id):
+    """Mark bill as paid."""
+    if not n_clicks or not bill_id:
+        return ""
+    
+    try:
+        bill_manager = BillManager()
+        success = bill_manager.mark_as_paid(bill_id)
+        
+        if success:
+            return dbc.Alert("✓ Faktura markerad som betald!", color="success", dismissable=True)
+        else:
+            return dbc.Alert("Kunde inte hitta fakturan", color="warning", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+# Callback: Train AI from Bill
+@app.callback(
+    Output('edit-bill-status-message', 'children', allow_duplicate=True),
+    Input('edit-bill-train-ai-btn', 'n_clicks'),
+    [State('edit-bill-id', 'data'),
+     State('edit-bill-name', 'value'),
+     State('edit-bill-category', 'value'),
+     State('edit-bill-subcategory', 'value')],
+    prevent_initial_call=True
+)
+def train_ai_from_bill(n_clicks, bill_id, name, category, subcategory):
+    """Add bill information to AI training data."""
+    if not n_clicks or not bill_id:
+        return ""
+    
+    try:
+        from modules.core.ai_trainer import AITrainer
+        
+        trainer = AITrainer()
+        
+        # Add training sample
+        trainer.add_training_sample(
+            description=name or '',
+            category=category or 'Övrigt',
+            subcategory=subcategory or ''
+        )
+        
+        return dbc.Alert("✓ Träningsdata tillagd för AI!", color="success", dismissable=True)
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
 
@@ -3549,7 +3639,10 @@ def update_monthly_upcoming_bills(n_clicks, start_month, end_month):
         start_month = datetime.now().strftime('%Y-%m')
     
     bill_manager = BillManager()
-    all_bills = bill_manager.get_bills(status='pending')
+    # Get both scheduled and pending bills
+    scheduled_bills = bill_manager.get_bills(status='scheduled')
+    pending_bills = bill_manager.get_bills(status='pending')
+    all_bills = scheduled_bills + pending_bills
     
     # Filter bills for the month
     month_bills = [
@@ -3569,21 +3662,79 @@ def update_monthly_upcoming_bills(n_clicks, start_month, end_month):
                 html.Td(bill['name']),
                 html.Td(f"{bill['amount']:,.2f} SEK"),
                 html.Td(bill['due_date']),
-                html.Td(bill.get('category', 'N/A'))
+                html.Td(bill.get('category', 'N/A')),
+                html.Td(bill.get('status', 'N/A').title())
             ])
         )
     
     return html.Div([
-        html.H6(f"Totalt: {total_amount:,.2f} SEK", className="mb-3 text-danger"),
+        html.H6(f"Totalt: {total_amount:,.2f} SEK ({len(month_bills)} fakturor)", className="mb-3 text-danger"),
         dbc.Table([
             html.Thead(html.Tr([
                 html.Th("Namn"),
                 html.Th("Belopp"),
                 html.Th("Förfallodatum"),
-                html.Th("Kategori")
+                html.Th("Kategori"),
+                html.Th("Status")
             ])),
             html.Tbody(bill_rows)
         ], bordered=True, hover=True, size='sm')
+    ])
+
+
+# Callback: Update Monthly Posted Transactions
+@app.callback(
+    Output('monthly-posted-transactions-display', 'children'),
+    Input('analyze-period-btn', 'n_clicks'),
+    [State('analysis-start-month', 'value'),
+     State('analysis-end-month', 'value')],
+    prevent_initial_call=False
+)
+def update_monthly_posted_transactions(n_clicks, start_month, end_month):
+    """Display posted transactions for selected month."""
+    from datetime import datetime
+    
+    # Default to current month
+    if not start_month:
+        start_month = datetime.now().strftime('%Y-%m')
+    
+    manager = AccountManager()
+    all_transactions = manager.get_all_transactions()
+    
+    # Filter posted transactions for the month
+    posted_txs = [
+        tx for tx in all_transactions
+        if tx.get('status') == 'posted' and tx.get('date', '').startswith(start_month)
+    ]
+    
+    if not posted_txs:
+        return html.P("Inga bokförda transaktioner för denna månad", className="text-muted")
+    
+    # Separate expenses and incomes
+    expenses = [tx for tx in posted_txs if tx.get('amount', 0) < 0]
+    incomes = [tx for tx in posted_txs if tx.get('amount', 0) > 0]
+    
+    total_expenses = sum(abs(tx['amount']) for tx in expenses)
+    total_incomes = sum(tx['amount'] for tx in incomes)
+    
+    return html.Div([
+        html.Div([
+            html.P([
+                html.Strong("Utgifter: "),
+                html.Span(f"{total_expenses:,.2f} SEK", className="text-danger")
+            ], className="mb-1"),
+            html.P([
+                html.Strong("Inkomster: "),
+                html.Span(f"{total_incomes:,.2f} SEK", className="text-success")
+            ], className="mb-1"),
+            html.P([
+                html.Strong("Netto: "),
+                html.Span(f"{(total_incomes - total_expenses):,.2f} SEK", 
+                         className="text-primary fw-bold")
+            ], className="mb-2"),
+        ]),
+        html.Hr(),
+        html.Small(f"{len(posted_txs)} bokförda transaktioner totalt", className="text-muted")
     ])
 
 
@@ -3691,6 +3842,8 @@ def update_monthly_expense_summary(n_clicks, start_month, end_month):
     
     return html.Div([
         html.H6(f"Totalt: {total_expenses:,.2f} SEK", className="mb-3 text-danger"),
+        html.Small("Detta är totala utgifter. Välj gemensamma kategorier nedan för överföringsberäkning.", 
+                  className="text-muted fst-italic"),
         html.Hr(),
         html.Div(category_rows)
     ])
@@ -3739,19 +3892,22 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
             for person, accounts in income_by_person_account.items()
         }
         
-        # Get expenses by category
-        manager = AccountManager()
-        transactions = manager.get_all_transactions()
+        # Get scheduled bills by category (upcoming expenses)
+        bill_manager = BillManager()
+        scheduled_bills = bill_manager.get_bills(status='scheduled')
+        pending_bills = bill_manager.get_bills(status='pending')
+        all_upcoming_bills = scheduled_bills + pending_bills
         
-        month_expenses = [
-            tx for tx in transactions
-            if tx.get('date', '').startswith(month) and tx.get('amount', 0) < 0
+        # Filter bills for the selected month
+        month_bills = [
+            b for b in all_upcoming_bills 
+            if b.get('due_date', '').startswith(month)
         ]
         
         expenses_by_category = defaultdict(float)
-        for tx in month_expenses:
-            category = tx.get('category', 'Okategoriserad')
-            amount = abs(tx.get('amount', 0))
+        for bill in month_bills:
+            category = bill.get('category', 'Okategoriserad')
+            amount = bill.get('amount', 0)
             expenses_by_category[category] += amount
         
         expenses_by_category = dict(expenses_by_category)
@@ -3797,8 +3953,13 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
         return html.Div([
             dbc.Alert([
                 html.H5("Sammanfattning", className="alert-heading"),
-                html.P(f"Totala gemensamma utgifter: {total_shared:,.2f} SEK"),
-                html.P(f"Baserat på {len(shared_categories)} gemensam{'ma' if len(shared_categories) > 1 else ''} kategori{'er' if len(shared_categories) > 1 else ''}: {', '.join(shared_categories)}")
+                html.P(f"Totala kommande gemensamma utgifter: {total_shared:,.2f} SEK"),
+                html.P(f"Baserat på {len(shared_categories)} gemensam{'ma' if len(shared_categories) > 1 else ''} kategori{'er' if len(shared_categories) > 1 else ''}: {', '.join(shared_categories)}"),
+                html.Small([
+                    "OBS: Beräkningen baseras på ",
+                    html.Strong("kommande schemalagda fakturor"),
+                    " för denna månad i de valda kategorierna."
+                ], className="text-muted fst-italic")
             ], color="info", className="mb-3"),
             html.Div(person_cards)
         ])

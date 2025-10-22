@@ -2,9 +2,24 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 5
+## 🎯 Projektstatus: Sprint 6 - Data-flow och Dashboard-förbättringar
 
-**Sprint 5 Status:** Avancerad analys, historik och AI i Insights implementerad!
+**Sprint 6 Status:** Komplett dataflöde med scheduled/posted transactions, förbättrad fakturamatchning och editerbara fakturor!
+
+Sprint 6 har implementerat:
+- ✅ **Transaktionsstatus-system**: Automatisk separation av 'scheduled' (framtida), 'posted' (bokförda) och 'paid' transaktioner
+- ✅ **Metadata för transaktioner**: source, source_uploaded_at, is_bill, bill_due_date, account_number, matched_to_bill_id, imported_historical
+- ✅ **CSV-import med statuslogik**: Framtida transaktioner markeras automatiskt som 'scheduled', historiska som 'posted'
+- ✅ **Förbättrad PDF-fakturaimport**: Extraherar kontonummer, sätter is_bill=true, status='scheduled', normaliserar kontonummer
+- ✅ **Kontonummer-baserad matchning**: Fakturor matchas mot transaktioner via kontonummer, belopp och datum med tolerans
+- ✅ **Automatisk faktura-till-transaktion-matchning**: Uppdaterar både faktura och transaktion med matched_to_bill_id
+- ✅ **Dashboard-förbättringar**: Real-time uppdateringar med dcc.Store, scheduled vs posted separation
+- ✅ **Månadanalys-förbättringar**: Visar både kommande fakturor (scheduled) och bokförda transaktioner (posted), överföringsrekommendationer
+- ✅ **Editerbara fakturor**: Inline-editering i Bills-tab med kategori, underkategori, belopp, datum, status, "Markera som betald" och "Träna AI"-knappar
+- ✅ **AI-träning från fakturor**: Lägg till fakturadata till training_data.yaml direkt från UI
+- ✅ **Omfattande tester**: Alla 187 tester godkända
+
+**Sprint 5 Status (tidigare):** Avancerad analys, historik och AI i Insights implementerad!
 
 Sprint 5 har implementerat:
 - ✅ Agentdriven analys och simulering med naturligt språk
@@ -513,6 +528,176 @@ Insights är byggt för att vara:
   - [x] Settings panel med konfigurerbara inställningar
   - [x] Dashboard-integration av alla nya funktioner
   - [x] Omfattande tester (142 passing tests)
+- [x] Sprint 6: Data-flow och dashboard-förbättringar
+  - [x] Transaktionsstatus-system (scheduled/posted/paid)
+  - [x] Metadata för transaktioner och fakturor
+  - [x] CSV-import med automatisk statuslogik
+  - [x] Förbättrad PDF-fakturaimport med kontonummer
+  - [x] Kontonummer-baserad fakturamatchning
+  - [x] Dashboard real-time uppdateringar
+  - [x] Månadanalys med scheduled/posted separation
+  - [x] Editerbara fakturor med AI-träning
+  - [x] Omfattande tester (187 passing tests)
+
+## 📝 YAML Datamodell och Metadata
+
+### Transaction Metadata (Sprint 6)
+
+Transaktioner innehåller nu följande metadata-fält:
+
+```yaml
+transactions:
+  - id: "unique-uuid"
+    account: "PERSONKONTO 880104-7591"
+    date: "2025-10-25"
+    amount: -1250.50
+    description: "ICA Kvantum"
+    category: "Mat & Dryck"
+    subcategory: "Matvaror"
+    
+    # Nya metadata-fält (Sprint 6)
+    status: "posted"                    # 'scheduled', 'posted', eller 'paid'
+    source: "import.csv"                # Källfil eller 'manual'
+    source_uploaded_at: "2025-10-22 14:30:00"
+    is_bill: false                      # true för fakturor, false för banktransaktioner
+    bill_due_date: null                 # Förfallodatum (om is_bill=true)
+    account_number: "1234 56 78901"    # Normaliserat kontonummer
+    matched_to_bill_id: null           # ID för matchad faktura (om matchning gjorts)
+    imported_historical: true           # true för historisk bankdata
+```
+
+### Bill Metadata (Sprint 6)
+
+Fakturor innehåller nu utökade metadata-fält:
+
+```yaml
+bills:
+  - id: "BILL-0001"
+    name: "Elräkning December"
+    amount: 850.0
+    due_date: "2025-11-15"
+    bill_due_date: "2025-11-15"        # Explicit förfallodatum
+    description: "Elkostnad för december"
+    category: "Boende"
+    subcategory: "El"
+    
+    # Nya metadata-fält (Sprint 6)
+    status: "scheduled"                 # 'scheduled', 'pending', 'paid', eller 'overdue'
+    is_bill: true                       # Alltid true för fakturor
+    source: "PDF"                       # 'PDF', 'manual', eller annat
+    source_uploaded_at: "2025-10-22 13:24:37"
+    account: "MAT 1722 20 34439"       # Normaliserat kontonummer
+    account_number: "MAT 1722 20 34439"
+    matched_transaction_id: null        # ID för matchad transaktion
+    matched_to_bill_id: null           # För reverse matching
+    paid_at: null
+    scheduled_payment_date: null
+    imported_historical: false          # Fakturor är framtida poster
+    created_at: "2025-10-22 13:24:37"
+```
+
+### Import-optioner
+
+**CSV-import med statuslogik:**
+
+```python
+from modules.core.import_bank_data import import_csv
+
+# Markera framtida transaktioner som 'scheduled' (standard)
+account_name, df = import_csv('transactions.csv', treat_future_as_scheduled=True)
+
+# Markera alla transaktioner som 'posted', även framtida
+account_name, df = import_csv('transactions.csv', treat_future_as_scheduled=False)
+```
+
+**PDF-fakturaimport:**
+
+PDF-import extraherar automatiskt:
+- Kontonummer (normaliserat)
+- Fakturabelopp
+- Förfallodatum
+- Mottagare/fakturerare
+- Sätter `is_bill=true`, `status='scheduled'`, `source='PDF'`
+
+### Fakturamatchning
+
+Systemet matchar automatiskt fakturor mot transaktioner baserat på:
+
+1. **Kontonummer** (normaliserat, viktad 0.4 i confidence score)
+2. **Belopp** (tolerance 5%, viktad 0.3-0.5)
+3. **Datum** (tolerance ±7 dagar från förfallodatum)
+4. **Beskrivning** (textsökning, viktad 0.1-0.3)
+
+```python
+from modules.core.bill_matcher import BillMatcher
+
+matcher = BillMatcher(bill_manager, account_manager)
+
+# Matcha alla fakturor automatiskt
+matches = matcher.match_bills_to_transactions(
+    tolerance_days=7,           # Sök ±7 dagar från förfallodatum
+    amount_tolerance_percent=5.0  # 5% tolerance i belopp
+)
+
+# Manuell matchning
+matcher.manual_match(bill_id="BILL-0001", transaction_id="TX-123")
+```
+
+### Migration Guide för befintliga YAML-filer
+
+Om du har befintliga `transactions.yaml` eller `bills.yaml` filer:
+
+1. **Transaktioner**: Lägg till följande fält för varje transaktion:
+   ```yaml
+   status: "posted"
+   source: "legacy"
+   source_uploaded_at: "2025-10-22 00:00:00"
+   is_bill: false
+   bill_due_date: null
+   account_number: null
+   matched_to_bill_id: null
+   imported_historical: true
+   ```
+
+2. **Fakturor**: Lägg till följande fält för varje faktura:
+   ```yaml
+   status: "scheduled"  # eller "pending", "paid"
+   is_bill: true
+   source: "manual"
+   source_uploaded_at: "2025-10-22 00:00:00"
+   bill_due_date: "2025-11-15"  # Samma som due_date
+   account_number: null  # eller kontonummer om känt
+   matched_to_bill_id: null
+   imported_historical: false
+   ```
+
+3. Gamla fält behålls för bakåtkompatibilitet
+4. Nya importer lägger automatiskt till alla fält
+
+### Dashboard-funktioner (Sprint 6)
+
+**Editerbara fakturor:**
+1. Gå till "Fakturor"-fliken
+2. Klicka på en faktura i tabellen för att välja den
+3. Modal-fönster öppnas med editerbara fält:
+   - Namn, belopp, förfallodatum
+   - Kategori och underkategori (dropdowns)
+   - Konto (dropdown)
+   - Status (dropdown: Schemalagd, Väntande, Betald, Förfallen)
+4. Använd knapparna:
+   - **Spara**: Spara ändringar
+   - **Markera som betald**: Sätt status till 'paid'
+   - **Träna AI**: Lägg till i training_data.yaml för AI-träning
+
+**Månadanalys:**
+1. Gå till "Månadsanalys"-fliken
+2. Välj månad med dropdown
+3. Visa:
+   - **Kommande fakturor** (status='scheduled')
+   - **Bokförda transaktioner** (status='posted')
+   - **Inkomster per person och konto**
+   - **Utgiftssummering per kategori**
+   - **Överföringsförslag** baserat på NetBalanceSplitter
 
 ## 🤝 Bidra
 

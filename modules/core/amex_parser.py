@@ -261,9 +261,12 @@ class AmexParser:
         if not self.bill_manager:
             return None
         
-        # Get all pending Amex bills
-        bills = self.bill_manager.get_bills(status='pending')
-        amex_bills = [b for b in bills if b.get('is_amex_bill', False)]
+        # Get all scheduled/pending Amex bills (not yet paid)
+        bills = self.bill_manager.get_bills()
+        # Filter for Amex bills that are not paid
+        amex_bills = [b for b in bills 
+                      if b.get('is_amex_bill', False) 
+                      and b.get('status') in ['scheduled', 'pending', 'posted']]
         
         # Use purchases_total for matching (since bills are typically for purchases amount)
         # Not net balance (purchases - payments)
