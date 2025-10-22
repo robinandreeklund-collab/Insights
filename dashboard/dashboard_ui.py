@@ -706,7 +706,7 @@ def create_settings_tab():
                             id='settings-notifications',
                             options=[
                                 {'label': ' Fakturavarningar', 'value': 'bill_reminders'},
-                                {'label': ' Lågt saldobelarm', 'value': 'low_balance'}
+                                {'label': ' Lågt saldolarm', 'value': 'low_balance'}
                             ],
                             value=['bill_reminders', 'low_balance'],
                             inline=True,
