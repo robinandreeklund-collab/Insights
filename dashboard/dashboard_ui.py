@@ -1538,13 +1538,19 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
         data = manager._load_yaml(manager.transactions_file)
         transactions = data.get('transactions', [])
         
+        # Convert amount to float for reliable comparison
+        selected_amount = float(selected_tx.get('amount', 0))
+        
         # Find and update the transaction
         # Match on date, description, and amount (more reliable than account name)
         transaction_found = False
         for tx in transactions:
-            if (tx.get('date') == selected_tx['date'] and 
-                tx.get('description') == selected_tx['description'] and
-                tx.get('amount') == selected_tx['amount']):
+            # Convert tx amount to float as well for comparison
+            tx_amount = float(tx.get('amount', 0))
+            
+            if (str(tx.get('date')) == str(selected_tx['date']) and 
+                str(tx.get('description')) == str(selected_tx['description']) and
+                abs(tx_amount - selected_amount) < 0.01):  # Use tolerance for float comparison
                 tx['category'] = category
                 tx['subcategory'] = subcategory
                 tx['categorized_manually'] = True
@@ -1567,7 +1573,7 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
         
         return dbc.Alert("✓ Kategorisering sparad!", color="success", dismissable=True, duration=3000), (current_trigger or 0) + 1
     except Exception as e:
-        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True, duration=3000), current_trigger
+        return dbc.Alert(f"Fel vid sparande: {str(e)}", color="danger", dismissable=True, duration=3000), current_trigger
 
 
 # Callback: Train AI from table
