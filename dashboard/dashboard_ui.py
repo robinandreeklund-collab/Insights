@@ -1201,15 +1201,17 @@ def update_transaction_table(account_name, current_page, refresh_trigger):
     # Create table with editable category columns
     df = pd.DataFrame(page_transactions)
     
-    # Prepare dropdown options for categories
+    # Prepare dropdown options for categories  
     category_options = [{'label': cat, 'value': cat} for cat in CATEGORIES.keys()]
     
     # Prepare conditional dropdown options for subcategories based on category
     subcategory_dropdowns = []
     for category, subcats in CATEGORIES.items():
+        # Escape quotes in category name for filter query
+        escaped_category = category.replace('"', '\\"')
         subcategory_dropdowns.append({
             'if': {
-                'filter_query': '{category} = "' + category + '"',
+                'filter_query': f'{{category}} = "{escaped_category}"',
                 'column_id': 'subcategory'
             },
             'options': [{'label': subcat, 'value': subcat} for subcat in subcats]
@@ -1224,13 +1226,13 @@ def update_transaction_table(account_name, current_page, refresh_trigger):
             {'name': 'Saldo', 'id': 'balance', 'editable': False},
             {
                 'name': 'Kategori', 
-                'id': 'category', 
+                'id': 'category',
                 'editable': True,
                 'presentation': 'dropdown'
             },
             {
                 'name': 'Underkategori', 
-                'id': 'subcategory', 
+                'id': 'subcategory',
                 'editable': True,
                 'presentation': 'dropdown'
             },
@@ -1238,8 +1240,7 @@ def update_transaction_table(account_name, current_page, refresh_trigger):
         data=df.to_dict('records'),
         dropdown={
             'category': {
-                'options': category_options,
-                'clearable': False
+                'options': category_options
             }
         },
         dropdown_conditional=subcategory_dropdowns,
