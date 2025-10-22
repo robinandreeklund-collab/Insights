@@ -2,6 +2,7 @@
 
 import dash
 from dash import html, dcc, Input, Output, State, callback_context, dash_table
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import signal
 import sys
@@ -207,7 +208,9 @@ def create_accounts_tab():
             dbc.ModalHeader(dbc.ModalTitle("Redigera konto")),
             dbc.ModalBody([
                 html.Label("Kontonamn:", className="fw-bold mb-2"),
-                dbc.Input(id='edit-account-name-input', type='text', placeholder='Kontonamn'),
+                dbc.Input(id='edit-account-name-input', type='text', placeholder='Kontonamn', className="mb-3"),
+                html.Label("Person/Ägare:", className="fw-bold mb-2"),
+                dbc.Input(id='edit-account-person-input', type='text', placeholder='T.ex. Robin'),
                 html.Div(id='edit-account-status', className="mt-2")
             ]),
             dbc.ModalFooter([
@@ -271,6 +274,7 @@ def create_accounts_tab():
                     dbc.CardBody([
                         html.H5("AI-träning", className="card-title"),
                         html.P("Träna AI-modellen med manuellt kategoriserade transaktioner", className="text-muted mb-3"),
+                        html.Div(id='training-readiness-status', className="mb-3"),
                         dbc.Button("🤖 Träna med AI", id='train-from-table-btn', color="success", className="me-2"),
                         html.Div(id='table-action-status', className="mt-3")
                     ])
@@ -1070,16 +1074,34 @@ def update_overview(n):
     Input('accounts-interval', 'n_intervals')
 )
 def update_account_selector(n):
-    """Update the account selector dropdown."""
+    """Update the account selector dropdown with account names and persons.
+    
+    Displays accounts in format: "Account Name (Person)" if person is set,
+    otherwise just "Account Name".
+    
+    Args:
+        n: Interval counter (unused but required by Dash)
+        
+    Returns:
+        List of dropdown options with label and value
+    """
     manager = AccountManager()
     accounts = manager.get_accounts()
-    return [{'label': acc['name'], 'value': acc['name']} for acc in accounts]
+    # Display person name if available
+    return [
+        {
+            'label': f"{acc['name']} ({acc.get('person', '')})" if acc.get('person') else acc['name'],
+            'value': acc['name']
+        } 
+        for acc in accounts
+    ]
 
 
 # Callback: Open Edit Account Modal
 @app.callback(
     [Output('edit-account-modal', 'is_open'),
-     Output('edit-account-name-input', 'value')],
+     Output('edit-account-name-input', 'value'),
+     Output('edit-account-person-input', 'value')],
     [Input('edit-account-btn', 'n_clicks'),
      Input('edit-account-cancel-btn', 'n_clicks'),
      Input('edit-account-save-btn', 'n_clicks')],
@@ -1087,19 +1109,24 @@ def update_account_selector(n):
      State('edit-account-modal', 'is_open')]
 )
 def toggle_edit_account_modal(edit_clicks, cancel_clicks, save_clicks, selected_account, is_open):
-    """Toggle edit account modal."""
+    """Toggle edit account modal and populate fields."""
     ctx = callback_context
     if not ctx.triggered:
-        return False, ""
+        return False, "", ""
     
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
     if button_id == 'edit-account-btn' and selected_account:
-        return True, selected_account
+        # Load account data to populate fields
+        manager = AccountManager()
+        account = manager.get_account_by_name(selected_account)
+        if account:
+            return True, account.get('name', ''), account.get('person', '')
+        return True, selected_account, ""
     elif button_id in ['edit-account-cancel-btn', 'edit-account-save-btn']:
-        return False, ""
+        return False, "", ""
     
-    return is_open, selected_account or ""
+    return is_open, selected_account or "", ""
 
 
 # Callback: Save Edited Account
@@ -1107,23 +1134,53 @@ def toggle_edit_account_modal(edit_clicks, cancel_clicks, save_clicks, selected_
     Output('edit-account-status', 'children'),
     Input('edit-account-save-btn', 'n_clicks'),
     [State('account-selector', 'value'),
-     State('edit-account-name-input', 'value')]
+     State('edit-account-name-input', 'value'),
+     State('edit-account-person-input', 'value')]
 )
-def save_edited_account(n_clicks, old_name, new_name):
-    """Save edited account name."""
+def save_edited_account(n_clicks, old_name, new_name, person):
+    """Save edited account name and person field.
+    
+    Handles updating both the account name and person/owner field.
+    Provides detailed feedback about what changed.
+    
+    Args:
+        n_clicks: Number of button clicks (trigger)
+        old_name: Original account name
+        new_name: New account name
+        person: Person/owner name for the account
+        
+    Returns:
+        Alert component with success/info message
+    """
     if not n_clicks or not old_name or not new_name:
         return ""
     
-    if old_name == new_name:
-        return dbc.Alert("Inget ändrat", color="info", dismissable=True)
-    
     manager = AccountManager()
-    result = manager.update_account(old_name, new_name=new_name)
     
-    if result:
-        return dbc.Alert(f"Konto uppdaterat från '{old_name}' till '{new_name}'", color="success", dismissable=True)
+    # Check what changed
+    changed = False
+    messages = []
+    
+    # Update name if changed
+    if old_name != new_name:
+        result = manager.update_account(old_name, new_name=new_name)
+        if result:
+            messages.append(f"Namn ändrat från '{old_name}' till '{new_name}'")
+            changed = True
+            old_name = new_name  # Update for person change
+    
+    # Update person field
+    account = manager.get_account_by_name(old_name)
+    if account and account.get('person', '') != (person or ''):
+        result = manager.update_account(old_name, person=person or '')
+        if result:
+            messages.append(f"Person uppdaterad till: {person if person else '(ingen angiven)'}")
+            changed = True
+    
+    if changed:
+        return dbc.Alert(". ".join(messages), color="success", dismissable=True)
     else:
-        return dbc.Alert("Kunde inte uppdatera konto", color="danger", dismissable=True)
+        return dbc.Alert("Inget ändrat", color="info", dismissable=True)
 
 
 # Callback: Open Delete Account Modal
@@ -1640,6 +1697,48 @@ def save_manual_categorization(n_clicks, selected_rows, table_data, category, su
             dismissable=True, 
             duration=5000
         ), current_trigger
+
+
+# Callback: Update Training Readiness Status
+@app.callback(
+    Output('training-readiness-status', 'children'),
+    Input('accounts-interval', 'n_intervals')
+)
+def update_training_readiness(n):
+    """Update training readiness indicator in accounts tab.
+    
+    Shows a visual indicator of whether AI training is ready based on
+    the number of manual categorizations available.
+    
+    Args:
+        n: Interval counter (unused but required by Dash)
+        
+    Returns:
+        Alert component showing training readiness status
+    """
+    try:
+        trainer = AITrainer()
+        stats = trainer.get_training_stats()
+        
+        if stats['total_samples'] == 0:
+            return dbc.Alert([
+                html.I(className="bi bi-info-circle me-2"),
+                "Ingen träningsdata tillgänglig. Börja med att kategorisera transaktioner manuellt."
+            ], color="info", className="mb-0 py-2")
+        
+        if stats['ready_to_train']:
+            return dbc.Alert([
+                html.I(className="bi bi-check-circle me-2"),
+                f"✓ Redo att träna! ({stats['manual_samples']} manuella kategoriseringar)"
+            ], color="success", className="mb-0 py-2")
+        else:
+            needed = stats['min_samples_needed'] - stats['manual_samples']
+            return dbc.Alert([
+                html.I(className="bi bi-exclamation-triangle me-2"),
+                f"Behöver {needed} fler manuella kategoriseringar för att träna (har {stats['manual_samples']}/{stats['min_samples_needed']})"
+            ], color="warning", className="mb-0 py-2")
+    except Exception as e:
+        return None
 
 
 # Callback: Train AI from table
@@ -2309,7 +2408,7 @@ def load_settings_on_tab_open(tab):
     """Load current settings when settings tab is opened."""
     if tab != 'settings':
         # Return current values without changing anything
-        raise dash.exceptions.PreventUpdate
+        raise PreventUpdate
     
     try:
         panel = SettingsPanel()
@@ -2347,7 +2446,7 @@ def load_settings_on_tab_open(tab):
         )
     except Exception as e:
         print(f"Error loading settings: {e}")
-        raise dash.exceptions.PreventUpdate
+        raise PreventUpdate
 
 
 # Callback: Save settings
@@ -2469,15 +2568,29 @@ def start_ai_training(n_clicks):
         result = trainer.train_from_samples()
         
         if result['success']:
+            # Show detailed results
+            rules_created = result.get('rules_created', 0)
+            categories = result.get('categories_trained', [])
+            
             return dbc.Alert([
-                html.H5("Träning genomförd!", className="alert-heading"),
+                html.H5("✓ Träning genomförd!", className="alert-heading"),
                 html.P(result['message']),
                 html.Hr(),
-                html.P([
-                    "Kategorier som tränats: ",
-                    ", ".join(result.get('categories_trained', []))
-                ], className="mb-0") if result.get('categories_trained') else None
-            ], color="success", dismissable=True, duration=8000)
+                html.Div([
+                    html.P([
+                        html.Strong("Nya kategoriseringsregler: "), 
+                        f"{rules_created} st"
+                    ], className="mb-2"),
+                    html.P([
+                        html.Strong("Tränade kategorier: "),
+                        ", ".join(categories) if categories else "Inga"
+                    ], className="mb-2"),
+                    html.P([
+                        html.I(className="bi bi-check-circle me-2"),
+                        "AI-modellen är nu uppdaterad och kommer användas vid automatisk kategorisering av nya transaktioner."
+                    ], className="mb-0 text-success")
+                ])
+            ], color="success", dismissable=True, duration=10000)
         else:
             return dbc.Alert(result['message'], color="warning", dismissable=True, duration=6000)
     except Exception as e:

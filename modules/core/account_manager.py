@@ -64,7 +64,7 @@ class AccountManager:
                 return account
         return None
     
-    def create_account(self, name: str, source_file: str, balance: float = 0.0) -> dict:
+    def create_account(self, name: str, source_file: str, balance: float = 0.0, person: str = None) -> dict:
         """
         Create a new account from a source file.
         
@@ -72,6 +72,7 @@ class AccountManager:
             name: Account name
             source_file: Path to the source CSV/Excel file
             balance: Initial balance
+            person: Person/owner of the account (optional)
             
         Returns:
             Dictionary with account information
@@ -86,7 +87,8 @@ class AccountManager:
             'name': name,
             'source_file': source_file,
             'created_at': datetime.now().strftime('%Y-%m-%d'),
-            'balance': balance
+            'balance': balance,
+            'person': person or ''
         }
         
         # Load accounts and add new one
@@ -223,7 +225,8 @@ class AccountManager:
         Args:
             old_name: Current account name
             new_name: New account name (optional)
-            **kwargs: Additional fields to update (balance, source_file, etc.)
+            **kwargs: Additional fields to update (balance, source_file, person, etc.)
+                     Common fields: person (owner name), balance (current balance)
             
         Returns:
             Updated account dictionary or None if not found
