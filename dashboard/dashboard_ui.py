@@ -1320,12 +1320,26 @@ def show_categorization_form(selected_rows, table_data):
     # Reload categories to get any newly added ones
     categories = category_manager.get_categories()
     
+    # IMPORTANT: Also load categories from existing transactions
+    # This ensures categories that were created before CategoryManager are available
+    account_manager = AccountManager()
+    all_transactions = account_manager.get_all_transactions()
+    
+    # Discover unique categories from transactions
+    for tx in all_transactions:
+        cat = tx.get('category')
+        subcat = tx.get('subcategory')
+        if cat and cat not in categories:
+            categories[cat] = []
+        if cat and subcat and subcat not in categories[cat]:
+            categories[cat].append(subcat)
+    
     # Get current category and subcategory values
     # Handle None, empty string, or missing keys
     current_category = selected_tx.get('category')
     current_subcategory = selected_tx.get('subcategory')
     
-    # If empty or None, use defaults
+    # If empty or None, use defaults ONLY if they don't have values
     if not current_category or current_category == '':
         current_category = 'Övrigt'
     if not current_subcategory or current_subcategory == '':
@@ -1397,6 +1411,20 @@ def show_categorization_form(selected_rows, table_data):
 def update_subcategory_options(category):
     """Update subcategory options based on selected category."""
     categories = category_manager.get_categories()
+    
+    # Also load categories from existing transactions
+    account_manager = AccountManager()
+    all_transactions = account_manager.get_all_transactions()
+    
+    # Discover unique categories from transactions
+    for tx in all_transactions:
+        cat = tx.get('category')
+        subcat = tx.get('subcategory')
+        if cat and cat not in categories:
+            categories[cat] = []
+        if cat and subcat and subcat not in categories[cat]:
+            categories[cat].append(subcat)
+    
     if category and category in categories:
         return [{'label': subcat, 'value': subcat} for subcat in categories[category]]
     return []
