@@ -498,6 +498,7 @@ def create_bills_tab():
                             id='bill-status-filter',
                             options=[
                                 {'label': 'Alla', 'value': 'all'},
+                                {'label': 'Schemalagda', 'value': 'scheduled'},
                                 {'label': 'Väntande', 'value': 'pending'},
                                 {'label': 'Betalda', 'value': 'paid'},
                                 {'label': 'Förfallna', 'value': 'overdue'}
@@ -917,11 +918,19 @@ def create_monthly_analysis_tab():
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H5("Kommande fakturor denna månad", className="card-title"),
+                        html.H5("Kommande fakturor denna månad (Scheduled)", className="card-title"),
                         html.Div(id='monthly-upcoming-bills-display'),
                     ])
                 ])
-            ], width=12)
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Bokförda transaktioner denna månad (Posted)", className="card-title"),
+                        html.Div(id='monthly-posted-transactions-display'),
+                    ])
+                ])
+            ], width=6)
         ], className="mb-4"),
         
         # Inkomster per person och konto
@@ -1129,6 +1138,11 @@ def create_settings_tab():
 # Main app layout
 app.layout = dbc.Container([
     html.H1("Insights – Hushållsekonomi Dashboard", className="text-center my-4"),
+    
+    # Storage components for state management and real-time updates
+    dcc.Store(id='bills-update-trigger', storage_type='memory'),
+    dcc.Store(id='incomes-update-trigger', storage_type='memory'),
+    dcc.Store(id='transactions-update-trigger', storage_type='memory'),
     
     dcc.Tabs(id="main-tabs", value="overview", children=[
         # Ekonomisk översikt
@@ -3406,7 +3420,10 @@ def update_monthly_upcoming_bills(n_clicks, start_month, end_month):
         start_month = datetime.now().strftime('%Y-%m')
     
     bill_manager = BillManager()
-    all_bills = bill_manager.get_bills(status='pending')
+    # Get both scheduled and pending bills
+    scheduled_bills = bill_manager.get_bills(status='scheduled')
+    pending_bills = bill_manager.get_bills(status='pending')
+    all_bills = scheduled_bills + pending_bills
     
     # Filter bills for the month
     month_bills = [
@@ -3426,21 +3443,79 @@ def update_monthly_upcoming_bills(n_clicks, start_month, end_month):
                 html.Td(bill['name']),
                 html.Td(f"{bill['amount']:,.2f} SEK"),
                 html.Td(bill['due_date']),
-                html.Td(bill.get('category', 'N/A'))
+                html.Td(bill.get('category', 'N/A')),
+                html.Td(bill.get('status', 'N/A').title())
             ])
         )
     
     return html.Div([
-        html.H6(f"Totalt: {total_amount:,.2f} SEK", className="mb-3 text-danger"),
+        html.H6(f"Totalt: {total_amount:,.2f} SEK ({len(month_bills)} fakturor)", className="mb-3 text-danger"),
         dbc.Table([
             html.Thead(html.Tr([
                 html.Th("Namn"),
                 html.Th("Belopp"),
                 html.Th("Förfallodatum"),
-                html.Th("Kategori")
+                html.Th("Kategori"),
+                html.Th("Status")
             ])),
             html.Tbody(bill_rows)
         ], bordered=True, hover=True, size='sm')
+    ])
+
+
+# Callback: Update Monthly Posted Transactions
+@app.callback(
+    Output('monthly-posted-transactions-display', 'children'),
+    Input('analyze-period-btn', 'n_clicks'),
+    [State('analysis-start-month', 'value'),
+     State('analysis-end-month', 'value')],
+    prevent_initial_call=False
+)
+def update_monthly_posted_transactions(n_clicks, start_month, end_month):
+    """Display posted transactions for selected month."""
+    from datetime import datetime
+    
+    # Default to current month
+    if not start_month:
+        start_month = datetime.now().strftime('%Y-%m')
+    
+    manager = AccountManager()
+    all_transactions = manager.get_all_transactions()
+    
+    # Filter posted transactions for the month
+    posted_txs = [
+        tx for tx in all_transactions
+        if tx.get('status') == 'posted' and tx.get('date', '').startswith(start_month)
+    ]
+    
+    if not posted_txs:
+        return html.P("Inga bokförda transaktioner för denna månad", className="text-muted")
+    
+    # Separate expenses and incomes
+    expenses = [tx for tx in posted_txs if tx.get('amount', 0) < 0]
+    incomes = [tx for tx in posted_txs if tx.get('amount', 0) > 0]
+    
+    total_expenses = sum(abs(tx['amount']) for tx in expenses)
+    total_incomes = sum(tx['amount'] for tx in incomes)
+    
+    return html.Div([
+        html.Div([
+            html.P([
+                html.Strong("Utgifter: "),
+                html.Span(f"{total_expenses:,.2f} SEK", className="text-danger")
+            ], className="mb-1"),
+            html.P([
+                html.Strong("Inkomster: "),
+                html.Span(f"{total_incomes:,.2f} SEK", className="text-success")
+            ], className="mb-1"),
+            html.P([
+                html.Strong("Netto: "),
+                html.Span(f"{(total_incomes - total_expenses):,.2f} SEK", 
+                         className="text-primary fw-bold")
+            ], className="mb-2"),
+        ]),
+        html.Hr(),
+        html.Small(f"{len(posted_txs)} bokförda transaktioner totalt", className="text-muted")
     ])
 
 
