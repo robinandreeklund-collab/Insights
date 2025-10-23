@@ -242,3 +242,39 @@ class TestInternalTransfers:
         # The transfer amounts should not be included
         # Total expense should be around 500, not 1500
         assert stats['avg_daily_expenses'] < 1000
+    
+    def test_swedish_transfer_keywords(self, manager):
+        """Test detection with Swedish transfer keywords in description."""
+        acc1 = manager.create_account("Konto 1722 20 34439", 5000.0)
+        acc2 = manager.create_account("Konto 1709 20 72840", 3000.0)
+        
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        transactions = [
+            {
+                'account': 'Konto 1722 20 34439',
+                'date': today,
+                'amount': -290.0,
+                'description': 'Överföring 1709 20 72840'
+            },
+            {
+                'account': 'Konto 1709 20 72840',
+                'date': today,
+                'amount': 290.0,
+                'description': 'Överföring FRÖJD,EVELINA'
+            }
+        ]
+        
+        manager.add_transactions(transactions)
+        count = manager.detect_internal_transfers()
+        
+        # Should detect the transfer based on keywords
+        assert count == 1
+        
+        all_txs = manager.get_all_transactions()
+        marked = [tx for tx in all_txs if tx.get('is_internal_transfer')]
+        assert len(marked) == 2
+        
+        # Verify labels are set
+        for tx in marked:
+            assert 'Flytt mellan konton' in tx.get('transfer_label', '')

@@ -1650,12 +1650,25 @@ def handle_csv_upload(contents, filename):
         manager.add_transactions(transactions)
         manager.update_account_balance(account_name, latest_balance)
         
+        # Detect internal transfers
+        transfer_count = manager.detect_internal_transfers()
+        
+        # Detect credit card payments
+        cc_payment_count = manager.detect_credit_card_payments()
+        
         # Clean up temp file
         os.remove(temp_file)
         
+        # Build status message
+        status_parts = [f"{len(transactions)} transaktioner tillagda till konto '{account_name}'"]
+        if transfer_count > 0:
+            status_parts.append(f"{transfer_count} internöverföring(ar) detekterade")
+        if cc_payment_count > 0:
+            status_parts.append(f"{cc_payment_count} kreditkortsbetalning(ar) detekterade")
+        
         return dbc.Alert([
             html.I(className="bi bi-check-circle-fill me-2"),
-            f"✓ {filename} importerad! {len(transactions)} transaktioner tillagda till konto '{account_name}'"
+            f"✓ {filename} importerad! " + ", ".join(status_parts)
         ], color="success", className="mt-3")
         
     except Exception as e:

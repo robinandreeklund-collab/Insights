@@ -98,6 +98,16 @@ def import_and_process_csv(csv_path: str, yaml_dir: str = "yaml") -> Tuple[str, 
     manager.update_account_balance(account_name, latest_balance)
     print(f"✓ Account balance updated")
     
+    # Step 6: Detect internal transfers
+    transfer_count = manager.detect_internal_transfers()
+    if transfer_count > 0:
+        print(f"✓ {transfer_count} internal transfer(s) detected and marked")
+    
+    # Step 7: Detect credit card payments
+    cc_payment_count = manager.detect_credit_card_payments()
+    if cc_payment_count > 0:
+        print(f"✓ {cc_payment_count} credit card payment(s) detected and marked")
+    
     return account_name, len(transactions)
 
 

@@ -332,6 +332,7 @@ class AccountManager:
         - Same or close date (within 2 days)
         - Opposite signs (one negative, one positive)
         - Different accounts
+        - Transfer keywords in description (Swedish: "Överföring", English: "Transfer")
         
         Marked transactions get is_internal_transfer=True and are excluded from forecasts.
         
@@ -353,6 +354,9 @@ class AccountManager:
         # Sort transactions by date for efficiency
         sorted_txs = sorted(transactions, key=lambda x: x.get('date', ''))
         
+        # Transfer keywords (Swedish and English)
+        transfer_keywords = ['överföring', 'transfer', 'intern överföring']
+        
         for i, tx1 in enumerate(sorted_txs):
             # Skip if already marked as transfer
             if tx1.get('is_internal_transfer'):
@@ -365,6 +369,10 @@ class AccountManager:
             
             date1 = tx1.get('date', '')
             account1 = tx1.get('account', '')
+            desc1 = tx1.get('description', '').lower()
+            
+            # Check if description contains transfer keywords
+            has_transfer_keyword = any(keyword in desc1 for keyword in transfer_keywords)
             
             # Look for matching positive transaction (incoming)
             for tx2 in sorted_txs[i+1:]:
@@ -375,6 +383,7 @@ class AccountManager:
                 date2 = tx2.get('date', '')
                 account2 = tx2.get('account', '')
                 amount2 = tx2.get('amount', 0)
+                desc2 = tx2.get('description', '').lower()
                 
                 # Must be from different accounts
                 if account1 == account2:
@@ -387,7 +396,7 @@ class AccountManager:
                 if amount2 <= 0:  # tx2 must be positive (incoming)
                     continue
                 
-                # Check date proximity (within 2 days)
+                # Check date proximity (same day or within 2 days)
                 try:
                     from datetime import datetime, timedelta
                     d1 = datetime.strptime(date1, '%Y-%m-%d')
@@ -395,6 +404,14 @@ class AccountManager:
                     
                     if abs((d2 - d1).days) > 2:
                         continue
+                    
+                    # Additional validation: check for transfer keywords in at least one description
+                    has_transfer_keyword2 = any(keyword in desc2 for keyword in transfer_keywords)
+                    
+                    if not (has_transfer_keyword or has_transfer_keyword2):
+                        # If no transfer keywords, require same day matching
+                        if d1 != d2:
+                            continue
                     
                     # Found a matching pair - mark both as internal transfers
                     tx1['is_internal_transfer'] = True
@@ -422,6 +439,7 @@ class AccountManager:
         
         Looks for transactions with descriptions containing credit card keywords
         (e.g., "Amex", "Mastercard", "Visa", "Payment", "Betalning").
+        Also handles Swedish bank payment formats like "Betalning BG".
         
         Marks matching transactions with is_credit_card_payment=True and attempts
         to match to specific credit card if CreditCardManager is available.
@@ -438,9 +456,10 @@ class AccountManager:
             return 0
         
         # Keywords to identify credit card payments
+        # Note: "american exp" matches "American Express" even if abbreviated
         keywords = [
-            'amex', 'american express',
-            'mastercard', 'master card',
+            'amex', 'american express', 'american exp', 'am exp',
+            'mastercard', 'master card', 'mc card',
             'visa',
             'kreditkort', 'credit card',
             'kortbetalning', 'card payment',
@@ -450,7 +469,7 @@ class AccountManager:
         marked_count = 0
         
         try:
-            cc_manager = CreditCardManager()
+            cc_manager = CreditCardManager(yaml_dir=self.yaml_dir)
             cards = cc_manager.get_cards(status='active')
         except:
             cards = []
@@ -470,23 +489,43 @@ class AccountManager:
             matched = False
             matched_card = None
             
+            # First, check if any keyword matches
             for keyword in keywords:
                 if keyword in description:
                     matched = True
+                    break
+            
+            # If matched, try to find specific card
+            if matched:
+                for card in cards:
+                    card_name = card.get('name', '').lower()
+                    card_type = card.get('card_type', '').lower()
+                    last_four = card.get('last_four', '')
                     
-                    # Try to match to specific card
-                    for card in cards:
-                        card_name = card.get('name', '').lower()
-                        card_type = card.get('card_type', '').lower()
-                        last_four = card.get('last_four', '')
-                        
-                        if (card_name in description or 
-                            card_type in description or
-                            (last_four and last_four in description)):
+                    # Check for direct name/type match
+                    if card_name in description or card_type in description:
+                        matched_card = card
+                        break
+                    
+                    # Check for abbreviated card type matches
+                    # e.g., "american exp" should match "american express"
+                    if card_type == 'american express':
+                        if any(variant in description for variant in ['amex', 'american exp', 'am exp']):
+                            matched_card = card
+                            break
+                    elif card_type == 'mastercard':
+                        if any(variant in description for variant in ['mastercard', 'master card', 'mc card']):
+                            matched_card = card
+                            break
+                    elif card_type == 'visa':
+                        if 'visa' in description:
                             matched_card = card
                             break
                     
-                    break
+                    # Check last 4 digits
+                    if last_four and last_four in description:
+                        matched_card = card
+                        break
             
             if matched:
                 tx['is_credit_card_payment'] = True
