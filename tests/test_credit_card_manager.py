@@ -303,6 +303,3 @@ class TestCreditCardManager:
             assert len(closed_cards) == 1
             assert closed_cards[0]['name'] == "Closed Card"
 
-
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
