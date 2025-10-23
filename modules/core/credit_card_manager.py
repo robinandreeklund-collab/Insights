@@ -456,13 +456,36 @@ class CreditCardManager:
         # Import transactions
         imported_count = 0
         duplicate_count = 0
+        payment_count = 0
         
+        # First pass: Process payments to update balance (but don't add as transactions)
+        if is_amex_format:
+            for _, row in df.iterrows():
+                if pd.isna(row['amount']) or pd.isna(row['date']):
+                    continue
+                
+                # Process payments (negative amounts in Amex format)
+                if row['amount'] < 0:
+                    # Apply payment to card balance
+                    # Payments reduce the balance (money owed)
+                    payment_amount = abs(row['amount'])
+                    posting_date = str(row.get('posting_date', row['date']))
+                    
+                    # Use match_payment_to_card to properly track payment
+                    self.match_payment_to_card(
+                        card_id=card_id,
+                        payment_amount=payment_amount,
+                        payment_date=posting_date
+                    )
+                    payment_count += 1
+        
+        # Second pass: Import purchase transactions
         for _, row in df.iterrows():
             # Skip rows with invalid data
             if pd.isna(row['amount']) or pd.isna(row['date']):
                 continue
             
-            # For Amex format: skip payments (negative values)
+            # For Amex format: skip payments (negative values) - already processed above
             # For standard format: accept all transactions
             if is_amex_format and row['amount'] < 0:
                 continue
@@ -525,7 +548,7 @@ class CreditCardManager:
             if result:
                 imported_count += 1
         
-        return {'imported': imported_count, 'duplicates': 0}
+        return {'imported': imported_count, 'duplicates': 0, 'payments_processed': payment_count}
     
     def get_transactions(self, card_id: str, category: Optional[str] = None,
                         start_date: Optional[str] = None,
