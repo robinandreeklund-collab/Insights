@@ -78,7 +78,7 @@ except Exception:
 
 
 def clear_data_on_exit(signum=None, frame=None):
-    """Clear transactions, accounts, bills, and loans data files on exit.
+    """Clear transactions, accounts, bills, loans, and credit cards data files on exit.
     
     Note: training_data.yaml is preserved to maintain AI learning.
     """
@@ -89,6 +89,7 @@ def clear_data_on_exit(signum=None, frame=None):
     accounts_file = os.path.join(yaml_dir, "accounts.yaml")
     bills_file = os.path.join(yaml_dir, "bills.yaml")
     loans_file = os.path.join(yaml_dir, "loans.yaml")
+    credit_cards_file = os.path.join(yaml_dir, "credit_cards.yaml")
     
     try:
         # Reset transactions.yaml
@@ -114,6 +115,12 @@ def clear_data_on_exit(signum=None, frame=None):
             with open(loans_file, 'w', encoding='utf-8') as f:
                 yaml.dump({'loans': []}, f, default_flow_style=False, allow_unicode=True)
             print(f"✓ Cleared {loans_file}")
+        
+        # Reset credit_cards.yaml
+        if os.path.exists(credit_cards_file):
+            with open(credit_cards_file, 'w', encoding='utf-8') as f:
+                yaml.dump({'cards': []}, f, default_flow_style=False, allow_unicode=True)
+            print(f"✓ Cleared {credit_cards_file}")
         
         print("Data files cleared successfully! (training_data.yaml preserved)")
     except Exception as e:
@@ -4296,9 +4303,14 @@ def update_cards_overview(n_clicks):
                         dbc.Col([
                             html.Div([
                                 html.Div([
-                                    html.Div(
-                                        dangerously_allow_html=True,
-                                        children=get_card_icon(card.get('card_type', ''), size=48)
+                                    html.Iframe(
+                                        srcDoc=get_card_icon(card.get('card_type', ''), size=48),
+                                        style={
+                                            'width': '48px',
+                                            'height': '48px',
+                                            'border': 'none',
+                                            'overflow': 'hidden'
+                                        }
                                     )
                                 ], style={'display': 'inline-block'})
                             ], style={'textAlign': 'right'})
