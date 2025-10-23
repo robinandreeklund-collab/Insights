@@ -274,14 +274,10 @@ class LoanImageParser:
                 break
         
         # Payment interval
-        interval_patterns = [
-            r'(?:Betalningsintervall|Payment\s*interval)[:\s]*([^\n]+)',
-        ]
-        for pattern in interval_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                loan_data['payment_interval'] = match.group(1).strip()
-                break
+        interval_pattern = r'(?:Betalningsintervall|Payment\s*interval)[:\s]*([^\n]+)'
+        match = re.search(interval_pattern, text, re.IGNORECASE)
+        if match:
+            loan_data['payment_interval'] = match.group(1).strip()
         
         # Account numbers (look for Swedish account number format)
         account_patterns = [
