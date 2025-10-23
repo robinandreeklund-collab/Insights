@@ -4944,12 +4944,12 @@ def display_card_details(card_id):
         # Transactions table
         if transactions:
             tx_df = pd.DataFrame(transactions)
-            # Select relevant columns
-            display_cols = ['date', 'vendor', 'description', 'amount', 'category', 'subcategory']
+            # Select relevant columns - include both date fields
+            display_cols = ['date', 'posting_date', 'vendor', 'description', 'amount', 'category', 'subcategory']
             
             # Add card_member if available
             if 'card_member' in tx_df.columns and tx_df['card_member'].notna().any():
-                display_cols.insert(2, 'card_member')  # Insert after vendor
+                display_cols.insert(3, 'card_member')  # Insert after posting_date
             
             tx_df = tx_df[[col for col in display_cols if col in tx_df.columns]]
             
@@ -4957,13 +4957,27 @@ def display_card_details(card_id):
             if 'id' in pd.DataFrame(transactions).columns:
                 tx_df['id'] = pd.DataFrame(transactions)['id']
             
+            # Create custom column names with Swedish labels
+            column_config = []
+            for col in tx_df.columns:
+                if col == 'id':
+                    continue
+                elif col == 'date':
+                    column_config.append({'name': 'Datum (Köp)', 'id': col})
+                elif col == 'posting_date':
+                    column_config.append({'name': 'Bokfört', 'id': col})
+                else:
+                    column_config.append({'name': col.title(), 'id': col})
+            
             transactions_elem = html.Div([
                 html.H6(f"Transaktioner ({len(transactions)})"),
                 html.P("Klicka på en transaktion för att redigera kategori", className="text-muted small"),
+                html.Small("Datum (Köp) = när du gjorde köpet, Bokfört = när det påverkade saldo", 
+                          className="text-muted d-block mb-2"),
                 dash_table.DataTable(
                     id='card-transactions-table',
                     data=tx_df.to_dict('records'),
-                    columns=[{'name': col.title(), 'id': col} for col in tx_df.columns if col != 'id'],
+                    columns=column_config,
                     style_table={'overflowX': 'auto'},
                     style_cell={'textAlign': 'left', 'padding': '10px'},
                     style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
