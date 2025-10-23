@@ -4611,6 +4611,11 @@ def handle_edit_card_modal(edit_clicks, cancel_clicks, save_clicks,
     
     trigger_id = ctx.triggered[0]['prop_id']
     
+    # Additional check: make sure the trigger has an actual value
+    trigger_value = ctx.triggered[0].get('value')
+    if trigger_value is None or trigger_value == 0:
+        raise PreventUpdate
+    
     # Cancel button
     if 'edit-card-cancel' in trigger_id:
         return False, None, None, None, None, '#1f77b4', None
