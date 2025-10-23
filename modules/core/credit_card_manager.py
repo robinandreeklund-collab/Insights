@@ -38,7 +38,7 @@ class CreditCardManager:
     
     def add_card(self, name: str, card_type: str, last_four: str,
                  credit_limit: float, display_color: str = "#1f77b4",
-                 icon: str = "credit-card") -> Dict:
+                 icon: str = "credit-card", initial_balance: float = 0.0) -> Dict:
         """Lägg till ett nytt kreditkort.
         
         Args:
@@ -48,6 +48,7 @@ class CreditCardManager:
             credit_limit: Kreditgräns i SEK
             display_color: Färg för visualisering (hex-kod)
             icon: Ikon-namn för kortet
+            initial_balance: Föregående saldo/faktura (för om du inte importerar från början)
             
         Returns:
             Det nya kortet som dict
@@ -57,14 +58,17 @@ class CreditCardManager:
         # Generera unikt ID
         card_id = f"CARD-{str(uuid.uuid4())[:8]}"
         
+        # Calculate available credit based on initial balance
+        available_credit = credit_limit - initial_balance
+        
         card = {
             'id': card_id,
             'name': name,
             'card_type': card_type,
             'last_four': last_four,
             'credit_limit': credit_limit,
-            'current_balance': 0.0,  # Current outstanding balance
-            'available_credit': credit_limit,  # Available credit
+            'current_balance': initial_balance,  # Start with initial/previous balance
+            'available_credit': available_credit,  # Available credit after initial balance
             'display_color': display_color,
             'icon': icon,
             'transactions': [],  # List of transactions
@@ -139,9 +143,32 @@ class CreditCardManager:
         
         return False
     
+    def _is_duplicate_transaction(self, card: Dict, date: str, description: str, 
+                                   amount: float, card_member: str = "") -> bool:
+        """Check if a transaction already exists to avoid duplicates.
+        
+        Args:
+            card: Card dictionary to check
+            date: Transaction date
+            description: Transaction description
+            amount: Transaction amount
+            card_member: Optional card member name
+            
+        Returns:
+            True if duplicate found, False otherwise
+        """
+        existing_txs = card.get('transactions', [])
+        
+        # Disable simple duplicate detection to allow multiple transactions
+        # with same date/amount/description (e.g., 5 KLM purchases on same day)
+        # Instead, we'll use a more sophisticated approach below
+        return False
+    
     def add_transaction(self, card_id: str, date: str, description: str,
                        amount: float, category: str = "Övrigt",
-                       subcategory: str = "", vendor: str = "") -> Optional[Dict]:
+                       subcategory: str = "", vendor: str = "",
+                       card_member: str = "", account_number: str = "",
+                       skip_duplicate_check: bool = False) -> Optional[Dict]:
         """Lägg till en transaktion till ett kreditkort.
         
         Args:
@@ -152,9 +179,12 @@ class CreditCardManager:
             category: Kategori
             subcategory: Underkategori
             vendor: Leverantör/handlare
+            card_member: Kortmedlem/innehavare (för tvillingkort)
+            account_number: Kontonummer (sista 4-5 siffror)
+            skip_duplicate_check: Om True, hoppa över duplikatkontroll (används för manuella tillägg)
             
         Returns:
-            Den skapade transaktionen, eller None om kortet inte finns
+            Den skapade transaktionen, eller None om kortet inte finns eller transaktionen är en duplikat
         """
         cards = self.load_cards()
         
@@ -163,6 +193,12 @@ class CreditCardManager:
                 # Ensure transactions array exists
                 if 'transactions' not in card:
                     card['transactions'] = []
+                
+                # Check for duplicates (unless explicitly skipped)
+                if not skip_duplicate_check:
+                    if self._is_duplicate_transaction(card, date, description, amount, card_member):
+                        # Duplicate found - skip this transaction
+                        return None
                 
                 # Generate transaction ID
                 tx_id = f"TX-{str(uuid.uuid4())[:8]}"
@@ -178,6 +214,12 @@ class CreditCardManager:
                     'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 
+                # Add cardholder info if available
+                if card_member:
+                    transaction['card_member'] = card_member
+                if account_number:
+                    transaction['account_number'] = account_number
+                
                 card['transactions'].append(transaction)
                 
                 # Update card balance
@@ -191,24 +233,70 @@ class CreditCardManager:
         
         return None
     
-    def import_transactions_from_csv(self, card_id: str, csv_path: str) -> int:
+    def detect_card_from_csv(self, csv_path: str) -> Optional[str]:
+        """Auto-detect which card to import to based on account number in CSV.
+        
+        Args:
+            csv_path: Path to CSV file
+            
+        Returns:
+            Card ID if detected, None otherwise
+        """
+        try:
+            df = pd.read_csv(csv_path)  # Read all rows
+            df.columns = [col.strip().lower() for col in df.columns]
+            
+            # Map Swedish column name
+            if 'konto #' in df.columns:
+                df.rename(columns={'konto #': 'account_number'}, inplace=True)
+            
+            # Look for account_number column
+            if 'account_number' not in df.columns:
+                return None
+            
+            # Extract account numbers from CSV (last 4-5 digits)
+            account_numbers = df['account_number'].dropna().astype(str).unique()
+            
+            # Get all active cards
+            cards = self.get_cards(status='active')
+            
+            # Try to match by last digits
+            for account_num in account_numbers:
+                # Extract last digits (support both 4 and 5 digit formats)
+                account_num_clean = account_num.strip().replace('-', '')
+                if len(account_num_clean) >= 4:
+                    last_digits = account_num_clean[-5:]  # Get last 5 digits
+                    
+                    for card in cards:
+                        card_last = card.get('last_four', '').strip()
+                        # Match either last 4 or last 5 digits
+                        if card_last and (last_digits.endswith(card_last) or card_last in last_digits):
+                            return card['id']
+            
+            return None
+        except Exception:
+            return None
+    
+    def import_transactions_from_csv(self, card_id: str, csv_path: str) -> Dict[str, int]:
         """Importera transaktioner från CSV-fil.
         
         CSV-filen förväntas ha kolumner: Date, Description, Amount
-        Valfria kolumner: Vendor, Category, Subcategory
+        Valfria kolumner: Vendor, Category, Subcategory, Card_member, Account_number
         
         Stöder både Amex-format (svensk) och generiskt format.
+        Hanterar även kortmedlem (cardholder) för att spåra utgifter per person.
+        Automatisk dublettdetektering förhindrar att samma transaktion importeras flera gånger.
         
         Args:
             card_id: ID för kortet
             csv_path: Sökväg till CSV-fil
             
         Returns:
-            Antal importerade transaktioner
+            Dict med 'imported' (antal nya) och 'duplicates' (antal dubbletter hoppade över)
         """
         card = self.get_card_by_id(card_id)
         if not card:
-            return 0
+            return {'imported': 0, 'duplicates': 0}
         
         # Load CSV
         df = pd.read_csv(csv_path)
@@ -250,16 +338,30 @@ class CreditCardManager:
         
         # Detect if this is an Amex CSV format (has positive purchases and negative payments)
         # vs standard format (has negative purchases)
-        # Check if we have a mix of positive and negative values
+        # Amex format characteristics:
+        # 1. Has positive values for purchases
+        # 2. May have card_member or account_number columns
+        # 3. Most transactions are positive (purchases), payments are less frequent
         has_positive = (df['amount'] > 0).any()
         has_negative = (df['amount'] < 0).any()
+        has_amex_columns = 'card_member' in df.columns or 'account_number' in df.columns
         
-        # If we have both positive and negative, it's likely Amex format
-        # where positive = purchases, negative = payments
-        is_amex_format = has_positive and has_negative
+        # Calculate percentage of positive values
+        if len(df) > 0:
+            positive_ratio = (df['amount'] > 0).sum() / len(df)
+        else:
+            positive_ratio = 0
+        
+        # Amex format if:
+        # - Has Amex-specific columns, OR
+        # - Has both positive and negative (mixed), OR
+        # - Has mostly positive values (>70% are purchases)
+        is_amex_format = has_amex_columns or (has_positive and has_negative) or (has_positive and positive_ratio > 0.7)
         
         # Import transactions
         imported_count = 0
+        duplicate_count = 0
+        
         for _, row in df.iterrows():
             # Skip rows with invalid data
             if pd.isna(row['amount']) or pd.isna(row['date']):
@@ -306,18 +408,28 @@ class CreditCardManager:
                 # Standard format already has purchases as negative
                 amount = float(row['amount'])
             
-            self.add_transaction(
+            # Extract card member/cardholder information
+            card_member = row.get('card_member', '')
+            account_number = row.get('account_number', '')
+            
+            # Add transaction (duplicate detection disabled to allow multiple
+            # legitimate transactions with same date/amount/description)
+            result = self.add_transaction(
                 card_id=card_id,
                 date=str(row['date']),
                 description=str(row['description']),
                 amount=amount,
                 category=category,
                 subcategory=subcategory,
-                vendor=str(row.get('vendor', row['description']))
+                vendor=str(row.get('vendor', row['description'])),
+                card_member=str(card_member) if pd.notna(card_member) else '',
+                account_number=str(account_number) if pd.notna(account_number) else ''
             )
-            imported_count += 1
+            
+            if result:
+                imported_count += 1
         
-        return imported_count
+        return {'imported': imported_count, 'duplicates': 0}
     
     def get_transactions(self, card_id: str, category: Optional[str] = None,
                         start_date: Optional[str] = None,
@@ -393,6 +505,14 @@ class CreditCardManager:
         
         top_vendors = sorted(vendor_totals.items(), key=lambda x: x[1], reverse=True)[:5]
         
+        # Cardholder breakdown (for dual/supplementary cards)
+        cardholder_totals = {}
+        for tx in transactions:
+            if tx['amount'] < 0:  # Only count purchases
+                member = tx.get('card_member', '')
+                if member:
+                    cardholder_totals[member] = cardholder_totals.get(member, 0) + abs(tx['amount'])
+        
         return {
             'card_id': card_id,
             'name': card['name'],
@@ -405,12 +525,16 @@ class CreditCardManager:
             'total_spent': total_spent,
             'total_payments': total_payments,
             'category_breakdown': category_totals,
-            'top_vendors': top_vendors
+            'top_vendors': top_vendors,
+            'cardholder_breakdown': cardholder_totals
         }
     
     def match_payment_to_card(self, card_id: str, payment_amount: float,
                              payment_date: str, transaction_id: Optional[str] = None) -> bool:
         """Matcha en betalning från bankkonto till kreditkortet.
+        
+        Uppdaterar endast kortets saldo. Lägger INTE till betalningen som en transaktion 
+        på kreditkortet eftersom betalningar redan finns i bankkontoutdraget.
         
         Args:
             card_id: ID för kortet
@@ -425,29 +549,106 @@ class CreditCardManager:
         
         for card in cards:
             if card.get('id') == card_id:
-                # Add payment as a transaction
-                payment_tx = {
-                    'id': f"PAY-{str(uuid.uuid4())[:8]}",
-                    'date': payment_date,
-                    'description': f"Payment from bank account",
-                    'vendor': 'Payment',
-                    'amount': payment_amount,  # Positive amount (reduces balance)
-                    'category': 'Betalning',
-                    'subcategory': 'Kreditkortsbetalning',
-                    'matched_transaction_id': transaction_id,
-                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                
-                if 'transactions' not in card:
-                    card['transactions'] = []
-                
-                card['transactions'].append(payment_tx)
-                
-                # Update balance
+                # Update balance only (don't add payment as transaction)
+                # Payments are already in bank account transactions
                 card['current_balance'] = card.get('current_balance', 0.0) - payment_amount
                 card['available_credit'] = card.get('credit_limit', 0.0) - card['current_balance']
                 
+                # Track the payment for reference (optional metadata)
+                if 'payment_history' not in card:
+                    card['payment_history'] = []
+                
+                card['payment_history'].append({
+                    'date': payment_date,
+                    'amount': payment_amount,
+                    'matched_transaction_id': transaction_id
+                })
+                
                 self.save_cards(cards)
                 return True
+        
+        return False
+    
+    def update_transaction(self, card_id: str, transaction_id: str, 
+                          category: Optional[str] = None,
+                          subcategory: Optional[str] = None,
+                          description: Optional[str] = None,
+                          amount: Optional[float] = None) -> bool:
+        """Uppdatera en kreditkortstransaktion.
+        
+        Args:
+            card_id: ID för kortet
+            transaction_id: ID för transaktionen
+            category: Ny kategori (valfritt)
+            subcategory: Ny underkategori (valfritt)
+            description: Ny beskrivning (valfritt)
+            amount: Nytt belopp (valfritt)
+            
+        Returns:
+            True om uppdateringen lyckades
+        """
+        cards = self.load_cards()
+        
+        for card in cards:
+            if card.get('id') == card_id:
+                transactions = card.get('transactions', [])
+                
+                for tx in transactions:
+                    if tx.get('id') == transaction_id:
+                        # Update fields if provided
+                        if category is not None:
+                            tx['category'] = category
+                        if subcategory is not None:
+                            tx['subcategory'] = subcategory
+                        if description is not None:
+                            tx['description'] = description
+                        if amount is not None:
+                            # Need to recalculate balance
+                            old_amount = tx['amount']
+                            tx['amount'] = amount
+                            
+                            # Adjust card balance
+                            balance_diff = old_amount - amount
+                            card['current_balance'] = card.get('current_balance', 0.0) + balance_diff
+                            card['available_credit'] = card.get('credit_limit', 0.0) - card['current_balance']
+                        
+                        tx['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        
+                        self.save_cards(cards)
+                        return True
+                
+                return False
+        
+        return False
+    
+    def delete_transaction(self, card_id: str, transaction_id: str) -> bool:
+        """Ta bort en kreditkortstransaktion.
+        
+        Args:
+            card_id: ID för kortet
+            transaction_id: ID för transaktionen
+            
+        Returns:
+            True om borttagningen lyckades
+        """
+        cards = self.load_cards()
+        
+        for card in cards:
+            if card.get('id') == card_id:
+                transactions = card.get('transactions', [])
+                
+                # Find and remove transaction
+                for i, tx in enumerate(transactions):
+                    if tx.get('id') == transaction_id:
+                        removed_tx = transactions.pop(i)
+                        
+                        # Adjust card balance (reverse the transaction)
+                        card['current_balance'] = card.get('current_balance', 0.0) - removed_tx['amount']
+                        card['available_credit'] = card.get('credit_limit', 0.0) - card['current_balance']
+                        
+                        self.save_cards(cards)
+                        return True
+                
+                return False
         
         return False

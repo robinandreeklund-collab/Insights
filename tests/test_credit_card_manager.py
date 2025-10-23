@@ -232,11 +232,17 @@ class TestCreditCardManager:
             assert card_after['current_balance'] == 0.0
             assert card_after['available_credit'] == 50000.0
             
-            # Check that payment transaction was added
+            # Check that payment is tracked in payment_history (not as a transaction)
+            assert 'payment_history' in card_after
+            assert len(card_after['payment_history']) == 1
+            assert card_after['payment_history'][0]['amount'] == 2500.0
+            assert card_after['payment_history'][0]['matched_transaction_id'] == "TX-BANK-123"
+            
+            # Check that NO payment transaction was added to transactions list
             transactions = manager.get_transactions(card['id'])
-            payment_tx = [tx for tx in transactions if tx.get('matched_transaction_id')]
-            assert len(payment_tx) == 1
-            assert payment_tx[0]['matched_transaction_id'] == "TX-BANK-123"
+            # Should only have the original purchase, not the payment
+            assert len(transactions) == 1
+            assert transactions[0]['description'] == "Store"
     
     def test_import_transactions_from_csv(self):
         """Test importing transactions from CSV file."""
@@ -257,9 +263,10 @@ class TestCreditCardManager:
             csv_data.to_csv(csv_path, index=False)
             
             # Import transactions
-            count = manager.import_transactions_from_csv(card['id'], csv_path)
+            result = manager.import_transactions_from_csv(card['id'], csv_path)
             
-            assert count == 3
+            assert result['imported'] == 3
+            assert result['duplicates'] == 0
             
             # Check that transactions were added
             transactions = manager.get_transactions(card['id'])
@@ -268,6 +275,49 @@ class TestCreditCardManager:
             # Check balance
             card_after = manager.get_card_by_id(card['id'])
             assert card_after['current_balance'] == 1625.50  # Sum of all purchases
+    
+    def test_import_csv_with_duplicates(self):
+        """Test that importing CSV with multiple identical transactions works correctly.
+        
+        Note: Duplicate detection is intentionally disabled to allow legitimate cases
+        where multiple transactions have the same date/amount/description (e.g., 5 KLM
+        purchases on the same day). Users should not import the same CSV file twice.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = CreditCardManager(yaml_dir=tmpdir)
+            
+            # Create a credit card
+            card = manager.add_card(
+                name="Test Card",
+                card_type="Visa",
+                last_four="1234",
+                credit_limit=10000.0
+            )
+            
+            # Create CSV with transactions including multiple identical ones
+            # (like 5 KLM purchases on same day with same amounts)
+            csv_data = pd.DataFrame({
+                'Date': ['2025-10-15', '2025-10-15', '2025-10-15', '2025-10-20'],
+                'Description': ['KLM STOCKHOLM', 'KLM STOCKHOLM', 'KLM STOCKHOLM', 'Shell Gas Station'],
+                'Amount': [-495.00, -495.00, -661.00, -650.00]
+            })
+            
+            csv_path = os.path.join(tmpdir, 'test_transactions.csv')
+            csv_data.to_csv(csv_path, index=False)
+            
+            # Import first time - all 4 transactions should be imported
+            result1 = manager.import_transactions_from_csv(card['id'], csv_path)
+            assert result1['imported'] == 4
+            assert result1['duplicates'] == 0
+            
+            # Check that we have all 4 transactions
+            transactions = manager.get_transactions(card['id'])
+            assert len(transactions) == 4
+            
+            # Balance should be correct
+            card_after = manager.get_card_by_id(card['id'])
+            expected_balance = 495.00 + 495.00 + 661.00 + 650.00
+            assert card_after['current_balance'] == expected_balance
     
     def test_utilization_calculation(self):
         """Test credit utilization percentage calculation."""
@@ -302,4 +352,43 @@ class TestCreditCardManager:
             closed_cards = manager.get_cards(status='closed')
             assert len(closed_cards) == 1
             assert closed_cards[0]['name'] == "Closed Card"
+    
+    def test_add_card_with_initial_balance(self):
+        """Test adding a card with an initial balance (previous statement)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = CreditCardManager(yaml_dir=tmpdir)
+            
+            # Add card with initial balance of 22,489.03 SEK (previous statement)
+            card = manager.add_card(
+                name="Amex Platinum",
+                card_type="American Express",
+                last_four="31009",
+                credit_limit=150000.0,
+                initial_balance=22489.03
+            )
+            
+            # Check that initial balance is set correctly
+            assert card['current_balance'] == 22489.03
+            assert card['available_credit'] == 150000.0 - 22489.03
+            
+            # Now import new transactions (e.g., from September)
+            manager.add_transaction(card['id'], "2025-09-15", "New Purchase", -1000.0, "Shopping")
+            
+            # Balance should be initial + new transaction
+            updated_card = manager.get_card_by_id(card['id'])
+            assert updated_card['current_balance'] == 22489.03 + 1000.0
+            assert updated_card['available_credit'] == 150000.0 - 23489.03
+            
+            # Add a payment
+            manager.match_payment_to_card(
+                card_id=card['id'],
+                payment_amount=20000.0,
+                payment_date="2025-09-20",
+                transaction_id="TX-PAYMENT-001"
+            )
+            
+            # Balance should be reduced by payment
+            updated_card2 = manager.get_card_by_id(card['id'])
+            assert updated_card2['current_balance'] == 23489.03 - 20000.0
+            assert updated_card2['available_credit'] == 150000.0 - 3489.03
 

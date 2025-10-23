@@ -134,6 +134,10 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - Visa kontoutdrag (50 transaktioner per sida)
 - Manuell kategorisering med huvud- och underkategori
 - Träna AI-modellen direkt från kontoutdraget
+- **Automatisk detektering av internöverföringar** mellan konton
+  - Transaktioner markeras med "Flytt mellan konton (Konto A → Konto B)"
+  - Överföringar exkluderas automatiskt från prognoser och kassaflödesberäkningar
+  - Påverkar inte utgifts- eller inkomststatistik
 
 ### 4. Fakturor
 - Aktiva och hanterade fakturor
@@ -145,13 +149,17 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 ### 5. Kreditkort
 - **NYtt: Kreditkortshantering** med generellt stöd för alla korttyper (Amex, Visa, Mastercard, etc)
   - Lägg till kreditkortskonton med namn, typ, kreditgräns, färg och ikon
+  - **Redigera och ta bort kreditkort** via dashboard (namn, typ, kreditgräns, färg, ikon)
   - CSV-import av transaktioner från kontoutdrag (generiskt format med Date, Description, Amount)
   - Automatisk kategorisering av kreditkortstransaktioner
+  - **Redigera kategori och underkategori** för varje kreditkortstransaktion
   - Visa aktuellt saldo, tillgänglig kredit och utnyttjandegrad per kort
-  - Kategorifördelning och topp-leverantörer per kort
+  - **Kategorifördelning per kort** med detaljerad utgiftsuppdelning
   - Transaktionshistorik med filtrering
-  - AI-träning på kreditkortstransaktioner (via automatisk kategorisering)
-  - Betalningsmatching mot bankkonto (uppdaterar kortsaldo automatiskt)
+  - AI-träning på kreditkortstransaktioner (via manuell kategorisering)
+  - **Automatisk betalningsmatching** mot bankkonto (uppdaterar kortsaldo automatiskt)
+  - **Visuell markering av kreditkortsbetalningar** (t.ex. "Inbetalning till kreditkort Amex")
+  - **Stilfulla kortikoner** för Amex, Visa, Mastercard med varumärkesspecifik design
 
 ### 6. Historik
 - Månadssammanställningar med inkomster/utgifter/netto
@@ -480,6 +488,75 @@ loan = loan_manager.add_loan(
 simulation = loan_manager.simulate_interest_change(loan['id'], 4.5)
 print(f"Ny månadsbetalning: {simulation['new_monthly_payment']} SEK")
 print(f"Skillnad: {simulation['difference']} SEK ({simulation['difference_percent']}%)")
+```
+
+### 11. Hantera kreditkort (Sprint 7)
+
+**Via Dashboard:**
+1. Gå till fliken "Kreditkort"
+2. Fyll i kortdetaljer (namn, typ, sista 4 siffror, kreditgräns, färg)
+3. Klicka "Lägg till kort"
+4. Klicka på redigera-knappen (✏️) på ett kort för att redigera detaljer
+5. Importera transaktioner från CSV
+6. Klicka på en transaktion för att redigera kategori
+7. Klicka "Träna AI" för att lära systemet från din kategorisering
+
+**Automatisk detektering av kreditkortsbetalningar:**
+Systemet detekterar automatiskt betalningar till kreditkort och markerar dem:
+- "Amex Payment" → "Inbetalning till kreditkort Amex Platinum"
+- Kortsaldon uppdateras automatiskt när betalningar registreras
+
+**Via Python:**
+```python
+from modules.core.credit_card_manager import CreditCardManager
+
+manager = CreditCardManager()
+
+# Lägg till kort
+card = manager.add_card(
+    name="Amex Platinum",
+    card_type="American Express",
+    last_four="1234",
+    credit_limit=50000.0,
+    display_color="#006FCF"
+)
+
+# Importera transaktioner
+count = manager.import_transactions_from_csv(card['id'], 'statement.csv')
+
+# Uppdatera transaktion
+manager.update_transaction(
+    card_id=card['id'],
+    transaction_id='TX-123',
+    category='Mat & Dryck',
+    subcategory='Restaurang'
+)
+
+# Ta bort kort
+manager.delete_card(card['id'])
+```
+
+### 12. Internöverföringar och kassaflöde (Sprint 7)
+
+**Automatisk detektering:**
+Systemet detekterar automatiskt överföringar mellan konton:
+- Matchar transaktioner med samma belopp och datum (±2 dagar)
+- Markerar båda sidor med "Flytt mellan konton (Konto A → Konto B)"
+- Exkluderar från prognoser och utgiftsstatistik
+
+**Via Python:**
+```python
+from modules.core.account_manager import AccountManager
+
+manager = AccountManager()
+
+# Detektera internöverföringar
+count = manager.detect_internal_transfers()
+print(f"{count} överföringspar detekterade")
+
+# Detektera kreditkortsbetalningar
+cc_count = manager.detect_credit_card_payments()
+print(f"{cc_count} kreditkortsbetalningar detekterade")
 ```
 
 ## 🧪 Tester

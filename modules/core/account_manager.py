@@ -323,3 +323,233 @@ class AccountManager:
             data: Dictionary containing transactions
         """
         self._save_yaml(self.transactions_file, data)
+    
+    def detect_internal_transfers(self) -> int:
+        """Detect and mark internal transfers between accounts.
+        
+        Internal transfers are detected by finding matching transactions with:
+        - Same absolute amount
+        - Same or close date (within 2 days)
+        - Opposite signs (one negative, one positive)
+        - Different accounts
+        - Transfer keywords in description (Swedish: "Överföring", English: "Transfer")
+        
+        Marked transactions get is_internal_transfer=True and are excluded from forecasts.
+        
+        Returns:
+            Number of transfer pairs detected and marked
+        """
+        data = self._load_yaml(self.transactions_file)
+        transactions = data.get('transactions', [])
+        
+        if not transactions:
+            return 0
+        
+        # Get all accounts for validation
+        accounts = self.get_accounts()
+        account_names = [acc.get('name') for acc in accounts]
+        
+        marked_count = 0
+        
+        # Sort transactions by date for efficiency
+        sorted_txs = sorted(transactions, key=lambda x: x.get('date', ''))
+        
+        # Transfer keywords (Swedish and English)
+        transfer_keywords = ['överföring', 'transfer', 'intern överföring']
+        
+        for i, tx1 in enumerate(sorted_txs):
+            # Skip if already marked as transfer
+            if tx1.get('is_internal_transfer'):
+                continue
+            
+            # Only check negative transactions (outgoing)
+            amount1 = tx1.get('amount', 0)
+            if amount1 >= 0:
+                continue
+            
+            date1 = tx1.get('date', '')
+            account1 = tx1.get('account', '')
+            desc1 = tx1.get('description', '').lower()
+            
+            # Check if description contains transfer keywords
+            has_transfer_keyword = any(keyword in desc1 for keyword in transfer_keywords)
+            
+            # Look for matching positive transaction (incoming)
+            for tx2 in sorted_txs[i+1:]:
+                # Skip if already marked
+                if tx2.get('is_internal_transfer'):
+                    continue
+                
+                date2 = tx2.get('date', '')
+                account2 = tx2.get('account', '')
+                amount2 = tx2.get('amount', 0)
+                desc2 = tx2.get('description', '').lower()
+                
+                # Must be from different accounts
+                if account1 == account2:
+                    continue
+                
+                # Must be opposite signs and same absolute amount
+                if abs(amount1) != abs(amount2):
+                    continue
+                
+                if amount2 <= 0:  # tx2 must be positive (incoming)
+                    continue
+                
+                # Check date proximity (same day or within 2 days)
+                try:
+                    from datetime import datetime, timedelta
+                    d1 = datetime.strptime(date1, '%Y-%m-%d')
+                    d2 = datetime.strptime(date2, '%Y-%m-%d')
+                    
+                    if abs((d2 - d1).days) > 2:
+                        continue
+                    
+                    # Additional validation: check for transfer keywords in at least one description
+                    has_transfer_keyword2 = any(keyword in desc2 for keyword in transfer_keywords)
+                    
+                    if not (has_transfer_keyword or has_transfer_keyword2):
+                        # If no transfer keywords, require same day matching
+                        if d1 != d2:
+                            continue
+                    
+                    # Found a matching pair - mark both as internal transfers
+                    tx1['is_internal_transfer'] = True
+                    tx1['transfer_counterpart_id'] = tx2.get('id')
+                    tx1['transfer_label'] = f"Flytt mellan konton ({account1} → {account2})"
+                    
+                    tx2['is_internal_transfer'] = True
+                    tx2['transfer_counterpart_id'] = tx1.get('id')
+                    tx2['transfer_label'] = f"Flytt mellan konton ({account1} → {account2})"
+                    
+                    marked_count += 1
+                    break  # Move to next tx1
+                    
+                except (ValueError, TypeError):
+                    continue
+        
+        # Save updated transactions
+        if marked_count > 0:
+            self._save_yaml(self.transactions_file, data)
+        
+        return marked_count
+    
+    def detect_credit_card_payments(self) -> int:
+        """Detect and mark credit card payments in bank transactions.
+        
+        Looks for transactions with descriptions containing credit card keywords
+        (e.g., "Amex", "Mastercard", "Visa", "Payment", "Betalning").
+        Also handles Swedish bank payment formats like "Betalning BG".
+        
+        Marks matching transactions with is_credit_card_payment=True and attempts
+        to match to specific credit card if CreditCardManager is available.
+        
+        Returns:
+            Number of credit card payments detected and marked
+        """
+        from modules.core.credit_card_manager import CreditCardManager
+        
+        data = self._load_yaml(self.transactions_file)
+        transactions = data.get('transactions', [])
+        
+        if not transactions:
+            return 0
+        
+        # Keywords to identify credit card payments
+        # Note: "american exp" matches "American Express" even if abbreviated
+        keywords = [
+            'amex', 'american express', 'american exp', 'am exp',
+            'mastercard', 'master card', 'mc card',
+            'visa',
+            'kreditkort', 'credit card',
+            'kortbetalning', 'card payment',
+            'cc payment', 'cc-payment'
+        ]
+        
+        marked_count = 0
+        
+        try:
+            cc_manager = CreditCardManager(yaml_dir=self.yaml_dir)
+            cards = cc_manager.get_cards(status='active')
+        except:
+            cards = []
+        
+        for tx in transactions:
+            # Skip if already marked
+            if tx.get('is_credit_card_payment'):
+                continue
+            
+            # Only check negative amounts (payments out from bank account)
+            if tx.get('amount', 0) >= 0:
+                continue
+            
+            description = tx.get('description', '').lower()
+            
+            # Check if description contains credit card keywords
+            matched = False
+            matched_card = None
+            
+            # First, check if any keyword matches
+            for keyword in keywords:
+                if keyword in description:
+                    matched = True
+                    break
+            
+            # If matched, try to find specific card
+            if matched:
+                for card in cards:
+                    card_name = card.get('name', '').lower()
+                    card_type = card.get('card_type', '').lower()
+                    last_four = card.get('last_four', '')
+                    
+                    # Check for direct name/type match
+                    if card_name in description or card_type in description:
+                        matched_card = card
+                        break
+                    
+                    # Check for abbreviated card type matches
+                    # e.g., "american exp" should match "american express"
+                    if card_type == 'american express':
+                        if any(variant in description for variant in ['amex', 'american exp', 'am exp']):
+                            matched_card = card
+                            break
+                    elif card_type == 'mastercard':
+                        if any(variant in description for variant in ['mastercard', 'master card', 'mc card']):
+                            matched_card = card
+                            break
+                    elif card_type == 'visa':
+                        if 'visa' in description:
+                            matched_card = card
+                            break
+                    
+                    # Check last 4 digits
+                    if last_four and last_four in description:
+                        matched_card = card
+                        break
+            
+            if matched:
+                tx['is_credit_card_payment'] = True
+                
+                if matched_card:
+                    card_name = matched_card.get('name')
+                    tx['credit_card_payment_label'] = f"Inbetalning till kreditkort {card_name}"
+                    tx['matched_credit_card_id'] = matched_card.get('id')
+                    
+                    # Auto-match payment to card balance
+                    payment_amount = abs(tx.get('amount', 0))
+                    cc_manager.match_payment_to_card(
+                        matched_card['id'],
+                        payment_amount,
+                        tx.get('date', ''),
+                        tx.get('id')
+                    )
+                else:
+                    tx['credit_card_payment_label'] = "Inbetalning till kreditkort"
+                
+                marked_count += 1
+        
+        # Save updated transactions
+        if marked_count > 0:
+            self._save_yaml(self.transactions_file, data)
+        
+        return marked_count

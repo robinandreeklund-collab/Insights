@@ -57,6 +57,7 @@ try:
     moon_icon = icons.moon_icon
     sun_icon = icons.sun_icon
     beaker_icon = icons.beaker_icon
+    get_card_icon = icons.get_card_icon
 except Exception:
     # Fallback if icons not available
     traceback.print_exc()
@@ -73,10 +74,11 @@ except Exception:
     def moon_icon(size=16): return ""
     def sun_icon(size=16): return ""
     def beaker_icon(size=16): return ""
+    def get_card_icon(card_type, size=48): return ""
 
 
 def clear_data_on_exit(signum=None, frame=None):
-    """Clear transactions, accounts, bills, and loans data files on exit.
+    """Clear transactions, accounts, bills, loans, and credit cards data files on exit.
     
     Note: training_data.yaml is preserved to maintain AI learning.
     """
@@ -87,6 +89,7 @@ def clear_data_on_exit(signum=None, frame=None):
     accounts_file = os.path.join(yaml_dir, "accounts.yaml")
     bills_file = os.path.join(yaml_dir, "bills.yaml")
     loans_file = os.path.join(yaml_dir, "loans.yaml")
+    credit_cards_file = os.path.join(yaml_dir, "credit_cards.yaml")
     
     try:
         # Reset transactions.yaml
@@ -112,6 +115,12 @@ def clear_data_on_exit(signum=None, frame=None):
             with open(loans_file, 'w', encoding='utf-8') as f:
                 yaml.dump({'loans': []}, f, default_flow_style=False, allow_unicode=True)
             print(f"✓ Cleared {loans_file}")
+        
+        # Reset credit_cards.yaml
+        if os.path.exists(credit_cards_file):
+            with open(credit_cards_file, 'w', encoding='utf-8') as f:
+                yaml.dump({'cards': []}, f, default_flow_style=False, allow_unicode=True)
+            print(f"✓ Cleared {credit_cards_file}")
         
         print("Data files cleared successfully! (training_data.yaml preserved)")
     except Exception as e:
@@ -734,17 +743,22 @@ def create_credit_cards_tab():
                         ], className="mb-3"),
                         dbc.Row([
                             dbc.Col([
-                                html.Label("Sista 4 siffror:", className="fw-bold"),
-                                dbc.Input(id='card-last-four-input', type='text', placeholder='1234', maxLength=4),
-                            ], width=4),
+                                html.Label(id='card-last-digits-label', children="Sista 4 siffror:", className="fw-bold"),
+                                dbc.Input(id='card-last-four-input', type='text', placeholder='1234', maxLength=5),
+                            ], width=3),
                             dbc.Col([
                                 html.Label("Kreditgräns (SEK):", className="fw-bold"),
                                 dbc.Input(id='card-limit-input', type='number', placeholder='50000'),
-                            ], width=4),
+                            ], width=3),
+                            dbc.Col([
+                                html.Label("Nuvarande saldo (SEK):", className="fw-bold"),
+                                dbc.Input(id='card-initial-balance-input', type='number', placeholder='0', value=0),
+                                html.Small("Föregående faktura/skuld om du inte importerar från början", className="text-muted"),
+                            ], width=3),
                             dbc.Col([
                                 html.Label("Färg:", className="fw-bold"),
                                 dbc.Input(id='card-color-input', type='color', value='#1f77b4'),
-                            ], width=4),
+                            ], width=3),
                         ], className="mb-3"),
                         dbc.Button("Lägg till kort", id='add-card-btn', color="primary"),
                         html.Div(id='card-add-status', className="mt-3")
@@ -765,15 +779,60 @@ def create_credit_cards_tab():
             ], width=12)
         ], className="mb-4"),
         
+        # Edit/Delete Card Modals
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Redigera kreditkort")),
+            dbc.ModalBody([
+                html.Label("Kortnamn:", className="fw-bold"),
+                dbc.Input(id='edit-card-name', type='text', className="mb-2"),
+                html.Label("Korttyp:", className="fw-bold"),
+                dcc.Dropdown(
+                    id='edit-card-type',
+                    options=[
+                        {'label': 'American Express', 'value': 'American Express'},
+                        {'label': 'Visa', 'value': 'Visa'},
+                        {'label': 'Mastercard', 'value': 'Mastercard'},
+                        {'label': 'Annat', 'value': 'Other'}
+                    ],
+                    className="mb-2"
+                ),
+                html.Label("Sista 4 siffror:", className="fw-bold"),
+                dbc.Input(id='edit-card-last-four', type='text', maxLength=4, className="mb-2"),
+                html.Label("Kreditgräns (SEK):", className="fw-bold"),
+                dbc.Input(id='edit-card-limit', type='number', className="mb-2"),
+                html.Label("Färg:", className="fw-bold"),
+                dbc.Input(id='edit-card-color', type='color', className="mb-2"),
+                dcc.Store(id='edit-card-id-store'),
+                html.Div(id='edit-card-status', className="mt-2")
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Avbryt", id='edit-card-cancel', color="secondary"),
+                dbc.Button("Spara", id='edit-card-save', color="primary")
+            ])
+        ], id='edit-card-modal', is_open=False),
+        
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Bekräfta borttagning")),
+            dbc.ModalBody([
+                html.P(id='delete-card-confirm-text'),
+                dcc.Store(id='delete-card-id-store')
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Avbryt", id='delete-card-cancel', color="secondary"),
+                dbc.Button("Ta bort", id='delete-card-confirm', color="danger")
+            ])
+        ], id='delete-card-modal', is_open=False),
+        
         # CSV Import section
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
                         html.H5("Importera transaktioner från CSV", className="card-title"),
+                        html.P("Systemet försöker automatiskt detektera vilket kort transaktionerna tillhör. Du kan också välja kort manuellt nedan.", className="text-muted small"),
                         dcc.Dropdown(
                             id='card-import-selector',
-                            placeholder='Välj kort för import...',
+                            placeholder='Valfritt: Välj kort manuellt...',
                             className="mb-3"
                         ),
                         dcc.Upload(
@@ -1597,12 +1656,25 @@ def handle_csv_upload(contents, filename):
         manager.add_transactions(transactions)
         manager.update_account_balance(account_name, latest_balance)
         
+        # Detect internal transfers
+        transfer_count = manager.detect_internal_transfers()
+        
+        # Detect credit card payments
+        cc_payment_count = manager.detect_credit_card_payments()
+        
         # Clean up temp file
         os.remove(temp_file)
         
+        # Build status message
+        status_parts = [f"{len(transactions)} transaktioner tillagda till konto '{account_name}'"]
+        if transfer_count > 0:
+            status_parts.append(f"{transfer_count} internöverföring(ar) detekterade")
+        if cc_payment_count > 0:
+            status_parts.append(f"{cc_payment_count} kreditkortsbetalning(ar) detekterade")
+        
         return dbc.Alert([
             html.I(className="bi bi-check-circle-fill me-2"),
-            f"✓ {filename} importerad! {len(transactions)} transaktioner tillagda till konto '{account_name}'"
+            f"✓ {filename} importerad! " + ", ".join(status_parts)
         ], color="success", className="mt-3")
         
     except Exception as e:
@@ -2017,6 +2089,11 @@ def update_transaction_table(account_name, current_page, refresh_trigger, select
     # Create table (non-editable, selection-based)
     df = pd.DataFrame(page_transactions)
     
+    # Add special labels for transfers and credit card payments
+    df['special_label'] = df.apply(lambda row: 
+        row.get('transfer_label', '') if row.get('is_internal_transfer') else 
+        row.get('credit_card_payment_label', ''), axis=1)
+    
     # Try to find and re-select the previously selected transaction
     selected_rows = []
     if selected_tx_id:
@@ -2035,6 +2112,7 @@ def update_transaction_table(account_name, current_page, refresh_trigger, select
             {'name': 'Saldo', 'id': 'balance'},
             {'name': 'Kategori', 'id': 'category'},
             {'name': 'Underkategori', 'id': 'subcategory'},
+            {'name': 'Info', 'id': 'special_label'},
         ],
         data=df.to_dict('records'),
         style_cell={'textAlign': 'left', 'padding': '10px'},
@@ -2055,6 +2133,12 @@ def update_transaction_table(account_name, current_page, refresh_trigger, select
             {
                 'if': {'column_id': 'subcategory'},
                 'backgroundColor': '#e8f4f8'
+            },
+            {
+                'if': {'column_id': 'special_label'},
+                'backgroundColor': '#fff3cd',
+                'fontWeight': 'bold',
+                'color': '#856404'
             }
         ],
         row_selectable='single',
@@ -4168,6 +4252,18 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
 
 # Credit Card Callbacks
 
+# Callback: Update last digits label based on card type
+@app.callback(
+    Output('card-last-digits-label', 'children'),
+    Input('card-type-dropdown', 'value')
+)
+def update_last_digits_label(card_type):
+    """Update label to show correct number of digits for card type."""
+    if card_type == 'American Express':
+        return "Sista 5 siffror:"
+    return "Sista 4 siffror:"
+
+
 # Callback: Add Credit Card
 @app.callback(
     Output('card-add-status', 'children'),
@@ -4176,10 +4272,11 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
      State('card-type-dropdown', 'value'),
      State('card-last-four-input', 'value'),
      State('card-limit-input', 'value'),
+     State('card-initial-balance-input', 'value'),
      State('card-color-input', 'value')],
     prevent_initial_call=True
 )
-def add_credit_card(n_clicks, name, card_type, last_four, limit, color):
+def add_credit_card(n_clicks, name, card_type, last_four, limit, initial_balance, color):
     """Add a new credit card."""
     if not name or not card_type or not last_four or not limit:
         return dbc.Alert("Fyll i alla fält", color="warning")
@@ -4192,10 +4289,12 @@ def add_credit_card(n_clicks, name, card_type, last_four, limit, color):
             last_four=last_four,
             credit_limit=float(limit),
             display_color=color or "#1f77b4",
-            icon="credit-card"
+            icon="credit-card",
+            initial_balance=float(initial_balance or 0)
         )
         
-        return dbc.Alert(f"✓ Kreditkort '{name}' tillagt!", color="success", dismissable=True)
+        balance_note = f" (startsaldo: {float(initial_balance or 0):.2f} SEK)" if initial_balance and float(initial_balance) != 0 else ""
+        return dbc.Alert(f"✓ Kreditkort '{name}' tillagt{balance_note}!", color="success", dismissable=True)
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
@@ -4234,12 +4333,30 @@ def update_cards_overview(n_clicks):
                         dbc.Col([
                             html.H5(f"{card['name']} (****{card['last_four']})", className="mb-1"),
                             html.P(card['card_type'], className="text-muted mb-2"),
-                        ], width=8),
+                        ], width=6),
                         dbc.Col([
                             html.Div([
-                                html.I(className="bi bi-credit-card", style={'fontSize': '32px', 'color': card.get('display_color', '#1f77b4')})
+                                html.Div([
+                                    html.Iframe(
+                                        srcDoc=get_card_icon(card.get('card_type', ''), size=48),
+                                        style={
+                                            'width': '48px',
+                                            'height': '48px',
+                                            'border': 'none',
+                                            'overflow': 'hidden'
+                                        }
+                                    )
+                                ], style={'display': 'inline-block'})
                             ], style={'textAlign': 'right'})
                         ], width=4),
+                        dbc.Col([
+                            html.Div([
+                                dbc.Button("✏️", id={'type': 'edit-card-btn', 'index': card['id']}, 
+                                          size="sm", color="primary", outline=True, className="me-1"),
+                                dbc.Button("🗑️", id={'type': 'delete-card-btn', 'index': card['id']}, 
+                                          size="sm", color="danger", outline=True),
+                            ], style={'textAlign': 'right'})
+                        ], width=2),
                     ]),
                     html.Hr(),
                     dbc.Row([
@@ -4296,9 +4413,9 @@ def update_cards_overview(n_clicks):
     prevent_initial_call=True
 )
 def import_card_csv(contents, filename, card_id):
-    """Import transactions from uploaded CSV file."""
-    if contents is None or not card_id:
-        return dbc.Alert("Välj ett kort först", color="warning")
+    """Import transactions from uploaded CSV file with auto-detection."""
+    if contents is None:
+        return ""
     
     try:
         # Decode the uploaded file
@@ -4312,15 +4429,46 @@ def import_card_csv(contents, filename, card_id):
             tmp_path = tmp_file.name
         
         try:
-            # Import transactions
             manager = CreditCardManager()
-            count = manager.import_transactions_from_csv(card_id, tmp_path)
             
-            return dbc.Alert(
-                f"✓ {count} transaktioner importerade från {filename}!",
-                color="success",
-                dismissable=True
-            )
+            # Auto-detect card if not selected
+            detected_card_id = card_id
+            if not card_id:
+                detected_card_id = manager.detect_card_from_csv(tmp_path)
+                if not detected_card_id:
+                    return dbc.Alert(
+                        "Kunde inte automatiskt detektera vilket kort CSV-filen tillhör. Välj kort manuellt.",
+                        color="warning"
+                    )
+            
+            # Import transactions
+            result = manager.import_transactions_from_csv(detected_card_id, tmp_path)
+            
+            # Get card info for message
+            card = manager.get_card_by_id(detected_card_id)
+            card_name = card.get('name', 'okänt kort') if card else 'okänt kort'
+            
+            # Build message
+            imported = result.get('imported', 0)
+            
+            if imported > 0:
+                message = f"{imported} transaktioner importerade"
+            else:
+                message = "Inga nya transaktioner"
+            
+            if not card_id and detected_card_id:
+                # Auto-detected
+                return dbc.Alert(
+                    f"✓ {message} från {filename} till {card_name} (automatiskt detekterat)!",
+                    color="success",
+                    dismissable=True
+                )
+            else:
+                return dbc.Alert(
+                    f"✓ {message} från {filename} till {card_name}!",
+                    color="success",
+                    dismissable=True
+                )
         finally:
             # Clean up temporary file
             import os
@@ -4357,6 +4505,24 @@ def display_card_details(card_id):
             ])
         ], color="info", className="mb-3")
         
+        # Cardholder breakdown (if multiple cardholders)
+        cardholder_elem = ""
+        if summary.get('cardholder_breakdown'):
+            cardholder_data = [{'Kortinnehavare': name, 'Belopp': amount} 
+                             for name, amount in summary['cardholder_breakdown'].items()]
+            if cardholder_data:
+                cardholder_df = pd.DataFrame(cardholder_data)
+                cardholder_elem = html.Div([
+                    html.H6("Utgifter per kortinnehavare"),
+                    dash_table.DataTable(
+                        data=cardholder_df.to_dict('records'),
+                        columns=[{'name': col, 'id': col} for col in cardholder_df.columns],
+                        style_table={'overflowX': 'auto'},
+                        style_cell={'textAlign': 'left', 'padding': '10px'},
+                        style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'}
+                    )
+                ], className="mb-3")
+        
         # Category breakdown
         if summary['category_breakdown']:
             category_data = [{'Kategori': cat, 'Belopp': amount} 
@@ -4381,27 +4547,315 @@ def display_card_details(card_id):
             tx_df = pd.DataFrame(transactions)
             # Select relevant columns
             display_cols = ['date', 'vendor', 'description', 'amount', 'category', 'subcategory']
+            
+            # Add card_member if available
+            if 'card_member' in tx_df.columns and tx_df['card_member'].notna().any():
+                display_cols.insert(2, 'card_member')  # Insert after vendor
+            
             tx_df = tx_df[[col for col in display_cols if col in tx_df.columns]]
+            
+            # Add ID column for editing (hidden)
+            if 'id' in pd.DataFrame(transactions).columns:
+                tx_df['id'] = pd.DataFrame(transactions)['id']
             
             transactions_elem = html.Div([
                 html.H6(f"Transaktioner ({len(transactions)})"),
+                html.P("Klicka på en transaktion för att redigera kategori", className="text-muted small"),
                 dash_table.DataTable(
+                    id='card-transactions-table',
                     data=tx_df.to_dict('records'),
-                    columns=[{'name': col.title(), 'id': col} for col in tx_df.columns],
+                    columns=[{'name': col.title(), 'id': col} for col in tx_df.columns if col != 'id'],
                     style_table={'overflowX': 'auto'},
                     style_cell={'textAlign': 'left', 'padding': '10px'},
                     style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
-                    page_size=20
-                )
+                    page_size=20,
+                    row_selectable='single'
+                ),
+                html.Div(id='card-tx-edit-container', className="mt-3")
             ])
         else:
             transactions_elem = html.P("Inga transaktioner funna. Importera från CSV.", className="text-muted")
         
-        return html.Div([summary_elem, category_elem, transactions_elem])
+        return html.Div([summary_elem, cardholder_elem, category_elem, transactions_elem])
         
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
+
+# Callback: Open Edit Card Modal
+@app.callback(
+    [Output('edit-card-modal', 'is_open'),
+     Output('edit-card-name', 'value'),
+     Output('edit-card-type', 'value'),
+     Output('edit-card-last-four', 'value'),
+     Output('edit-card-limit', 'value'),
+     Output('edit-card-color', 'value'),
+     Output('edit-card-id-store', 'data')],
+    [Input({'type': 'edit-card-btn', 'index': dash.dependencies.ALL}, 'n_clicks'),
+     Input('edit-card-cancel', 'n_clicks'),
+     Input('edit-card-save', 'n_clicks')],
+    [State('edit-card-id-store', 'data'),
+     State('edit-card-name', 'value'),
+     State('edit-card-type', 'value'),
+     State('edit-card-last-four', 'value'),
+     State('edit-card-limit', 'value'),
+     State('edit-card-color', 'value')],
+    prevent_initial_call=True
+)
+def handle_edit_card_modal(edit_clicks, cancel_clicks, save_clicks, 
+                           stored_card_id, name, card_type, last_four, limit, color):
+    """Handle edit card modal open/close and save."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    trigger_id = ctx.triggered[0]['prop_id']
+    
+    # Additional check: make sure the trigger has an actual value
+    trigger_value = ctx.triggered[0].get('value')
+    if trigger_value is None or trigger_value == 0:
+        raise PreventUpdate
+    
+    # Cancel button
+    if 'edit-card-cancel' in trigger_id:
+        return False, None, None, None, None, '#1f77b4', None
+    
+    # Save button
+    if 'edit-card-save' in trigger_id and stored_card_id:
+        try:
+            manager = CreditCardManager()
+            updates = {
+                'name': name,
+                'card_type': card_type,
+                'last_four': last_four,
+                'credit_limit': float(limit) if limit else 0.0,
+                'display_color': color
+            }
+            manager.update_card(stored_card_id, updates)
+            return False, None, None, None, None, '#1f77b4', None
+        except Exception as e:
+            # Keep modal open on error
+            return True, name, card_type, last_four, limit, color, stored_card_id
+    
+    # Edit button clicked
+    if 'edit-card-btn' in trigger_id:
+        # Find which card was clicked
+        button_data = ctx.triggered[0]['prop_id']
+        import json
+        # Extract index from pattern matching callback
+        start = button_data.index('"index":"') + len('"index":"')
+        end = button_data.index('"', start)
+        card_id = button_data[start:end]
+        
+        # Load card data
+        manager = CreditCardManager()
+        card = manager.get_card_by_id(card_id)
+        
+        if card:
+            return (True, 
+                   card.get('name'), 
+                   card.get('card_type'),
+                   card.get('last_four'),
+                   card.get('credit_limit'),
+                   card.get('display_color', '#1f77b4'),
+                   card_id)
+    
+    raise PreventUpdate
+
+
+# Callback: Open Delete Card Modal
+@app.callback(
+    [Output('delete-card-modal', 'is_open'),
+     Output('delete-card-confirm-text', 'children'),
+     Output('delete-card-id-store', 'data')],
+    [Input({'type': 'delete-card-btn', 'index': dash.dependencies.ALL}, 'n_clicks'),
+     Input('delete-card-cancel', 'n_clicks'),
+     Input('delete-card-confirm', 'n_clicks')],
+    [State('delete-card-id-store', 'data')],
+    prevent_initial_call=True
+)
+def handle_delete_card_modal(delete_clicks, cancel_clicks, confirm_clicks, stored_card_id):
+    """Handle delete card modal open/close and confirm."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    trigger_id = ctx.triggered[0]['prop_id']
+    
+    # Cancel button
+    if 'delete-card-cancel' in trigger_id:
+        return False, "", None
+    
+    # Confirm button
+    if 'delete-card-confirm' in trigger_id and stored_card_id:
+        try:
+            manager = CreditCardManager()
+            manager.delete_card(stored_card_id)
+            return False, "", None
+        except Exception as e:
+            return True, f"Fel vid borttagning: {str(e)}", stored_card_id
+    
+    # Delete button clicked - check if any button was actually clicked
+    if 'delete-card-btn' in trigger_id:
+        # Check if the click is valid (not None and greater than 0)
+        # Also verify that ctx.triggered has actual value (not just triggered_id)
+        if delete_clicks and any(c is not None and c > 0 for c in delete_clicks):
+            # Additional check: make sure the trigger has an actual value
+            trigger_value = ctx.triggered[0].get('value')
+            if trigger_value is None or trigger_value == 0:
+                raise PreventUpdate
+                
+            # Find which card was clicked
+            button_data = ctx.triggered[0]['prop_id']
+            import json
+            start = button_data.index('"index":"') + len('"index":"')
+            end = button_data.index('"', start)
+            card_id = button_data[start:end]
+            
+            # Load card data
+            manager = CreditCardManager()
+            card = manager.get_card_by_id(card_id)
+            
+            if card:
+                message = f"Är du säker på att du vill ta bort kreditkortet {card.get('name')} (****{card.get('last_four')})?  Detta kommer även ta bort alla transaktioner för detta kort."
+                return True, message, card_id
+    
+    raise PreventUpdate
+
+
+# Callback: Handle Credit Card Transaction Selection and Editing
+@app.callback(
+    Output('card-tx-edit-container', 'children'),
+    [Input('card-transactions-table', 'selected_rows'),
+     Input('card-details-selector', 'value')],
+    State('card-transactions-table', 'data'),
+    prevent_initial_call=True
+)
+def handle_card_tx_selection(selected_rows, card_id, table_data):
+    """Display edit form when a transaction is selected."""
+    if not selected_rows or not table_data or not card_id:
+        return ""
+    
+    selected_idx = selected_rows[0]
+    selected_tx = table_data[selected_idx]
+    
+    # Category manager for dropdowns
+    cat_manager = CategoryManager()
+    categories = cat_manager.get_categories()
+    
+    category_options = [{'label': cat, 'value': cat} for cat in categories.keys()]
+    
+    selected_category = selected_tx.get('category', '')
+    subcategory_options = []
+    if selected_category and selected_category in categories:
+        subcategory_options = [{'label': sub, 'value': sub} for sub in categories[selected_category]]
+    
+    return dbc.Card([
+        dbc.CardBody([
+            html.H6("Redigera transaktion", className="card-title"),
+            html.P(f"{selected_tx.get('description', '')} - {selected_tx.get('amount', 0)} SEK", className="text-muted"),
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Kategori:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='edit-card-tx-category',
+                        options=category_options,
+                        value=selected_category,
+                        placeholder='Välj kategori'
+                    )
+                ], width=6),
+                dbc.Col([
+                    html.Label("Underkategori:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='edit-card-tx-subcategory',
+                        options=subcategory_options,
+                        value=selected_tx.get('subcategory', ''),
+                        placeholder='Välj underkategori'
+                    )
+                ], width=6),
+            ], className="mb-3"),
+            dbc.ButtonGroup([
+                dbc.Button("💾 Spara kategorisering", id='save-card-tx-btn', color="primary", size="sm"),
+                dbc.Button("🤖 Träna AI", id='train-card-tx-btn', color="success", size="sm", className="ms-2"),
+            ]),
+            html.Div(id='card-tx-edit-status', className="mt-2"),
+            dcc.Store(id='selected-card-tx-idx', data=selected_idx),
+            dcc.Store(id='selected-card-id', data=card_id)
+        ])
+    ], className="border-primary")
+
+
+@app.callback(
+    Output('edit-card-tx-subcategory', 'options'),
+    Input('edit-card-tx-category', 'value')
+)
+def update_card_tx_subcategories(category):
+    """Update subcategory options when category changes."""
+    if not category:
+        return []
+    
+    cat_manager = CategoryManager()
+    categories = cat_manager.get_categories()
+    
+    if category in categories:
+        return [{'label': sub, 'value': sub} for sub in categories[category]]
+    
+    return []
+
+
+@app.callback(
+    Output('card-tx-edit-status', 'children'),
+    [Input('save-card-tx-btn', 'n_clicks'),
+     Input('train-card-tx-btn', 'n_clicks')],
+    [State('selected-card-id', 'data'),
+     State('card-transactions-table', 'data'),
+     State('selected-card-tx-idx', 'data'),
+     State('edit-card-tx-category', 'value'),
+     State('edit-card-tx-subcategory', 'value')],
+    prevent_initial_call=True
+)
+def save_card_tx_category(save_clicks, train_clicks, card_id, table_data, tx_idx, category, subcategory):
+    """Save credit card transaction category."""
+    ctx = callback_context
+    if not ctx.triggered or tx_idx is None or not table_data:
+        raise PreventUpdate
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    try:
+        manager = CreditCardManager()
+        selected_tx = table_data[tx_idx]
+        tx_id = selected_tx.get('id')
+        
+        if not tx_id:
+            return dbc.Alert("Fel: Transaktions-ID saknas", color="danger", dismissable=True)
+        
+        # Update transaction
+        success = manager.update_transaction(
+            card_id=card_id,
+            transaction_id=tx_id,
+            category=category,
+            subcategory=subcategory
+        )
+        
+        if not success:
+            return dbc.Alert("Fel vid uppdatering", color="danger", dismissable=True)
+        
+        # If train button was clicked, also train AI
+        if 'train-card-tx-btn' in trigger_id:
+            trainer = AITrainer()
+            trainer.add_training_entry(
+                description=selected_tx.get('description', ''),
+                category=category,
+                subcategory=subcategory,
+                manual=True
+            )
+            return dbc.Alert("✓ Kategorisering sparad och AI tränad!", color="success", dismissable=True)
+        
+        return dbc.Alert("✓ Kategorisering sparad!", color="success", dismissable=True)
+        
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
 
 
 if __name__ == "__main__":

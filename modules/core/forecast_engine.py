@@ -20,6 +20,8 @@ def calculate_average_income_and_expenses(transactions: List[dict], days: int = 
     """
     Calculate average daily income and expenses from historical data.
     
+    Excludes internal transfers from calculations.
+    
     Args:
         transactions: List of transaction dictionaries
         days: Number of days to look back (default: 30)
@@ -27,6 +29,12 @@ def calculate_average_income_and_expenses(transactions: List[dict], days: int = 
     Returns:
         Dictionary with avg_daily_income and avg_daily_expenses
     """
+    if not transactions:
+        return {'avg_daily_income': 0.0, 'avg_daily_expenses': 0.0}
+    
+    # Filter out internal transfers
+    transactions = [tx for tx in transactions if not tx.get('is_internal_transfer', False)]
+    
     if not transactions:
         return {'avg_daily_income': 0.0, 'avg_daily_expenses': 0.0}
     
@@ -134,6 +142,8 @@ def get_category_breakdown(transactions: List[dict] = None, transactions_file: s
     """
     Get expense breakdown by category.
     
+    Excludes internal transfers and credit card transactions.
+    
     Args:
         transactions: List of transactions (optional, will load from file if not provided)
         transactions_file: Path to transactions YAML file
@@ -143,6 +153,12 @@ def get_category_breakdown(transactions: List[dict] = None, transactions_file: s
     """
     if transactions is None:
         transactions = load_transactions(transactions_file)
+    
+    if not transactions:
+        return {}
+    
+    # Filter out internal transfers
+    transactions = [tx for tx in transactions if not tx.get('is_internal_transfer', False)]
     
     if not transactions:
         return {}
