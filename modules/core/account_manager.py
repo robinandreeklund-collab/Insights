@@ -463,7 +463,9 @@ class AccountManager:
             'visa',
             'kreditkort', 'credit card',
             'kortbetalning', 'card payment',
-            'cc payment', 'cc-payment'
+            'cc payment', 'cc-payment',
+            'seb kort bank',  # Swedish BG payment for credit cards (e.g., "Betalning BG 595-4300 SEB KORT BANK")
+            'kort bank'  # Generic Swedish credit card bank payment pattern
         ]
         
         marked_count = 0
