@@ -2,9 +2,23 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 6 - Data-flow och Dashboard-förbättringar
+## 🎯 Projektstatus: Sprint 7 - Lånehantering med OCR och avancerad matchning
 
-**Sprint 6 Status:** Komplett dataflöde med scheduled/posted transactions, förbättrad fakturamatchning och editerbara fakturor!
+**Sprint 7 Status:** OCR-baserad låneimport, utökad datamodell och smart transaktionsmatchning implementerad!
+
+Sprint 7 har implementerat:
+- ✅ **OCR-baserad låneimport**: Ladda upp skärmdumpar av lån och extrahera automatiskt alla detaljer
+- ✅ **Utökad lånemodell**: 20+ fält inklusive lånenummer, långivare, kontonummer, låntagare, säkerheter
+- ✅ **Smart transaktionsmatchning**: Matcha automatiskt transaktioner via kontonummer eller lånenamn
+- ✅ **Separat spårning**: Amorteringar och räntebetalningar spåras oberoende av varandra
+- ✅ **Förbättrad dashboard**: Visar lånenummer, långivare, kontonummer, totalt amorterat och betald ränta
+- ✅ **Redigerbart formulär**: Granska och editera OCR-extraherade uppgifter innan sparande
+- ✅ **Transaktionslänkning**: Koppla betalningar till specifika transaktioner med transaction_id
+- ✅ **Kontonormalisering**: Hanterar olika format av kontonummer (bindestreck, mellanslag)
+- ✅ **Dokumentation**: Omfattande användardokumentation och YAML-exempel
+- ✅ **Omfattande tester**: 242 tester godkända (från 187), 14 valfria OCR-tester
+
+**Sprint 6 Status (tidigare):** Komplett dataflöde med scheduled/posted transactions, förbättrad fakturamatchning och editerbara fakturor!
 
 Sprint 6 har implementerat:
 - ✅ **Transaktionsstatus-system**: Automatisk separation av 'scheduled' (framtida), 'posted' (bokförda) och 'paid' transaktioner
