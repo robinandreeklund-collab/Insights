@@ -236,8 +236,8 @@ class CreditCardManager:
         if 'date' not in df.columns or 'description' not in df.columns or 'amount' not in df.columns:
             raise ValueError("CSV must have Date, Description, and Amount columns")
         
-        # Handle Swedish number format (comma as decimal separator)
-        # Always convert to string first to handle any format consistently
+        # Handles Swedish CSV format where amounts like "135,00" use a comma as decimal separator,
+        # so we convert to string and replace commas with dots to ensure correct float parsing.
         df['amount'] = df['amount'].astype(str).str.replace(',', '.').str.replace('"', '').str.strip()
         df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
         
