@@ -3880,10 +3880,11 @@ def process_agent_query(n_clicks, query):
 # Callback: Income account dropdown
 @app.callback(
     Output('income-account-dropdown', 'options'),
-    Input('overview-interval', 'n_intervals')
+    [Input('people-interval', 'n_intervals'),
+     Input('selected-person-dropdown', 'value')]
 )
-def update_income_account_dropdown(n):
-    """Update account dropdown for income input."""
+def update_income_account_dropdown(n, selected_person):
+    """Update account dropdown for income input in People panel."""
     try:
         manager = AccountManager()
         accounts = manager.get_accounts()
