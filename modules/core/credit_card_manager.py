@@ -197,6 +197,8 @@ class CreditCardManager:
         CSV-filen förväntas ha kolumner: Date, Description, Amount
         Valfria kolumner: Vendor, Category, Subcategory
         
+        Stöder både Amex-format (svensk) och generiskt format.
+        
         Args:
             card_id: ID för kortet
             csv_path: Sökväg till CSV-fil
@@ -221,7 +223,9 @@ class CreditCardManager:
             'belopp': 'amount',
             'leverantör': 'vendor',
             'kategori': 'category',
-            'underkategori': 'subcategory'
+            'underkategori': 'subcategory',
+            'kortmedlem': 'card_member',
+            'konto #': 'account_number'
         }
         
         for old_col, new_col in column_mapping.items():
@@ -232,9 +236,41 @@ class CreditCardManager:
         if 'date' not in df.columns or 'description' not in df.columns or 'amount' not in df.columns:
             raise ValueError("CSV must have Date, Description, and Amount columns")
         
+        # Handle Swedish number format (comma as decimal separator)
+        if df['amount'].dtype == 'object':
+            # Replace comma with dot and remove quotes for Swedish format
+            df['amount'] = df['amount'].astype(str).str.replace(',', '.').str.replace('"', '').str.strip()
+            df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
+        
+        # Parse dates - handle both MM/DD/YYYY and YYYY-MM-DD formats
+        if df['date'].dtype == 'object':
+            # Try parsing as datetime, pandas will auto-detect format
+            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+            # Convert to string format YYYY-MM-DD
+            df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+        
+        # Detect if this is an Amex CSV format (has positive purchases and negative payments)
+        # vs standard format (has negative purchases)
+        # Check if we have a mix of positive and negative values
+        has_positive = (df['amount'] > 0).any()
+        has_negative = (df['amount'] < 0).any()
+        
+        # If we have both positive and negative, it's likely Amex format
+        # where positive = purchases, negative = payments
+        is_amex_format = has_positive and has_negative
+        
         # Import transactions
         imported_count = 0
         for _, row in df.iterrows():
+            # Skip rows with invalid data
+            if pd.isna(row['amount']) or pd.isna(row['date']):
+                continue
+            
+            # For Amex format: skip payments (negative values)
+            # For standard format: accept all transactions
+            if is_amex_format and row['amount'] < 0:
+                continue
+            
             # Auto-categorize if not provided
             from modules.core.categorize_expenses import load_categorization_rules, categorize_by_rules, categorize_by_ai_heuristic
             from modules.core.ai_trainer import AITrainer
@@ -251,10 +287,10 @@ class CreditCardManager:
                     category = cat_result['category']
                     subcategory = cat_result.get('subcategory', '')
                 else:
-                    # Use AI heuristic
+                    # Use AI heuristic (use negative for expense categorization)
                     trainer = AITrainer()
                     training_data = trainer.get_training_data()
-                    cat_result = categorize_by_ai_heuristic(description, row['amount'], training_data)
+                    cat_result = categorize_by_ai_heuristic(description, -abs(row['amount']), training_data)
                     if cat_result:
                         category = cat_result.get('category', 'Övrigt')
                         subcategory = cat_result.get('subcategory', '')
@@ -262,11 +298,20 @@ class CreditCardManager:
                         category = 'Övrigt'
                         subcategory = ''
             
+            # Normalize amount based on format
+            # In our system, purchases are always stored as negative amounts (money spent)
+            if is_amex_format:
+                # Amex CSV has purchases as positive, so we negate them
+                amount = -abs(row['amount'])
+            else:
+                # Standard format already has purchases as negative
+                amount = float(row['amount'])
+            
             self.add_transaction(
                 card_id=card_id,
                 date=str(row['date']),
                 description=str(row['description']),
-                amount=float(row['amount']),
+                amount=amount,
                 category=category,
                 subcategory=subcategory,
                 vendor=str(row.get('vendor', row['description']))

@@ -133,6 +133,27 @@ Date,Description,Amount,Vendor
 
 ## API Examples
 
+### Amex CSV Format Support
+
+The credit card module now fully supports importing transactions from American Express (Amex) CSV statements in Swedish format:
+
+**Amex CSV Format:**
+```csv
+Datum,Beskrivning,Kortmedlem,Konto #,Belopp
+10/02/2025,PERIODENS DEL AV ÅRSAVGIFT FÖR KONTOT,KARL ROBIN LUDVIG FROJD,-31009,"135,00"
+10/01/2025,COOP HJO,KARL ROBIN LUDVIG FROJD,-31009,"164,00"
+09/29/2025,"BETALNING MOTTAGEN, TACK",KARL ROBIN LUDVIG FROJD,-31009,"-18489,03"
+```
+
+**Key Features:**
+- Automatically detects Amex format (Swedish with comma decimal separator)
+- Filters out payment transactions (negative amounts)
+- Converts dates from MM/DD/YYYY to YYYY-MM-DD
+- Handles Swedish number format (comma as decimal separator)
+- Auto-categorizes all transactions using existing rules and AI
+
+**Sample File:** `credit_card_sample.csv` included in repository
+
 ### Create a Credit Card
 
 ```python
@@ -152,10 +173,17 @@ card = manager.add_card(
 ### Import Transactions
 
 ```python
-# From CSV file
+# From standard CSV file (negative amounts = purchases)
 count = manager.import_transactions_from_csv(
     card_id=card['id'],
     csv_path='statement.csv'
+)
+
+# From Amex CSV file (positive amounts = purchases, negative = payments)
+# Automatically detected and handled correctly
+count = manager.import_transactions_from_csv(
+    card_id=card['id'],
+    csv_path='amex_statement.csv'  # Swedish Amex format
 )
 
 # Or add individually
@@ -163,11 +191,34 @@ manager.add_transaction(
     card_id=card['id'],
     date='2025-10-20',
     description='ICA Supermarket',
-    amount=-1250.50,
+    amount=-1250.50,  # Negative = purchase/expense
     category='Mat & Dryck',
     vendor='ICA'
 )
 ```
+
+**Supported CSV Formats:**
+
+1. **Standard Format:**
+   ```csv
+   Date,Description,Amount,Vendor
+   2025-10-15,ICA Supermarket,-1250.50,ICA
+   2025-10-20,Shell Gas Station,-650.00,Shell
+   ```
+   - Negative amounts represent purchases
+   - Dates in YYYY-MM-DD format
+
+2. **Amex Format (Swedish):**
+   ```csv
+   Datum,Beskrivning,Kortmedlem,Konto #,Belopp
+   10/02/2025,COOP HJO,KARL ROBIN,-31009,"164,00"
+   09/29/2025,"BETALNING MOTTAGEN",KARL ROBIN,-31009,"-5000,00"
+   ```
+   - Positive amounts represent purchases
+   - Negative amounts represent payments (automatically filtered out)
+   - Dates in MM/DD/YYYY format
+   - Amounts use comma as decimal separator
+   - Automatic categorization applied to all transactions
 
 ### Get Card Summary
 
