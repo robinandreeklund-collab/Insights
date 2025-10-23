@@ -331,8 +331,8 @@ class CreditCardManager:
                     # Next row should be the header
                     if i < len(df_raw):
                         header_row = df_raw.iloc[i]
-                        # Check if it's a proper header row
-                        if 'Datum' in str(header_row.iloc[0]) or 'Datum' in str(header_row.iloc[1]):
+                        # Check if it's a proper header row (look for 'Datum' in any column)
+                        if any('Datum' in str(cell) for cell in header_row):
                             i += 1
                             
                             # Extract transactions from this section
