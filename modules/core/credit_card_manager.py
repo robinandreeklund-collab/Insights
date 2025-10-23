@@ -340,9 +340,18 @@ class CreditCardManager:
                                 tx_row = df_raw.iloc[i]
                                 first_col_tx = str(tx_row.iloc[0]) if pd.notna(tx_row.iloc[0]) else ''
                                 
-                                # Stop at empty row or next section
-                                if not first_col_tx or not first_col_tx.startswith('202'):
+                                # Check for section end markers
+                                if 'Totalt belopp' in first_col_tx or 'Summa' in first_col_tx:
                                     break
+                                
+                                # Check for cardholder marker (next section starting)
+                                if '******' in first_col_tx:
+                                    break
+                                
+                                # Skip rows that are not transaction rows (like "Valutakurs:")
+                                if not first_col_tx.startswith('202'):
+                                    i += 1
+                                    continue
                                 
                                 # This is a valid transaction row
                                 tx_dict = {

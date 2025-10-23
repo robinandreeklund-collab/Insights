@@ -957,3 +957,821 @@ cards:
     id: TX-a9c6f6ac
     subcategory: ''
     vendor: DAR ES SALAAM
+- available_credit: 23237.639999999985
+  card_type: Mastercard
+  created_at: '2025-10-23 11:40:23'
+  credit_limit: 50000.0
+  current_balance: 26762.360000000015
+  display_color: '#EB001B'
+  icon: mastercard
+  id: CARD-88861bc8
+  last_four: '7203'
+  name: Mastercard Fixed Parser
+  status: active
+  transactions:
+  - amount: -2335.0
+    category: Övrigt
+    created_at: '2025-10-23 11:40:23'
+    date: '2025-08-31'
+    description: ÅRSAVGIFT
+    id: TX-e0083303
+    subcategory: ''
+    vendor: ÅRSAVGIFT
+  - amount: -295.0
+    category: Övrigt
+    created_at: '2025-10-23 11:40:23'
+    date: '2025-08-31'
+    description: EXTRAKORTSAVGIFT
+    id: TX-2ddcf5ee
+    subcategory: ''
+    vendor: EXTRAKORTSAVGIFT
+  - amount: -35.0
+    category: Övrigt
+    created_at: '2025-10-23 11:40:23'
+    date: '2025-08-31'
+    description: Kostnad pappersfaktura
+    id: TX-137f1997
+    subcategory: ''
+    vendor: Kostnad pappersfaktura
+  - amount: -35.0
+    category: Övrigt
+    created_at: '2025-10-23 11:40:23'
+    date: '2025-09-30'
+    description: Kostnad pappersfaktura
+    id: TX-0641ef50
+    subcategory: ''
+    vendor: Kostnad pappersfaktura
+  - amount: -130.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-21'
+    description: PIZZERIA & REST
+    id: TX-7ba231c0
+    subcategory: ''
+    vendor: HJO
+  - amount: -526.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-19'
+    description: NORMAL SKÖVDE
+    id: TX-030936ab
+    subcategory: ''
+    vendor: SKOVDE
+  - amount: -544.75
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-19'
+    description: MAXI ICA STORMARKNAD S
+    id: TX-c60bb3f3
+    subcategory: Matinköp
+    vendor: SKOVDE
+  - amount: -69.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-17'
+    description: ICA SUPERMARKET HJO
+    id: TX-08c5256e
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -108.69
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-17'
+    description: HJOGOTTEN AB
+    id: TX-4f4b62a3
+    subcategory: ''
+    vendor: HJO
+  - amount: -130.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-16'
+    description: PIZZERIA & REST
+    id: TX-32e5a5b8
+    subcategory: ''
+    vendor: HJO
+  - amount: -165.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-15'
+    description: HEM OCH HOBBY
+    id: TX-046bd12d
+    subcategory: ''
+    vendor: HJO
+  - amount: -264.86
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-13'
+    description: ICA SUPERMARKET HJO
+    id: TX-f4ddf049
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -149.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-10'
+    description: OYUSUSHI
+    id: TX-9e4f92ca
+    subcategory: Restaurang
+    vendor: HJO
+  - amount: -224.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:24'
+    date: '2025-10-09'
+    description: HEM OCH HOBBY
+    id: TX-fe8a101c
+    subcategory: ''
+    vendor: HJO
+  - amount: -135.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-10-07'
+    description: LANTKROGEN I HJO AB
+    id: TX-ad726d07
+    subcategory: ''
+    vendor: HJO
+  - amount: -327.8
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-10-04'
+    description: SP LH COSMETICS AB
+    id: TX-d0b26813
+    subcategory: ''
+    vendor: STOCKHOLM
+  - amount: -370.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-10-04'
+    description: VARA BADHUS
+    id: TX-a2164a89
+    subcategory: ''
+    vendor: VARA
+  - amount: -45.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-09-27'
+    description: HEM OCH HOBBY
+    id: TX-65a1950a
+    subcategory: ''
+    vendor: HJO
+  - amount: -300.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-09-27'
+    description: HEM OCH HOBBY
+    id: TX-cd1a94e2
+    subcategory: ''
+    vendor: HJO
+  - amount: -211.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-09-26'
+    description: HEM OCH HOBBY
+    id: TX-608739e0
+    subcategory: ''
+    vendor: HJO
+  - amount: -20.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-09-20'
+    description: RYDE SWEDEN AB
+    id: TX-450cf821
+    subcategory: ''
+    vendor: ALINGSAS
+  - amount: -30.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-09-20'
+    description: RYDE SWEDEN AB
+    id: TX-6b40cb4b
+    subcategory: ''
+    vendor: ALINGSAS
+  - amount: -156.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:25'
+    date: '2025-09-20'
+    description: LOOMISP*NAMFON THAI RE
+    id: TX-4cc43107
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -88.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-20'
+    description: LOOMISP*NAMFON THAI RE
+    id: TX-1a1f575e
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -88.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-20'
+    description: LOOMISP*NAMFON THAI RE
+    id: TX-c42fc335
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -196.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-20'
+    description: MASALA KITCHEN GAMLEST
+    id: TX-e0702ba5
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -298.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-19'
+    description: HEM OCH HOBBY
+    id: TX-9b4801bf
+    subcategory: ''
+    vendor: HJO
+  - amount: -360.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-18'
+    description: HEM OCH HOBBY
+    id: TX-60f48060
+    subcategory: ''
+    vendor: HJO
+  - amount: -139.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-17'
+    description: CASTELLO SUSHI
+    id: TX-6b553d6e
+    subcategory: Restaurang
+    vendor: HJO
+  - amount: -30.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-12'
+    description: DAMASKUS MINILIVS
+    id: TX-682474d0
+    subcategory: ''
+    vendor: HJO
+  - amount: -165.85
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-09'
+    description: COOP HJO
+    id: TX-efdd0333
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -135.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:26'
+    date: '2025-09-02'
+    description: LANTKROGEN I HJO AB
+    id: TX-4ce66b30
+    subcategory: ''
+    vendor: HJO
+  - amount: -145.0
+    card_member: 525412******9506 EVELINA FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-08-31'
+    description: OYUSUSHI
+    id: TX-c1727c1c
+    subcategory: Restaurang
+    vendor: HJO
+  - amount: -310.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-10-20'
+    description: KORKISSEBASTIAN
+    id: TX-e8ed6e3f
+    subcategory: ''
+    vendor: HJO
+  - amount: -109.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-10-16'
+    description: MACKEN I HJO AB
+    id: TX-c81d4c4a
+    subcategory: ''
+    vendor: HJO
+  - amount: -196.33
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-10-15'
+    description: ICA SUPERMARKET HJO
+    id: TX-e49c59c2
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -566.5
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-10-11'
+    description: HEM OCH HOBBY
+    id: TX-0cc62d76
+    subcategory: ''
+    vendor: HJO
+  - amount: -39.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-10-11'
+    description: ICA SUPERMARKET HJO
+    id: TX-a149097c
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -132.87
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-10-10'
+    description: HJOGOTTEN AB
+    id: TX-f37727b9
+    subcategory: ''
+    vendor: HJO
+  - amount: -165.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:27'
+    date: '2025-10-09'
+    description: ICA SUPERMARKET HJO
+    id: TX-f733134d
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -149.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Nöje
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-07'
+    description: NETFLIX.COM
+    id: TX-f3dc7cde
+    subcategory: Streaming
+    vendor: AMSTERDAM
+  - amount: -221.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-05'
+    description: HEM OCH HOBBY
+    id: TX-f4389cf6
+    subcategory: ''
+    vendor: HJO
+  - amount: -126.9
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-05'
+    description: ICA SUPERMARKET HJO
+    id: TX-7ae1ad62
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -512.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-04'
+    description: VARA BADHUS
+    id: TX-c2770100
+    subcategory: ''
+    vendor: VARA
+  - amount: -370.65
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-04'
+    description: ICA SUPERMARKET HJO
+    id: TX-52acba51
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -199.96
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-03'
+    description: HJOGOTTEN AB
+    id: TX-a47579c8
+    subcategory: ''
+    vendor: HJO
+  - amount: -156.78
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Kontanter
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-01'
+    description: KONTANTUTTAGSAVGIFT
+    id: TX-9b119810
+    subcategory: Uttagsautomat
+    vendor: KONTANTUTTAGSAVGIFT
+  - amount: -5226.17
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:28'
+    date: '2025-10-01'
+    description: CHANGEGROUP
+    id: TX-01c99de9
+    subcategory: ''
+    vendor: SKOVDE
+  - amount: -614.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:29'
+    date: '2025-10-01'
+    description: BRODERNA BRANDT PERSON
+    id: TX-0648b89b
+    subcategory: ''
+    vendor: UDDEVALLA
+  - amount: -5.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:29'
+    date: '2025-10-01'
+    description: SKÖVDE KOMMUN
+    id: TX-80241b74
+    subcategory: ''
+    vendor: SKÖVDE
+  - amount: -570.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:29'
+    date: '2025-10-01'
+    description: LAGER 157 SKOVD
+    id: TX-33758a29
+    subcategory: ''
+    vendor: SKOVDE
+  - amount: -345.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:29'
+    date: '2025-09-30'
+    description: AVARDA AB
+    id: TX-e6dbee84
+    subcategory: ''
+    vendor: NACKA
+  - amount: -50.08
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Shopping
+    created_at: '2025-10-23 11:40:29'
+    date: '2025-09-28'
+    description: PAYPAL *EBAY US
+    id: TX-35b3b63c
+    subcategory: Online-handel
+    vendor: '4029357733'
+  - amount: -164.9
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:29'
+    date: '2025-09-28'
+    description: ICA SUPERMARKET HJO
+    id: TX-cbb5e41a
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -145.29
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:29'
+    date: '2025-09-26'
+    description: HJOGOTTEN AB
+    id: TX-fc29f1fe
+    subcategory: ''
+    vendor: HJO
+  - amount: -38.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:30'
+    date: '2025-09-26'
+    description: HEM OCH HOBBY
+    id: TX-e2cd700e
+    subcategory: ''
+    vendor: HJO
+  - amount: -155.8
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:30'
+    date: '2025-09-26'
+    description: ICA SUPERMARKET HJO
+    id: TX-34d8493f
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -125.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:30'
+    date: '2025-09-25'
+    description: GUMMICENTRALEN
+    id: TX-55e1d1b1
+    subcategory: ''
+    vendor: HJO
+  - amount: -37.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:30'
+    date: '2025-09-23'
+    description: HJOGOTTEN AB
+    id: TX-fd6a34b2
+    subcategory: ''
+    vendor: HJO
+  - amount: -15.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:30'
+    date: '2025-09-20'
+    description: RYDE SWEDEN AB
+    id: TX-93b6238d
+    subcategory: ''
+    vendor: ALINGSAS
+  - amount: -30.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:30'
+    date: '2025-09-20'
+    description: RYDE SWEDEN AB
+    id: TX-209a1915
+    subcategory: ''
+    vendor: ALINGSAS
+  - amount: -180.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:30'
+    date: '2025-09-20'
+    description: MUGG TILLTUGG
+    id: TX-70be309b
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -465.15
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:31'
+    date: '2025-09-20'
+    description: ROLLIN BISTROS
+    id: TX-4cc35074
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -482.99
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:31'
+    date: '2025-09-18'
+    description: IMMIGRATION VISA TANZA
+    id: TX-3ff32cf4
+    subcategory: ''
+    vendor: DAR ES SALAAM
+  - amount: -482.99
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:31'
+    date: '2025-09-18'
+    description: IMMIGRATION VISA TANZA
+    id: TX-01df8726
+    subcategory: ''
+    vendor: DAR ES SALAAM
+  - amount: -482.99
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:31'
+    date: '2025-09-18'
+    description: IMMIGRATION VISA TANZA
+    id: TX-0a128cfe
+    subcategory: ''
+    vendor: DAR ES SALAAM
+  - amount: -482.99
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:31'
+    date: '2025-09-18'
+    description: IMMIGRATION VISA TANZA
+    id: TX-9cf59fb7
+    subcategory: ''
+    vendor: DAR ES SALAAM
+  - amount: -482.99
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:31'
+    date: '2025-09-18'
+    description: IMMIGRATION VISA TANZA
+    id: TX-f3223cd5
+    subcategory: ''
+    vendor: DAR ES SALAAM
+  - amount: -79.95
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:31'
+    date: '2025-09-18'
+    description: ICA SUPERMARKET HJO
+    id: TX-a8b02c81
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -218.75
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:32'
+    date: '2025-09-17'
+    description: ICA SUPERMARKET HJO
+    id: TX-2eabdb3d
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -169.15
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Shopping
+    created_at: '2025-10-23 11:40:32'
+    date: '2025-09-16'
+    description: EBAY O*13-13581-74494
+    id: TX-cd0e32bc
+    subcategory: Online-handel
+    vendor: SAN JOSE
+  - amount: -415.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:32'
+    date: '2025-09-14'
+    description: KORKISSEBASTIAN
+    id: TX-90f97afa
+    subcategory: ''
+    vendor: HJO
+  - amount: -145.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:32'
+    date: '2025-09-14'
+    description: CASTELLO SUSHI
+    id: TX-1f85a988
+    subcategory: Restaurang
+    vendor: HJO
+  - amount: -10.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:32'
+    date: '2025-09-12'
+    description: FORSHALLEN
+    id: TX-68a654e0
+    subcategory: ''
+    vendor: TIDAHOLM
+  - amount: -95.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:32'
+    date: '2025-09-12'
+    description: FORSHALLEN
+    id: TX-0c4de520
+    subcategory: ''
+    vendor: TIDAHOLM
+  - amount: -220.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:32'
+    date: '2025-09-12'
+    description: FORSHALLEN
+    id: TX-58843082
+    subcategory: ''
+    vendor: TIDAHOLM
+  - amount: -161.28
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:33'
+    date: '2025-09-12'
+    description: HJOGOTTEN AB
+    id: TX-019b3e9d
+    subcategory: ''
+    vendor: HJO
+  - amount: -95.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:33'
+    date: '2025-09-12'
+    description: HEM OCH HOBBY
+    id: TX-527141e5
+    subcategory: ''
+    vendor: HJO
+  - amount: -50.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:33'
+    date: '2025-09-10'
+    description: HÄLSOCENTRALEN
+    id: TX-b8ba704f
+    subcategory: ''
+    vendor: HJO
+  - amount: -140.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Boende
+    created_at: '2025-10-23 11:40:33'
+    date: '2025-09-09'
+    description: MOSTER ELINS GL
+    id: TX-9d0266d0
+    subcategory: Hyra & Räkningar
+    vendor: HJO
+  - amount: -118.08
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:33'
+    date: '2025-09-08'
+    description: ICA SUPERMARKET HJO
+    id: TX-60d424bc
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -117.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Boende
+    created_at: '2025-10-23 11:40:33'
+    date: '2025-09-07'
+    description: MOSTER ELINS GL
+    id: TX-926861d0
+    subcategory: Hyra & Räkningar
+    vendor: HJO
+  - amount: -248.61
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Mat & Dryck
+    created_at: '2025-10-23 11:40:34'
+    date: '2025-09-07'
+    description: ICA SUPERMARKET HJO
+    id: TX-686de229
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -149.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Nöje
+    created_at: '2025-10-23 11:40:34'
+    date: '2025-09-07'
+    description: NETFLIX.COM
+    id: TX-586e9a5d
+    subcategory: Streaming
+    vendor: 020790637
+  - amount: -669.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:34'
+    date: '2025-09-05'
+    description: DH* DREAMHACKSWEDEN DR
+    id: TX-2ea4328f
+    subcategory: ''
+    vendor: HAGERSTEN
+  - amount: -100.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:34'
+    date: '2025-09-05'
+    description: HJOGOTTEN AB
+    id: TX-5c3a89a6
+    subcategory: ''
+    vendor: HJO
+  - amount: -226.26
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:34'
+    date: '2025-09-05'
+    description: HJOGOTTEN AB
+    id: TX-76930f7d
+    subcategory: ''
+    vendor: HJO
+  - amount: -364.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Hälsa
+    created_at: '2025-10-23 11:40:34'
+    date: '2025-09-01'
+    description: KRONANS APOTEK AB
+    id: TX-26117ddf
+    subcategory: Medicin
+    vendor: HJO
+  - amount: -614.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:35'
+    date: '2025-09-01'
+    description: BRODERNA BRANDT PERSON
+    id: TX-624f4694
+    subcategory: ''
+    vendor: UDDEVALLA
+  - amount: -270.0
+    card_member: 525412******7203 ROBIN FRÖJD
+    category: Övrigt
+    created_at: '2025-10-23 11:40:35'
+    date: '2025-08-31'
+    description: KORKISSEBASTIAN
+    id: TX-a06e26ee
+    subcategory: ''
+    vendor: HJO
