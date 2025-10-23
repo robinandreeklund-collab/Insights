@@ -4674,22 +4674,24 @@ def handle_delete_card_modal(delete_clicks, cancel_clicks, confirm_clicks, store
         except Exception as e:
             return True, f"Fel vid borttagning: {str(e)}", stored_card_id
     
-    # Delete button clicked
+    # Delete button clicked - check if any button was actually clicked
     if 'delete-card-btn' in trigger_id:
-        # Find which card was clicked
-        button_data = ctx.triggered[0]['prop_id']
-        import json
-        start = button_data.index('"index":"') + len('"index":"')
-        end = button_data.index('"', start)
-        card_id = button_data[start:end]
-        
-        # Load card data
-        manager = CreditCardManager()
-        card = manager.get_card_by_id(card_id)
-        
-        if card:
-            message = f"Är du säker på att du vill ta bort kreditkortet {card.get('name')} (****{card.get('last_four')})?  Detta kommer även ta bort alla transaktioner för detta kort."
-            return True, message, card_id
+        # Check if the click is valid (not None)
+        if delete_clicks and any(c is not None and c > 0 for c in delete_clicks):
+            # Find which card was clicked
+            button_data = ctx.triggered[0]['prop_id']
+            import json
+            start = button_data.index('"index":"') + len('"index":"')
+            end = button_data.index('"', start)
+            card_id = button_data[start:end]
+            
+            # Load card data
+            manager = CreditCardManager()
+            card = manager.get_card_by_id(card_id)
+            
+            if card:
+                message = f"Är du säker på att du vill ta bort kreditkortet {card.get('name')} (****{card.get('last_four')})?  Detta kommer även ta bort alla transaktioner för detta kort."
+                return True, message, card_id
     
     raise PreventUpdate
 

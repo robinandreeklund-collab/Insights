@@ -304,13 +304,25 @@ class CreditCardManager:
         
         # Detect if this is an Amex CSV format (has positive purchases and negative payments)
         # vs standard format (has negative purchases)
-        # Check if we have a mix of positive and negative values
+        # Amex format characteristics:
+        # 1. Has positive values for purchases
+        # 2. May have card_member or account_number columns
+        # 3. Most transactions are positive (purchases), payments are less frequent
         has_positive = (df['amount'] > 0).any()
         has_negative = (df['amount'] < 0).any()
+        has_amex_columns = 'card_member' in df.columns or 'account_number' in df.columns
         
-        # If we have both positive and negative, it's likely Amex format
-        # where positive = purchases, negative = payments
-        is_amex_format = has_positive and has_negative
+        # Calculate percentage of positive values
+        if len(df) > 0:
+            positive_ratio = (df['amount'] > 0).sum() / len(df)
+        else:
+            positive_ratio = 0
+        
+        # Amex format if:
+        # - Has Amex-specific columns, OR
+        # - Has both positive and negative (mixed), OR
+        # - Has mostly positive values (>70% are purchases)
+        is_amex_format = has_amex_columns or (has_positive and has_negative) or (has_positive and positive_ratio > 0.7)
         
         # Import transactions
         imported_count = 0
