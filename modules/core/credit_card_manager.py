@@ -243,7 +243,7 @@ class CreditCardManager:
             Card ID if detected, None otherwise
         """
         try:
-            df = pd.read_csv(csv_path, nrows=10)  # Read first 10 rows
+            df = pd.read_csv(csv_path)  # Read all rows
             df.columns = [col.strip().lower() for col in df.columns]
             
             # Map Swedish column name
