@@ -3418,7 +3418,7 @@ def process_loan_image(contents, filename):
         status,
         {'display': 'block'},  # Show form
         # Use extracted data if available, otherwise None (empty fields)
-        loan_data.get('lender', loan_data.get('name')) if loan_data.get('lender') or loan_data.get('name') else None,
+        loan_data.get('lender') or loan_data.get('name') or None,
         loan_data.get('loan_number'),
         loan_data.get('lender'),
         loan_data.get('original_amount'),
