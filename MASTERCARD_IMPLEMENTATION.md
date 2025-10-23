@@ -29,6 +29,16 @@ Datum,Bokfört,Specifikation,Ort,Valuta,Utl. belopp,Belopp
 2025-10-17,2025-10-20,ICA SUPERMARKET HJO,HJO,SEK,0,69.0
 ```
 
+**Date Fields:**
+- **Datum** (Transaction Date): When the purchase was actually made
+- **Bokfört** (Posting Date): When the transaction was posted to the card statement
+
+**IMPORTANT:** Card balance is ALWAYS calculated based on **Bokfört** (posting date), 
+since this is when transactions actually affect the statement and card balance. Both dates 
+are stored and visible, allowing analysis by either date:
+- Use **transaction date** for spend trends and category analysis
+- Use **posting date** for accurate balance and cashflow calculations
+
 **Format 2: Generic CSV with Cardholder**
 ```csv
 Datum,Beskrivning,Kortmedlem,Konto #,Belopp
@@ -106,6 +116,48 @@ card = cc_manager.add_card(
 - Card balance is separate from bank accounts
 - Only payments appear in bank statements (as negative amounts)
 
+**Two Date Fields:**
+Mastercard CSV exports contain two important date columns:
+1. **Datum (Transaction Date)**: When the purchase was actually made
+2. **Bokfört (Posting Date)**: When the transaction was posted to your statement
+
+**Balance Calculation Rule:**
+The system ALWAYS uses **Bokfört (posting date)** for balance calculations, because:
+- This is when transactions actually affect your statement
+- This is when the bank processes the charge
+- This ensures accurate balance reconciliation with official statements
+- Posting dates determine your actual payment due dates
+
+**Both dates are stored and available:**
+- **Transaction date**: Used for spend analysis, trends, and understanding your purchasing patterns
+- **Posting date**: Used for balance calculations, cashflow, and statement accuracy
+
+**Example:**
+```python
+# Purchase made on Oct 15, posted on Oct 17
+cc_manager.add_transaction(
+    card_id=card['id'],
+    date='2025-10-15',        # When you made the purchase
+    posting_date='2025-10-17', # When it appeared on statement
+    description='ICA Supermarket',
+    amount=-1000.0
+)
+
+# Balance at Oct 16: 0 SEK (posting hasn't occurred yet)
+balance = cc_manager.calculate_balance_at_date(
+    card_id=card['id'],
+    as_of_date='2025-10-16',
+    use_posting_date=True  # Correct for balance
+)
+
+# Balance at Oct 18: 1000 SEK (posting occurred on Oct 17)
+balance = cc_manager.calculate_balance_at_date(
+    card_id=card['id'],
+    as_of_date='2025-10-18',
+    use_posting_date=True
+)
+```
+
 **Example:**
 ```python
 # Import Mastercard transactions
@@ -182,7 +234,35 @@ manager.add_transaction(
 )
 ```
 
-### Viewing Card Summary
+### Viewing Transactions
+
+```python
+# Get all transactions (sorted by posting_date by default)
+transactions = manager.get_transactions(card['id'])
+
+# Filter by transaction date (for spend analysis)
+oct_purchases = manager.get_transactions(
+    card_id=card['id'],
+    start_date='2025-10-01',
+    end_date='2025-10-31',
+    use_posting_date=False  # Filter by transaction date
+)
+
+# Filter by posting date (for balance/cashflow analysis)
+oct_statement = manager.get_transactions(
+    card_id=card['id'],
+    start_date='2025-10-01',
+    end_date='2025-10-31',
+    use_posting_date=True  # Filter by posting date (recommended)
+)
+
+# Calculate balance at specific date
+balance = manager.calculate_balance_at_date(
+    card_id=card['id'],
+    as_of_date='2025-10-20',
+    use_posting_date=True  # Always use posting_date for balance
+)
+```
 
 ```python
 summary = manager.get_card_summary(card['id'])
@@ -289,6 +369,9 @@ The test suite covers:
 7. ✅ Summary with category breakdown
 8. ✅ Icon and branding
 9. ✅ Cash flow separation
+10. ✅ **Two date fields (transaction & posting dates)**
+11. ✅ **Balance calculation using posting_date**
+12. ✅ **Date filtering (transaction vs posting)**
 
 ## Migration from Other Cards
 
@@ -329,7 +412,8 @@ created_at: "2025-10-23 10:00:00"
 **Transaction:**
 ```yaml
 id: TX-xyz67890
-date: "2025-10-15"
+date: "2025-10-15"  # Transaction date (Datum) - when purchase was made
+posting_date: "2025-10-17"  # Posting date (Bokfört) - when transaction posted to statement
 description: ICA SUPERMARKET MALMÖ
 vendor: ICA SUPERMARKET MALMÖ
 amount: -1250.50  # Negative = purchase
@@ -339,6 +423,13 @@ card_member: EXEMPEL ANVÄNDARE
 account_number: "-12345"
 created_at: "2025-10-23 10:00:00"
 ```
+
+**Balance Calculation:**
+Card balance is ALWAYS calculated based on `posting_date` (Bokfört), not `date` (Datum).
+This ensures the balance matches the official card statement. Both dates are stored and 
+available for different types of analysis:
+- `date`: Used for spend trends, category analysis, and understanding when purchases occurred
+- `posting_date`: Used for balance calculations, cashflow accuracy, and statement reconciliation
 
 ### Payment Detection Keywords
 
