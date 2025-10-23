@@ -43,6 +43,9 @@ class IncomeTracker:
     ) -> Dict:
         """Add a new income entry.
         
+        Also creates a corresponding transaction in transactions.yaml so that
+        the income is included in forecasts and analytics.
+        
         Args:
             person: Person receiving the income
             account: Account where income is deposited
@@ -60,8 +63,9 @@ class IncomeTracker:
             data['incomes'] = []
         
         # Create income entry
+        income_id = str(uuid.uuid4())
         income = {
-            'id': str(uuid.uuid4()),
+            'id': income_id,
             'person': person,
             'account': account,
             'amount': float(amount),
@@ -74,8 +78,30 @@ class IncomeTracker:
         # Add to data
         data['incomes'].append(income)
         
-        # Save
+        # Save to income tracker
         self._save_yaml(self.income_file, data)
+        
+        # Also create a transaction for forecasting and analytics
+        transactions_file = os.path.join(self.yaml_dir, "transactions.yaml")
+        tx_data = self._load_yaml(transactions_file)
+        if 'transactions' not in tx_data:
+            tx_data['transactions'] = []
+        
+        # Create transaction with positive amount (income)
+        transaction = {
+            'id': f"income-{income_id}",
+            'account': account,
+            'date': date,
+            'amount': float(amount),  # Positive for income
+            'description': description or f"{category} - {person}",
+            'category': category,
+            'person': person,
+            'is_income': True,
+            'income_id': income_id
+        }
+        
+        tx_data['transactions'].append(transaction)
+        self._save_yaml(transactions_file, tx_data)
         
         return income
     
