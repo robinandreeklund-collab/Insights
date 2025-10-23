@@ -303,43 +303,69 @@ class CreditCardManager:
         file_extension = csv_path.lower().split('.')[-1]
         
         if file_extension == 'xlsx':
-            # Read Excel file, skip first 3 rows to get to data
-            # Mastercard Excel exports have headers starting at row 3
-            df = pd.read_excel(csv_path, skiprows=3)
+            # Read Excel file without skipping rows to get full structure
+            # Mastercard Excel exports have multiple sections
+            df_raw = pd.read_excel(csv_path, header=None)
             
-            # Find where actual transactions start (look for 'Köp/uttag' section)
-            purchase_start = None
-            for i, row in df.iterrows():
-                if 'Köp/uttag' in str(row.iloc[0]) or 'Köp/uttag' in str(row.iloc[1]):
-                    purchase_start = i + 2  # Skip 'Köp/uttag' and next header row
-                    break
+            all_transactions = []
+            current_cardholder = None
             
-            if purchase_start is not None:
-                # Get transactions starting from purchase section
-                df = df.iloc[purchase_start:].copy()
+            # Scan through the file to find all transaction sections
+            i = 0
+            while i < len(df_raw):
+                row = df_raw.iloc[i]
+                first_col = str(row.iloc[0]) if pd.notna(row.iloc[0]) else ''
+                second_col = str(row.iloc[1]) if len(row) > 1 and pd.notna(row.iloc[1]) else ''
                 
-                # Clean up - remove rows with NaN in first column (date)
-                df = df[df.iloc[:, 0].notna()]
+                # Check for cardholder line (e.g., "525412******9506  EVELINA FRÖJD")
+                if '******' in first_col:
+                    current_cardholder = first_col + ' ' + second_col if second_col else first_col
+                    i += 1
+                    continue
                 
-                # Stop at next section marker (rows that don't start with date)
-                valid_rows = []
-                for i, row in df.iterrows():
-                    first_col = str(row.iloc[0])
-                    if first_col.startswith('202'):  # Date format check (starts with year)
-                        valid_rows.append(row)
-                    else:
-                        break
+                # Check for section markers ("Köp/uttag" or "Totalt övriga händelser")
+                if 'Köp/uttag' in first_col or 'övriga händelser' in first_col:
+                    section_name = first_col
+                    i += 1
+                    
+                    # Next row should be the header
+                    if i < len(df_raw):
+                        header_row = df_raw.iloc[i]
+                        # Check if it's a proper header row
+                        if 'Datum' in str(header_row.iloc[0]) or 'Datum' in str(header_row.iloc[1]):
+                            i += 1
+                            
+                            # Extract transactions from this section
+                            while i < len(df_raw):
+                                tx_row = df_raw.iloc[i]
+                                first_col_tx = str(tx_row.iloc[0]) if pd.notna(tx_row.iloc[0]) else ''
+                                
+                                # Stop at empty row or next section
+                                if not first_col_tx or not first_col_tx.startswith('202'):
+                                    break
+                                
+                                # This is a valid transaction row
+                                tx_dict = {
+                                    'Datum': tx_row.iloc[0] if pd.notna(tx_row.iloc[0]) else '',
+                                    'Bokfört': tx_row.iloc[1] if len(tx_row) > 1 and pd.notna(tx_row.iloc[1]) else '',
+                                    'Specifikation': tx_row.iloc[2] if len(tx_row) > 2 and pd.notna(tx_row.iloc[2]) else '',
+                                    'Ort': tx_row.iloc[3] if len(tx_row) > 3 and pd.notna(tx_row.iloc[3]) else '',
+                                    'Valuta': tx_row.iloc[4] if len(tx_row) > 4 and pd.notna(tx_row.iloc[4]) else '',
+                                    'Utl. belopp': tx_row.iloc[5] if len(tx_row) > 5 and pd.notna(tx_row.iloc[5]) else 0,
+                                    'Belopp': tx_row.iloc[6] if len(tx_row) > 6 and pd.notna(tx_row.iloc[6]) else 0,
+                                    'Kortmedlem': current_cardholder if current_cardholder else ''
+                                }
+                                all_transactions.append(tx_dict)
+                                i += 1
+                            continue
                 
-                if valid_rows:
-                    df = pd.DataFrame(valid_rows)
-                    # Set proper column names based on the header row
-                    df.columns = ['Datum', 'Bokfört', 'Specifikation', 'Ort', 'Valuta', 'Utl. belopp', 'Belopp']
-                else:
-                    # If no valid transactions found, return empty
-                    return {'imported': 0, 'duplicates': 0}
+                i += 1
+            
+            if all_transactions:
+                df = pd.DataFrame(all_transactions)
             else:
-                # No purchase section found, try to use data as-is
-                pass
+                # If no transactions found, return empty
+                return {'imported': 0, 'duplicates': 0}
         else:
             # Load CSV file normally
             df = pd.read_csv(csv_path)

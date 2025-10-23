@@ -11,7 +11,13 @@ Import Mastercard transactions from CSV or Excel files with automatic categoriza
 
 **Supported File Formats:**
 - **CSV files** (.csv) - Standard text format
-- **Excel files** (.xlsx) - **NEW: Automatic conversion and import**
+- **Excel files** (.xlsx) - **Automatic conversion and import**
+
+**Multi-Cardholder Support:**
+- **Automatically imports all cardholders** from the same statement
+- Tracks which cardholder made each transaction (Kortmedlem column)
+- Imports account-level fees (annual fee, extra card fee, etc.)
+- Perfect for accounts with main card + supplementary cards
 
 **Supported Data Formats:**
 
@@ -32,7 +38,10 @@ Datum,Beskrivning,Kortmedlem,Konto #,Belopp
 
 **Key Features:**
 - **Excel files** (.xlsx) automatically converted to CSV format
-- **Excel parsing** handles Mastercard export structure with multiple sections
+- **Excel parsing** handles Mastercard export structure with multiple sections:
+  - "Totalt övriga händelser" (account fees, payments)
+  - "Köp/uttag" sections for each cardholder
+- **Multi-cardholder tracking** - imports all supplementary cards automatically
 - **Format 1** (Actual): YYYY-MM-DD dates, decimal point, positive amounts = purchases
 - **Format 2** (Generic): MM/DD/YYYY dates, comma decimal, positive amounts = purchases
 - Both formats: Payments (negative amounts) automatically filtered
