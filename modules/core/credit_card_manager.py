@@ -168,12 +168,12 @@ class CreditCardManager:
                        amount: float, category: str = "Övrigt",
                        subcategory: str = "", vendor: str = "",
                        card_member: str = "", account_number: str = "",
-                       skip_duplicate_check: bool = False) -> Optional[Dict]:
+                       posting_date: str = "", skip_duplicate_check: bool = False) -> Optional[Dict]:
         """Lägg till en transaktion till ett kreditkort.
         
         Args:
             card_id: ID för kortet
-            date: Transaktionsdatum (YYYY-MM-DD)
+            date: Transaktionsdatum (YYYY-MM-DD) - när köpet gjordes
             description: Beskrivning
             amount: Belopp (negativt för utgifter, positivt för återbetalningar)
             category: Kategori
@@ -181,6 +181,7 @@ class CreditCardManager:
             vendor: Leverantör/handlare
             card_member: Kortmedlem/innehavare (för tvillingkort)
             account_number: Kontonummer (sista 4-5 siffror)
+            posting_date: Bokföringsdatum (YYYY-MM-DD) - när transaktionen påverkade saldo
             skip_duplicate_check: Om True, hoppa över duplikatkontroll (används för manuella tillägg)
             
         Returns:
@@ -205,7 +206,8 @@ class CreditCardManager:
                 
                 transaction = {
                     'id': tx_id,
-                    'date': date,
+                    'date': date,  # Transaction date (när köpet gjordes)
+                    'posting_date': posting_date or date,  # Posting date (när det bokfördes), defaults to transaction date
                     'description': description,
                     'vendor': vendor or description,
                     'amount': amount,
@@ -388,6 +390,7 @@ class CreditCardManager:
         # Map Swedish/English column names
         column_mapping = {
             'datum': 'date',
+            'bokfört': 'posting_date',  # Swedish posting date column
             'beskrivning': 'description',
             'specifikation': 'description',  # Mastercard uses "Specifikation"
             'belopp': 'amount',
@@ -418,6 +421,15 @@ class CreditCardManager:
             df['date'] = pd.to_datetime(df['date'], errors='coerce')
             # Convert to string format YYYY-MM-DD
             df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+        
+        # Parse posting_date if present
+        if 'posting_date' in df.columns:
+            if df['posting_date'].dtype == 'object':
+                df['posting_date'] = pd.to_datetime(df['posting_date'], errors='coerce')
+                df['posting_date'] = df['posting_date'].dt.strftime('%Y-%m-%d')
+        else:
+            # If no posting_date column, use transaction date as posting date
+            df['posting_date'] = df['date']
         
         # Detect if this is an Amex CSV format (has positive purchases and negative payments)
         # vs standard format (has negative purchases)
@@ -506,7 +518,8 @@ class CreditCardManager:
                 subcategory=subcategory,
                 vendor=str(row.get('vendor', row['description'])),
                 card_member=str(card_member) if pd.notna(card_member) else '',
-                account_number=str(account_number) if pd.notna(account_number) else ''
+                account_number=str(account_number) if pd.notna(account_number) else '',
+                posting_date=str(row.get('posting_date', row['date']))  # Use posting date for balance calculation
             )
             
             if result:
@@ -516,7 +529,8 @@ class CreditCardManager:
     
     def get_transactions(self, card_id: str, category: Optional[str] = None,
                         start_date: Optional[str] = None,
-                        end_date: Optional[str] = None) -> List[Dict]:
+                        end_date: Optional[str] = None,
+                        use_posting_date: bool = False) -> List[Dict]:
         """Hämta transaktioner för ett kort med filtrering.
         
         Args:
@@ -524,6 +538,7 @@ class CreditCardManager:
             category: Filtrera på kategori (valfritt)
             start_date: Startdatum (YYYY-MM-DD, valfritt)
             end_date: Slutdatum (YYYY-MM-DD, valfritt)
+            use_posting_date: Om True, använd posting_date för datumfiltrering istället för transaction date
             
         Returns:
             Lista med transaktioner
@@ -540,7 +555,12 @@ class CreditCardManager:
             if category and tx.get('category') != category:
                 continue
             
-            tx_date = tx.get('date', '')
+            # Use posting_date for filtering if requested, otherwise use transaction date
+            if use_posting_date:
+                tx_date = tx.get('posting_date', tx.get('date', ''))
+            else:
+                tx_date = tx.get('date', '')
+            
             if start_date and tx_date < start_date:
                 continue
             if end_date and tx_date > end_date:
@@ -548,16 +568,20 @@ class CreditCardManager:
             
             filtered.append(tx)
         
-        # Sort by date (newest first)
-        filtered.sort(key=lambda x: x.get('date', ''), reverse=True)
+        # Sort by posting_date for saldo accuracy, or by date if posting_date not available
+        filtered.sort(key=lambda x: x.get('posting_date', x.get('date', '')), reverse=True)
         
         return filtered
     
-    def get_card_summary(self, card_id: str) -> Dict:
+    def get_card_summary(self, card_id: str, use_posting_date: bool = True) -> Dict:
         """Få sammanfattning för ett kort.
+        
+        IMPORTANT: Card balance (current_balance) is ALWAYS calculated based on posting_date,
+        since this is when transactions actually affect the card statement and balance.
         
         Args:
             card_id: ID för kortet
+            use_posting_date: Om True, använd posting_date för trendanalys (default: True för korrekt saldo)
             
         Returns:
             Dict med sammanfattning (balance, limit, transactions, categories, etc)
@@ -611,6 +635,44 @@ class CreditCardManager:
             'top_vendors': top_vendors,
             'cardholder_breakdown': cardholder_totals
         }
+    
+    def calculate_balance_at_date(self, card_id: str, as_of_date: str, 
+                                  use_posting_date: bool = True) -> float:
+        """Beräkna kortets saldo vid ett specifikt datum.
+        
+        VIKTIGT: För korrekt saldo, använd alltid posting_date (bokföringsdatum),
+        eftersom det är när transaktioner faktiskt påverkar kontoutdraget.
+        
+        Args:
+            card_id: ID för kortet
+            as_of_date: Datum att beräkna saldo för (YYYY-MM-DD)
+            use_posting_date: Om True, använd posting_date (rekommenderat för korrekt saldo)
+            
+        Returns:
+            Saldo vid det angivna datumet
+        """
+        card = self.get_card_by_id(card_id)
+        if not card:
+            return 0.0
+        
+        transactions = card.get('transactions', [])
+        # Start from initial balance if set on the card, otherwise 0.0
+        balance = card.get('initial_balance', 0.0)
+        
+        for tx in transactions:
+            # Determine which date to use
+            if use_posting_date:
+                tx_date = tx.get('posting_date', tx.get('date', ''))
+            else:
+                tx_date = tx.get('date', '')
+            
+            # Only include transactions on or before the as_of_date
+            if tx_date and tx_date <= as_of_date:
+                # Negative amounts increase balance (purchases)
+                # Positive amounts decrease balance (payments)
+                balance -= tx['amount']
+        
+        return balance
     
     def match_payment_to_card(self, card_id: str, payment_amount: float,
                              payment_date: str, transaction_id: Optional[str] = None) -> bool:

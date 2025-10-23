@@ -360,3 +360,191 @@ class TestMastercardWorkflow:
         else:
             # Skip test if file doesn't exist
             pytest.skip("Excel file not available for testing")
+    
+    def test_transaction_and_posting_dates(self, cc_manager):
+        """Test that both transaction date (Datum) and posting date (Bokfört) are imported and stored."""
+        # Create a test card
+        card = cc_manager.add_card(
+            name="Mastercard Two Dates",
+            card_type="Mastercard",
+            last_four="9506",
+            credit_limit=50000.0,
+            display_color="#EB001B",
+            icon="mastercard"
+        )
+        
+        # Create test CSV with both date columns
+        import pandas as pd
+        test_data = pd.DataFrame({
+            'Datum': ['2025-10-21', '2025-10-19', '2025-10-17'],
+            'Bokfört': ['2025-10-22', '2025-10-20', '2025-10-20'],
+            'Specifikation': ['PIZZERIA', 'ICA SUPERMARKET', 'MAXI'],
+            'Ort': ['HJO', 'SKOVDE', 'SKOVDE'],
+            'Valuta': ['SEK', 'SEK', 'SEK'],
+            'Utl. belopp': [0, 0, 0],
+            'Belopp': [130.0, 544.75, 69.0]
+        })
+        
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'test_two_dates.csv')
+        test_data.to_csv(csv_path, index=False)
+        
+        try:
+            # Import the CSV
+            result = cc_manager.import_transactions_from_csv(
+                card_id=card['id'],
+                csv_path=csv_path
+            )
+            
+            # Verify import
+            assert result['imported'] == 3
+            
+            # Get transactions
+            transactions = cc_manager.get_transactions(card['id'])
+            assert len(transactions) == 3
+            
+            # Verify both dates are present and different
+            for tx in transactions:
+                assert 'date' in tx, "Transaction should have transaction date (Datum)"
+                assert 'posting_date' in tx, "Transaction should have posting date (Bokfört)"
+                
+                # Verify dates are valid
+                assert tx['date'] is not None
+                assert tx['posting_date'] is not None
+            
+            # Find the specific transactions and verify dates
+            pizzeria_tx = [tx for tx in transactions if 'PIZZERIA' in tx['description']][0]
+            assert pizzeria_tx['date'] == '2025-10-21', "Transaction date should match Datum column"
+            assert pizzeria_tx['posting_date'] == '2025-10-22', "Posting date should match Bokfört column"
+            
+            # Verify posting_date is used for sorting (most recent posting first)
+            assert transactions[0]['posting_date'] >= transactions[1]['posting_date']
+            
+        finally:
+            # Clean up test file
+            if os.path.exists(csv_path):
+                os.remove(csv_path)
+    
+    def test_balance_calculated_by_posting_date(self, cc_manager):
+        """Test that card balance is calculated based on posting_date, not transaction date."""
+        # Create a test card
+        card = cc_manager.add_card(
+            name="Mastercard Posting Date Test",
+            card_type="Mastercard",
+            last_four="1234",
+            credit_limit=50000.0,
+            display_color="#EB001B",
+            icon="mastercard"
+        )
+        
+        # Add transactions with different transaction and posting dates
+        # Transaction 1: Made on Oct 15, posted on Oct 17
+        cc_manager.add_transaction(
+            card_id=card['id'],
+            date='2025-10-15',
+            description='Purchase 1',
+            amount=-1000.0,
+            category='Shopping',
+            posting_date='2025-10-17'
+        )
+        
+        # Transaction 2: Made on Oct 18, posted on Oct 19
+        cc_manager.add_transaction(
+            card_id=card['id'],
+            date='2025-10-18',
+            description='Purchase 2',
+            amount=-500.0,
+            category='Shopping',
+            posting_date='2025-10-19'
+        )
+        
+        # Transaction 3: Made on Oct 20, posted on Oct 21
+        cc_manager.add_transaction(
+            card_id=card['id'],
+            date='2025-10-20',
+            description='Purchase 3',
+            amount=-300.0,
+            category='Shopping',
+            posting_date='2025-10-21'
+        )
+        
+        # Calculate balance at Oct 18 using posting_date
+        # Should include only Transaction 1 (posted Oct 17)
+        balance_oct18_posting = cc_manager.calculate_balance_at_date(
+            card_id=card['id'],
+            as_of_date='2025-10-18',
+            use_posting_date=True
+        )
+        assert balance_oct18_posting == 1000.0, f"Balance on Oct 18 (by posting date) should be 1000, got {balance_oct18_posting}"
+        
+        # Calculate balance at Oct 18 using transaction_date
+        # Should include Transactions 1 and 2 (made Oct 15 and Oct 18)
+        balance_oct18_transaction = cc_manager.calculate_balance_at_date(
+            card_id=card['id'],
+            as_of_date='2025-10-18',
+            use_posting_date=False
+        )
+        assert balance_oct18_transaction == 1500.0, f"Balance on Oct 18 (by transaction date) should be 1500, got {balance_oct18_transaction}"
+        
+        # Verify that current_balance uses posting_date logic
+        # (Total of all transactions = 1800)
+        card_updated = cc_manager.get_card_by_id(card['id'])
+        assert card_updated['current_balance'] == 1800.0
+        
+        # Calculate balance at Oct 20 using posting_date
+        # Should include Transactions 1 and 2 (posted Oct 17 and Oct 19)
+        balance_oct20_posting = cc_manager.calculate_balance_at_date(
+            card_id=card['id'],
+            as_of_date='2025-10-20',
+            use_posting_date=True
+        )
+        assert balance_oct20_posting == 1500.0, f"Balance on Oct 20 (by posting date) should be 1500, got {balance_oct20_posting}"
+    
+    def test_filtering_by_posting_date(self, cc_manager):
+        """Test filtering transactions by posting_date vs transaction date."""
+        # Create a test card
+        card = cc_manager.add_card(
+            name="Mastercard Filter Test",
+            card_type="Mastercard",
+            last_four="5678",
+            credit_limit=50000.0,
+            display_color="#EB001B",
+            icon="mastercard"
+        )
+        
+        # Add transactions with different dates
+        cc_manager.add_transaction(
+            card_id=card['id'],
+            date='2025-10-15',
+            description='Early Purchase',
+            amount=-100.0,
+            category='Shopping',
+            posting_date='2025-10-20'  # Posted later
+        )
+        
+        cc_manager.add_transaction(
+            card_id=card['id'],
+            date='2025-10-18',
+            description='Middle Purchase',
+            amount=-200.0,
+            category='Shopping',
+            posting_date='2025-10-19'
+        )
+        
+        # Filter by transaction date (Oct 15-17)
+        txs_by_transaction = cc_manager.get_transactions(
+            card_id=card['id'],
+            start_date='2025-10-15',
+            end_date='2025-10-17',
+            use_posting_date=False
+        )
+        assert len(txs_by_transaction) == 1, "Should find 1 transaction by transaction date"
+        assert txs_by_transaction[0]['description'] == 'Early Purchase'
+        
+        # Filter by posting date (Oct 19-20)
+        txs_by_posting = cc_manager.get_transactions(
+            card_id=card['id'],
+            start_date='2025-10-19',
+            end_date='2025-10-20',
+            use_posting_date=True
+        )
+        assert len(txs_by_posting) == 2, "Should find 2 transactions by posting date"
