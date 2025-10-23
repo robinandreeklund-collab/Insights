@@ -1,6 +1,7 @@
 """Loan Image Parser - Extract loan details from images using OCR."""
 
 import re
+import sys
 from datetime import datetime
 from typing import Dict, Optional, List, Any
 try:
@@ -13,6 +14,38 @@ except ImportError:
     OCR_AVAILABLE = False
 
 
+def check_tesseract_installed():
+    """Check if Tesseract OCR executable is installed and accessible."""
+    if not OCR_AVAILABLE:
+        return False, "Python OCR packages not installed"
+    
+    try:
+        # Try to get Tesseract version to verify it's installed
+        pytesseract.get_tesseract_version()
+        return True, "Tesseract is installed"
+    except pytesseract.TesseractNotFoundError:
+        if sys.platform == 'win32':
+            return False, (
+                "Tesseract OCR är inte installerat på din dator.\n\n"
+                "För Windows:\n"
+                "1. Ladda ner Tesseract från: https://github.com/UB-Mannheim/tesseract/wiki\n"
+                "2. Installera med standardinställningar\n"
+                "3. Starta om dashboarden\n\n"
+                "Alternativt kan du ange sökvägen manuellt i Python:\n"
+                "pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'"
+            )
+        else:
+            return False, (
+                "Tesseract OCR är inte installerat.\n\n"
+                "För Linux/Mac:\n"
+                "sudo apt-get install tesseract-ocr tesseract-ocr-swe  # Ubuntu/Debian\n"
+                "brew install tesseract tesseract-lang  # Mac\n\n"
+                "Starta sedan om dashboarden."
+            )
+    except Exception as e:
+        return False, f"Kunde inte verifiera Tesseract installation: {str(e)}"
+
+
 class LoanImageParser:
     """Extract loan information from images using OCR."""
     
@@ -23,6 +56,11 @@ class LoanImageParser:
                 "OCR dependencies not available. Install with: "
                 "pip install pytesseract Pillow opencv-python"
             )
+        
+        # Check if Tesseract executable is available
+        is_installed, message = check_tesseract_installed()
+        if not is_installed:
+            raise RuntimeError(message)
     
     def parse_loan_image(self, image_path: str) -> Dict[str, Any]:
         """Parse a loan information image and extract key details.

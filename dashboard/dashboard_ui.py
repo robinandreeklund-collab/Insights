@@ -3369,11 +3369,28 @@ def process_loan_image(contents, filename):
     
     try:
         # Import here to avoid issues if OCR not available
-        from modules.core.loan_image_parser import LoanImageParser, OCR_AVAILABLE
+        from modules.core.loan_image_parser import LoanImageParser, OCR_AVAILABLE, check_tesseract_installed
         
         if not OCR_AVAILABLE:
             return (
                 dbc.Alert("OCR dependencies inte installerade. Funktionen är inte tillgänglig.", color="warning"),
+                {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
+                None, None, None, 360, None, None, None, None
+            )
+        
+        # Check if Tesseract is actually installed
+        is_installed, message = check_tesseract_installed()
+        if not is_installed:
+            # Format the error message with line breaks for the alert
+            error_lines = message.split('\n')
+            error_content = [html.Div(line, style={'marginBottom': '5px'}) for line in error_lines if line.strip()]
+            
+            return (
+                dbc.Alert([
+                    html.H5("Tesseract OCR krävs", className="alert-heading"),
+                    html.Hr(),
+                    html.Div(error_content)
+                ], color="warning", style={'whiteSpace': 'pre-wrap'}),
                 {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
                 None, None, None, 360, None, None, None, None
             )
@@ -3415,11 +3432,39 @@ def process_loan_image(contents, filename):
             borrowers_str
         )
     
+    except ImportError as e:
+        return (
+            dbc.Alert([
+                html.H5("Installation krävs", className="alert-heading"),
+                html.P("OCR-modulerna är inte installerade."),
+                html.P("Installera med: pip install pytesseract Pillow opencv-python-headless")
+            ], color="warning"),
+            {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
+            None, None, None, 360, None, None, None, None
+        )
+    except RuntimeError as e:
+        # This handles the Tesseract not found error with helpful instructions
+        error_lines = str(e).split('\n')
+        error_content = [html.Div(line, style={'marginBottom': '5px'}) for line in error_lines if line.strip()]
+        
+        return (
+            dbc.Alert([
+                html.H5("Tesseract OCR krävs", className="alert-heading"),
+                html.Hr(),
+                html.Div(error_content)
+            ], color="warning", style={'whiteSpace': 'pre-wrap'}),
+            {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
+            None, None, None, 360, None, None, None, None
+        )
     except Exception as e:
         import traceback
         traceback.print_exc()
         return (
-            dbc.Alert(f"Fel vid bearbetning av bild: {str(e)}", color="danger"),
+            dbc.Alert([
+                html.H5("Fel vid bearbetning", className="alert-heading"),
+                html.P(f"Ett oväntat fel uppstod: {str(e)}"),
+                html.P("Se konsolen för mer detaljerad information.", className="text-muted")
+            ], color="danger"),
             {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
             None, None, None, 360, None, None, None, None
         )

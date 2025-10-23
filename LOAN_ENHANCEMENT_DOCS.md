@@ -228,9 +228,35 @@ The OCR functionality requires:
 - `pytesseract>=0.3.10` - Python wrapper for Tesseract OCR
 - `Pillow>=10.2.0` - Image processing
 - `opencv-python-headless>=4.8.1.78` - Computer vision for image preprocessing
-- System package: `tesseract-ocr` and `tesseract-ocr-swe` (for Swedish)
+- **System package: Tesseract OCR executable**
 
-If these dependencies are not installed, the OCR feature will be disabled but the rest of the loan functionality remains available.
+#### Installing Tesseract OCR
+
+**Windows:**
+1. Download the installer from: https://github.com/UB-Mannheim/tesseract/wiki
+2. Run the installer and use default settings (installs to `C:\Program Files\Tesseract-OCR\`)
+3. The installer should automatically add Tesseract to your PATH
+4. If not added automatically, add `C:\Program Files\Tesseract-OCR\` to your system PATH
+5. Restart your terminal/IDE
+6. Verify installation: `tesseract --version`
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install tesseract-ocr tesseract-ocr-swe
+```
+
+**macOS:**
+```bash
+brew install tesseract tesseract-lang
+```
+
+**Python packages:**
+```bash
+pip install pytesseract Pillow>=10.2.0 opencv-python-headless>=4.8.1.78
+```
+
+If these dependencies are not installed, the OCR feature will be disabled but the rest of the loan functionality remains available. The system will display helpful installation instructions when you try to upload an image.
 
 ### Image Processing Pipeline
 
@@ -279,7 +305,49 @@ pytest tests/test_loan_image_parser.py -v
 
 ## Troubleshooting
 
-### OCR Not Working
+### TesseractNotFoundError (Windows)
+
+**Error**: `FileNotFoundError: [WinError 2] Det går inte att hitta filen` or `TesseractNotFoundError: tesseract is not installed or it's not in your PATH`
+
+**This is the most common issue on Windows. The error means the Tesseract OCR executable is not installed on your system.**
+
+**Solution for Windows:**
+
+1. **Download Tesseract installer:**
+   - Go to: https://github.com/UB-Mannheim/tesseract/wiki
+   - Download the latest Windows installer (e.g., `tesseract-ocr-w64-setup-5.x.x.exe`)
+
+2. **Install Tesseract:**
+   - Run the installer
+   - Use default installation path: `C:\Program Files\Tesseract-OCR\`
+   - Make sure "Add to PATH" option is checked during installation
+
+3. **Verify installation:**
+   - Open a new Command Prompt or PowerShell window
+   - Type: `tesseract --version`
+   - You should see version information
+
+4. **Restart the dashboard:**
+   - Close and restart your Python/dashboard application
+   - Try uploading an image again
+
+**Alternative (if PATH not set automatically):**
+
+If Tesseract is installed but still not found, manually add to PATH:
+1. Open System Properties → Environment Variables
+2. Under "System variables", find "Path"
+3. Add: `C:\Program Files\Tesseract-OCR\`
+4. Click OK and restart your terminal/IDE
+
+**Or set path in code** (temporary workaround):
+
+Add this line before importing the loan image parser:
+```python
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+```
+
+### OCR Not Working (Linux/Mac)
 
 **Error**: "OCR dependencies inte installerade"
 
@@ -288,8 +356,12 @@ pytest tests/test_loan_image_parser.py -v
 # Install Python packages
 pip install pytesseract Pillow>=10.2.0 opencv-python-headless>=4.8.1.78
 
-# Install system package (Ubuntu/Debian)
+# Install Tesseract executable
+# Ubuntu/Debian:
 sudo apt-get install tesseract-ocr tesseract-ocr-swe
+
+# macOS:
+brew install tesseract tesseract-lang
 ```
 
 ### Poor OCR Accuracy
@@ -299,6 +371,8 @@ sudo apt-get install tesseract-ocr tesseract-ocr-swe
 2. **Poor contrast**: Adjust image brightness/contrast before upload
 3. **Non-standard format**: Review and edit extracted fields before saving
 4. **Language issues**: Ensure Swedish language pack is installed
+   - Windows: Select Swedish during Tesseract installation
+   - Linux: Install `tesseract-ocr-swe` package
 
 ### Transaction Not Matching
 
