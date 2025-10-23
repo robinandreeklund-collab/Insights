@@ -141,7 +141,8 @@ class CreditCardManager:
     
     def add_transaction(self, card_id: str, date: str, description: str,
                        amount: float, category: str = "Övrigt",
-                       subcategory: str = "", vendor: str = "") -> Optional[Dict]:
+                       subcategory: str = "", vendor: str = "",
+                       card_member: str = "", account_number: str = "") -> Optional[Dict]:
         """Lägg till en transaktion till ett kreditkort.
         
         Args:
@@ -152,6 +153,8 @@ class CreditCardManager:
             category: Kategori
             subcategory: Underkategori
             vendor: Leverantör/handlare
+            card_member: Kortmedlem/innehavare (för tvillingkort)
+            account_number: Kontonummer (sista 4-5 siffror)
             
         Returns:
             Den skapade transaktionen, eller None om kortet inte finns
@@ -178,6 +181,12 @@ class CreditCardManager:
                     'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 
+                # Add cardholder info if available
+                if card_member:
+                    transaction['card_member'] = card_member
+                if account_number:
+                    transaction['account_number'] = account_number
+                
                 card['transactions'].append(transaction)
                 
                 # Update card balance
@@ -191,13 +200,58 @@ class CreditCardManager:
         
         return None
     
+    def detect_card_from_csv(self, csv_path: str) -> Optional[str]:
+        """Auto-detect which card to import to based on account number in CSV.
+        
+        Args:
+            csv_path: Path to CSV file
+            
+        Returns:
+            Card ID if detected, None otherwise
+        """
+        try:
+            df = pd.read_csv(csv_path, nrows=10)  # Read first 10 rows
+            df.columns = [col.strip().lower() for col in df.columns]
+            
+            # Map Swedish column name
+            if 'konto #' in df.columns:
+                df.rename(columns={'konto #': 'account_number'}, inplace=True)
+            
+            # Look for account_number column
+            if 'account_number' not in df.columns:
+                return None
+            
+            # Extract account numbers from CSV (last 4-5 digits)
+            account_numbers = df['account_number'].dropna().astype(str).unique()
+            
+            # Get all active cards
+            cards = self.get_cards(status='active')
+            
+            # Try to match by last digits
+            for account_num in account_numbers:
+                # Extract last digits (support both 4 and 5 digit formats)
+                account_num_clean = account_num.strip().replace('-', '')
+                if len(account_num_clean) >= 4:
+                    last_digits = account_num_clean[-5:]  # Get last 5 digits
+                    
+                    for card in cards:
+                        card_last = card.get('last_four', '').strip()
+                        # Match either last 4 or last 5 digits
+                        if card_last and (last_digits.endswith(card_last) or card_last in last_digits):
+                            return card['id']
+            
+            return None
+        except Exception:
+            return None
+    
     def import_transactions_from_csv(self, card_id: str, csv_path: str) -> int:
         """Importera transaktioner från CSV-fil.
         
         CSV-filen förväntas ha kolumner: Date, Description, Amount
-        Valfria kolumner: Vendor, Category, Subcategory
+        Valfria kolumner: Vendor, Category, Subcategory, Card_member, Account_number
         
         Stöder både Amex-format (svensk) och generiskt format.
+        Hanterar även kortmedlem (cardholder) för att spåra utgifter per person.
         
         Args:
             card_id: ID för kortet
@@ -306,6 +360,10 @@ class CreditCardManager:
                 # Standard format already has purchases as negative
                 amount = float(row['amount'])
             
+            # Extract card member/cardholder information
+            card_member = row.get('card_member', '')
+            account_number = row.get('account_number', '')
+            
             self.add_transaction(
                 card_id=card_id,
                 date=str(row['date']),
@@ -313,7 +371,9 @@ class CreditCardManager:
                 amount=amount,
                 category=category,
                 subcategory=subcategory,
-                vendor=str(row.get('vendor', row['description']))
+                vendor=str(row.get('vendor', row['description'])),
+                card_member=str(card_member) if pd.notna(card_member) else '',
+                account_number=str(account_number) if pd.notna(account_number) else ''
             )
             imported_count += 1
         
@@ -393,6 +453,14 @@ class CreditCardManager:
         
         top_vendors = sorted(vendor_totals.items(), key=lambda x: x[1], reverse=True)[:5]
         
+        # Cardholder breakdown (for dual/supplementary cards)
+        cardholder_totals = {}
+        for tx in transactions:
+            if tx['amount'] < 0:  # Only count purchases
+                member = tx.get('card_member', '')
+                if member:
+                    cardholder_totals[member] = cardholder_totals.get(member, 0) + abs(tx['amount'])
+        
         return {
             'card_id': card_id,
             'name': card['name'],
@@ -405,7 +473,8 @@ class CreditCardManager:
             'total_spent': total_spent,
             'total_payments': total_payments,
             'category_breakdown': category_totals,
-            'top_vendors': top_vendors
+            'top_vendors': top_vendors,
+            'cardholder_breakdown': cardholder_totals
         }
     
     def match_payment_to_card(self, card_id: str, payment_amount: float,

@@ -743,8 +743,8 @@ def create_credit_cards_tab():
                         ], className="mb-3"),
                         dbc.Row([
                             dbc.Col([
-                                html.Label("Sista 4 siffror:", className="fw-bold"),
-                                dbc.Input(id='card-last-four-input', type='text', placeholder='1234', maxLength=4),
+                                html.Label(id='card-last-digits-label', children="Sista 4 siffror:", className="fw-bold"),
+                                dbc.Input(id='card-last-four-input', type='text', placeholder='1234', maxLength=5),
                             ], width=4),
                             dbc.Col([
                                 html.Label("Kreditgräns (SEK):", className="fw-bold"),
@@ -824,9 +824,10 @@ def create_credit_cards_tab():
                 dbc.Card([
                     dbc.CardBody([
                         html.H5("Importera transaktioner från CSV", className="card-title"),
+                        html.P("Systemet försöker automatiskt detektera vilket kort transaktionerna tillhör. Du kan också välja kort manuellt nedan.", className="text-muted small"),
                         dcc.Dropdown(
                             id='card-import-selector',
-                            placeholder='Välj kort för import...',
+                            placeholder='Valfritt: Välj kort manuellt...',
                             className="mb-3"
                         ),
                         dcc.Upload(
@@ -4246,6 +4247,18 @@ def calculate_transfer_recommendations_callback(n_clicks, month, shared_categori
 
 # Credit Card Callbacks
 
+# Callback: Update last digits label based on card type
+@app.callback(
+    Output('card-last-digits-label', 'children'),
+    Input('card-type-dropdown', 'value')
+)
+def update_last_digits_label(card_type):
+    """Update label to show correct number of digits for card type."""
+    if card_type == 'American Express':
+        return "Sista 5 siffror:"
+    return "Sista 4 siffror:"
+
+
 # Callback: Add Credit Card
 @app.callback(
     Output('card-add-status', 'children'),
@@ -4392,9 +4405,9 @@ def update_cards_overview(n_clicks):
     prevent_initial_call=True
 )
 def import_card_csv(contents, filename, card_id):
-    """Import transactions from uploaded CSV file."""
-    if contents is None or not card_id:
-        return dbc.Alert("Välj ett kort först", color="warning")
+    """Import transactions from uploaded CSV file with auto-detection."""
+    if contents is None:
+        return ""
     
     try:
         # Decode the uploaded file
@@ -4408,15 +4421,38 @@ def import_card_csv(contents, filename, card_id):
             tmp_path = tmp_file.name
         
         try:
-            # Import transactions
             manager = CreditCardManager()
-            count = manager.import_transactions_from_csv(card_id, tmp_path)
             
-            return dbc.Alert(
-                f"✓ {count} transaktioner importerade från {filename}!",
-                color="success",
-                dismissable=True
-            )
+            # Auto-detect card if not selected
+            detected_card_id = card_id
+            if not card_id:
+                detected_card_id = manager.detect_card_from_csv(tmp_path)
+                if not detected_card_id:
+                    return dbc.Alert(
+                        "Kunde inte automatiskt detektera vilket kort CSV-filen tillhör. Välj kort manuellt.",
+                        color="warning"
+                    )
+            
+            # Import transactions
+            count = manager.import_transactions_from_csv(detected_card_id, tmp_path)
+            
+            # Get card info for message
+            card = manager.get_card_by_id(detected_card_id)
+            card_name = card.get('name', 'okänt kort') if card else 'okänt kort'
+            
+            if not card_id and detected_card_id:
+                # Auto-detected
+                return dbc.Alert(
+                    f"✓ {count} transaktioner importerade från {filename} till {card_name} (automatiskt detekterat)!",
+                    color="success",
+                    dismissable=True
+                )
+            else:
+                return dbc.Alert(
+                    f"✓ {count} transaktioner importerade från {filename} till {card_name}!",
+                    color="success",
+                    dismissable=True
+                )
         finally:
             # Clean up temporary file
             import os
@@ -4453,6 +4489,24 @@ def display_card_details(card_id):
             ])
         ], color="info", className="mb-3")
         
+        # Cardholder breakdown (if multiple cardholders)
+        cardholder_elem = ""
+        if summary.get('cardholder_breakdown'):
+            cardholder_data = [{'Kortinnehavare': name, 'Belopp': amount} 
+                             for name, amount in summary['cardholder_breakdown'].items()]
+            if cardholder_data:
+                cardholder_df = pd.DataFrame(cardholder_data)
+                cardholder_elem = html.Div([
+                    html.H6("Utgifter per kortinnehavare"),
+                    dash_table.DataTable(
+                        data=cardholder_df.to_dict('records'),
+                        columns=[{'name': col, 'id': col} for col in cardholder_df.columns],
+                        style_table={'overflowX': 'auto'},
+                        style_cell={'textAlign': 'left', 'padding': '10px'},
+                        style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'}
+                    )
+                ], className="mb-3")
+        
         # Category breakdown
         if summary['category_breakdown']:
             category_data = [{'Kategori': cat, 'Belopp': amount} 
@@ -4477,6 +4531,11 @@ def display_card_details(card_id):
             tx_df = pd.DataFrame(transactions)
             # Select relevant columns
             display_cols = ['date', 'vendor', 'description', 'amount', 'category', 'subcategory']
+            
+            # Add card_member if available
+            if 'card_member' in tx_df.columns and tx_df['card_member'].notna().any():
+                display_cols.insert(2, 'card_member')  # Insert after vendor
+            
             tx_df = tx_df[[col for col in display_cols if col in tx_df.columns]]
             
             # Add ID column for editing (hidden)
@@ -4501,7 +4560,7 @@ def display_card_details(card_id):
         else:
             transactions_elem = html.P("Inga transaktioner funna. Importera från CSV.", className="text-muted")
         
-        return html.Div([summary_elem, category_elem, transactions_elem])
+        return html.Div([summary_elem, cardholder_elem, category_elem, transactions_elem])
         
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
