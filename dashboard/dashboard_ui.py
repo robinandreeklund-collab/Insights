@@ -884,12 +884,170 @@ def create_loans_tab():
     return html.Div([
         html.H3("Lånehantering", className="mt-3 mb-4"),
         
+        # Image upload section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Importera lån från bild", className="card-title"),
+                        html.P("Ladda upp en skärmdump eller bild av låneuppgifter. Bilden används som referens när du fyller i formuläret.", 
+                               className="text-muted"),
+                        dcc.Upload(
+                            id='loan-image-upload',
+                            children=html.Div([
+                                html.I(className="fas fa-cloud-upload-alt me-2"),
+                                'Dra och släpp eller klicka för att välja en bild'
+                            ]),
+                            style={
+                                'width': '100%',
+                                'height': '60px',
+                                'lineHeight': '60px',
+                                'borderWidth': '1px',
+                                'borderStyle': 'dashed',
+                                'borderRadius': '5px',
+                                'textAlign': 'center',
+                                'margin': '10px 0',
+                                'cursor': 'pointer'
+                            },
+                            multiple=False
+                        ),
+                        html.Div(id='loan-image-upload-status', className="mt-2"),
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Editable loan form (hidden until image is uploaded)
+        html.Div([
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H5("Granska och redigera låneuppgifter", className="card-title"),
+                            html.P("Verifiera och redigera automatiskt extraherade uppgifter innan du sparar.", 
+                                   className="text-muted"),
+                            
+                            # Basic information
+                            html.H6("Grundläggande information", className="mt-3 mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Namn:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-name-input', type='text', placeholder='T.ex. Bolån'),
+                                ], width=4),
+                                dbc.Col([
+                                    html.Label("Lånenummer:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-number-input', type='text', placeholder='12345-678'),
+                                ], width=4),
+                                dbc.Col([
+                                    html.Label("Långivare/Bank:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-lender-input', type='text', placeholder='T.ex. Swedbank'),
+                                ], width=4),
+                            ], className="mb-3"),
+                            
+                            # Amounts
+                            html.H6("Belopp", className="mt-3 mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Ursprungligt belopp:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-original-amount-input', type='number', placeholder='0.00'),
+                                ], width=4),
+                                dbc.Col([
+                                    html.Label("Aktuellt belopp:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-current-amount-input', type='number', placeholder='0.00'),
+                                ], width=4),
+                                dbc.Col([
+                                    html.Label("Amorterat:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-amortized-input', type='number', placeholder='0.00'),
+                                ], width=4),
+                            ], className="mb-3"),
+                            
+                            # Interest rates
+                            html.H6("Räntor", className="mt-3 mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Basränta (%):", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-base-rate-input', type='number', placeholder='3.75', step='0.01'),
+                                ], width=3),
+                                dbc.Col([
+                                    html.Label("Rabatt (%):", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-discount-input', type='number', placeholder='0.25', step='0.01'),
+                                ], width=3),
+                                dbc.Col([
+                                    html.Label("Effektiv ränta (%):", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-effective-rate-input', type='number', placeholder='3.5', step='0.01'),
+                                ], width=3),
+                                dbc.Col([
+                                    html.Label("Valuta:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-currency-input', type='text', placeholder='SEK', value='SEK'),
+                                ], width=3),
+                            ], className="mb-3"),
+                            
+                            # Dates and periods
+                            html.H6("Datum och perioder", className="mt-3 mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Utbetalningsdatum:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-disbursement-date-input', type='date'),
+                                ], width=3),
+                                dbc.Col([
+                                    html.Label("Bindningstid slutar:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-binding-end-input', type='date'),
+                                ], width=3),
+                                dbc.Col([
+                                    html.Label("Nästa ränteändring:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-next-change-input', type='date'),
+                                ], width=3),
+                                dbc.Col([
+                                    html.Label("Löptid (månader):", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-term-input', type='number', placeholder='360', value='360'),
+                                ], width=3),
+                            ], className="mb-3"),
+                            
+                            # Accounts
+                            html.H6("Konton", className="mt-3 mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Betalkonto:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-payment-account-input', type='text', placeholder='3300-123456789'),
+                                ], width=6),
+                                dbc.Col([
+                                    html.Label("Återbetalkonto:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-repayment-account-input', type='text', placeholder='3300-987654321'),
+                                ], width=6),
+                            ], className="mb-3"),
+                            
+                            # Additional information
+                            html.H6("Övrig information", className="mt-3 mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Säkerhet:", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-collateral-input', type='text', placeholder='T.ex. Fastighet'),
+                                ], width=6),
+                                dbc.Col([
+                                    html.Label("Låntagare (kommaseparerade):", className="fw-bold"),
+                                    dbc.Input(id='loan-ocr-borrowers-input', type='text', placeholder='Anna Svensson, Erik Andersson'),
+                                ], width=6),
+                            ], className="mb-3"),
+                            
+                            dbc.Row([
+                                dbc.Col([
+                                    dbc.Button("Spara lån", id='save-ocr-loan-btn', color="success", className="me-2"),
+                                    dbc.Button("Avbryt", id='cancel-ocr-loan-btn', color="secondary"),
+                                ]),
+                            ]),
+                            html.Div(id='ocr-loan-save-status', className="mt-3")
+                        ])
+                    ])
+                ], width=12)
+            ], className="mb-4"),
+        ], id='loan-ocr-form-container', style={'display': 'none'}),
+        
         # Add new loan section
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H5("Lägg till lån", className="card-title"),
+                        html.H5("Lägg till lån manuellt", className="card-title"),
                         dbc.Row([
                             dbc.Col([
                                 html.Label("Namn:", className="fw-bold"),
@@ -2940,9 +3098,10 @@ def add_loan(n_clicks, name, principal, interest_rate, term_months, start_date, 
 @app.callback(
     Output('loans-table-container', 'children'),
     [Input('loans-interval', 'n_intervals'),
-     Input('add-loan-btn', 'n_clicks')]
+     Input('add-loan-btn', 'n_clicks'),
+     Input('save-ocr-loan-btn', 'n_clicks')]
 )
-def update_loans_table(n, add_clicks):
+def update_loans_table(n, add_clicks, ocr_clicks):
     """Update the loans table."""
     try:
         loan_manager = LoanManager()
@@ -2951,7 +3110,7 @@ def update_loans_table(n, add_clicks):
         if not loans:
             return html.P("Inga aktiva lån funna", className="text-muted")
         
-        # Create table with calculated monthly payment
+        # Create expanded table with more details
         loans_display = []
         for loan in loans:
             monthly_payment = loan_manager.calculate_monthly_payment(
@@ -2959,35 +3118,72 @@ def update_loans_table(n, add_clicks):
                 loan['interest_rate'],
                 loan['term_months']
             )
+            
+            # Get payment history info
+            payments = loan.get('payments', [])
+            interest_payments = loan.get('interest_payments', [])
+            total_paid = sum(p.get('amount', 0) for p in payments)
+            total_interest = sum(p.get('amount', 0) for p in interest_payments)
+            
             loans_display.append({
                 'id': loan['id'],
                 'name': loan['name'],
-                'balance': f"{loan['current_balance']:,.2f}",
+                'loan_number': loan.get('loan_number', '-'),
+                'lender': loan.get('lender', '-'),
+                'balance': f"{loan['current_balance']:,.0f}",
                 'interest_rate': f"{loan['interest_rate']}%",
-                'monthly_payment': f"{monthly_payment:,.2f}",
-                'term_months': loan['term_months']
+                'monthly_payment': f"{monthly_payment:,.0f}",
+                'payment_account': loan.get('payment_account', '-'),
+                'total_paid': f"{total_paid:,.0f}",
+                'interest_paid': f"{total_interest:,.0f}",
             })
         
         df = pd.DataFrame(loans_display)
-        table = dash_table.DataTable(
-            id='loans-table',
-            columns=[
-                {'name': 'ID', 'id': 'id'},
-                {'name': 'Namn', 'id': 'name'},
-                {'name': 'Saldo (SEK)', 'id': 'balance'},
-                {'name': 'Ränta', 'id': 'interest_rate'},
-                {'name': 'Månadsbetalning (SEK)', 'id': 'monthly_payment'},
-                {'name': 'Löptid (mån)', 'id': 'term_months'},
-            ],
-            data=df.to_dict('records'),
-            style_cell={'textAlign': 'left', 'padding': '10px'},
-            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold'},
-            row_selectable='single',
-            selected_rows=[]
-        )
         
-        return table
+        # Create card layout with table for better presentation
+        return dbc.Card([
+            dbc.CardBody([
+                dash_table.DataTable(
+                    id='loans-table',
+                    columns=[
+                        {'name': 'ID', 'id': 'id'},
+                        {'name': 'Namn', 'id': 'name'},
+                        {'name': 'Lånenr', 'id': 'loan_number'},
+                        {'name': 'Långivare', 'id': 'lender'},
+                        {'name': 'Saldo (kr)', 'id': 'balance'},
+                        {'name': 'Ränta', 'id': 'interest_rate'},
+                        {'name': 'Månad (kr)', 'id': 'monthly_payment'},
+                        {'name': 'Betalkonto', 'id': 'payment_account'},
+                        {'name': 'Amorterat (kr)', 'id': 'total_paid'},
+                        {'name': 'Ränta betald (kr)', 'id': 'interest_paid'},
+                    ],
+                    data=df.to_dict('records'),
+                    style_cell={
+                        'textAlign': 'left', 
+                        'padding': '10px',
+                        'fontSize': '13px',
+                        'fontFamily': 'var(--bs-body-font-family)'
+                    },
+                    style_header={
+                        'backgroundColor': 'var(--gh-canvas-subtle)',
+                        'fontWeight': 'bold',
+                        'fontSize': '13px'
+                    },
+                    style_data_conditional=[
+                        {
+                            'if': {'row_index': 'odd'},
+                            'backgroundColor': 'var(--gh-canvas-subtle)',
+                        }
+                    ],
+                    row_selectable='single',
+                    selected_rows=[],
+                    page_size=10,
+                )
+            ])
+        ], className="mb-3")
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return html.P(f"Fel vid laddning av lån: {str(e)}", className="text-danger")
 
 
@@ -2995,9 +3191,10 @@ def update_loans_table(n, add_clicks):
 @app.callback(
     Output('loan-selector', 'options'),
     [Input('loans-interval', 'n_intervals'),
-     Input('add-loan-btn', 'n_clicks')]
+     Input('add-loan-btn', 'n_clicks'),
+     Input('save-ocr-loan-btn', 'n_clicks')]
 )
-def update_loan_selector(n, add_clicks):
+def update_loan_selector(n, add_clicks, ocr_clicks):
     """Update loan selector dropdown."""
     loan_manager = LoanManager()
     loans = loan_manager.get_loans(status='active')
@@ -3137,6 +3334,202 @@ def update_amortization_graph(loan_id, n):
             x=0.5, y=0.5, showarrow=False
         )
         return fig
+
+
+# Callback: Handle loan image upload
+@app.callback(
+    [Output('loan-image-upload-status', 'children'),
+     Output('loan-ocr-form-container', 'style'),
+     Output('loan-ocr-name-input', 'value'),
+     Output('loan-ocr-number-input', 'value'),
+     Output('loan-ocr-lender-input', 'value'),
+     Output('loan-ocr-original-amount-input', 'value'),
+     Output('loan-ocr-current-amount-input', 'value'),
+     Output('loan-ocr-amortized-input', 'value'),
+     Output('loan-ocr-base-rate-input', 'value'),
+     Output('loan-ocr-discount-input', 'value'),
+     Output('loan-ocr-effective-rate-input', 'value'),
+     Output('loan-ocr-currency-input', 'value'),
+     Output('loan-ocr-disbursement-date-input', 'value'),
+     Output('loan-ocr-binding-end-input', 'value'),
+     Output('loan-ocr-next-change-input', 'value'),
+     Output('loan-ocr-term-input', 'value'),
+     Output('loan-ocr-payment-account-input', 'value'),
+     Output('loan-ocr-repayment-account-input', 'value'),
+     Output('loan-ocr-collateral-input', 'value'),
+     Output('loan-ocr-borrowers-input', 'value')],
+    Input('loan-image-upload', 'contents'),
+    State('loan-image-upload', 'filename'),
+    prevent_initial_call=True
+)
+def process_loan_image(contents, filename):
+    """Process uploaded loan image and extract data."""
+    if not contents:
+        raise PreventUpdate
+    
+    loan_data = {}
+    ocr_attempted = False
+    ocr_success = False
+    
+    try:
+        # Try to use OCR if available
+        from modules.core.loan_image_parser import LoanImageParser, OCR_AVAILABLE, check_tesseract_installed
+        
+        if OCR_AVAILABLE:
+            # Check if Tesseract is actually installed
+            is_installed, message = check_tesseract_installed()
+            if is_installed:
+                ocr_attempted = True
+                # Parse the base64 image data
+                parser = LoanImageParser()
+                loan_data = parser.parse_loan_from_base64(contents)
+                ocr_success = True
+    except Exception as e:
+        # OCR failed, but we can still continue without it
+        import traceback
+        print(f"OCR extraction failed: {e}")
+        traceback.print_exc()
+        ocr_attempted = True
+        ocr_success = False
+    
+    # Prepare borrowers string (comma-separated)
+    borrowers_str = ', '.join(loan_data.get('borrowers', [])) if loan_data.get('borrowers') else None
+    
+    # Show appropriate message and display form
+    if ocr_success:
+        status = dbc.Alert([
+            html.I(className="fas fa-check-circle me-2"),
+            f"Bilden '{filename}' har bearbetats med OCR. Granska uppgifterna nedan."
+        ], color="success")
+    elif ocr_attempted:
+        status = dbc.Alert([
+            html.I(className="fas fa-info-circle me-2"),
+            f"Bilden '{filename}' har laddats upp. OCR-extraktion misslyckades, men du kan fylla i uppgifterna manuellt med bilden som referens."
+        ], color="info")
+    else:
+        status = dbc.Alert([
+            html.I(className="fas fa-info-circle me-2"),
+            f"Bilden '{filename}' har laddats upp. Fyll i låneuppgifterna manuellt med bilden som referens. ",
+            html.Br(),
+            html.Small("Tips: Installera Tesseract OCR för automatisk extraktion av data från bilden.", className="text-muted")
+        ], color="info")
+    
+    return (
+        status,
+        {'display': 'block'},  # Show form
+        # Use extracted data if available, otherwise None (empty fields)
+        loan_data.get('lender') or loan_data.get('name') or None,
+        loan_data.get('loan_number'),
+        loan_data.get('lender'),
+        loan_data.get('original_amount'),
+        loan_data.get('current_amount') or loan_data.get('original_amount'),
+        loan_data.get('amortized'),
+        loan_data.get('base_interest_rate'),
+        loan_data.get('discount'),
+        loan_data.get('effective_interest_rate'),
+        loan_data.get('currency', 'SEK'),
+        loan_data.get('disbursement_date'),
+        loan_data.get('next_change_date'),
+        loan_data.get('next_change_date'),
+        360,  # Default term
+        loan_data.get('payment_account'),
+        loan_data.get('repayment_account'),
+        loan_data.get('collateral'),
+        borrowers_str
+    )
+
+
+# Callback: Save OCR-extracted loan
+@app.callback(
+    [Output('ocr-loan-save-status', 'children'),
+     Output('loan-ocr-form-container', 'style', allow_duplicate=True)],
+    Input('save-ocr-loan-btn', 'n_clicks'),
+    [State('loan-ocr-name-input', 'value'),
+     State('loan-ocr-number-input', 'value'),
+     State('loan-ocr-lender-input', 'value'),
+     State('loan-ocr-original-amount-input', 'value'),
+     State('loan-ocr-current-amount-input', 'value'),
+     State('loan-ocr-amortized-input', 'value'),
+     State('loan-ocr-base-rate-input', 'value'),
+     State('loan-ocr-discount-input', 'value'),
+     State('loan-ocr-effective-rate-input', 'value'),
+     State('loan-ocr-currency-input', 'value'),
+     State('loan-ocr-disbursement-date-input', 'value'),
+     State('loan-ocr-binding-end-input', 'value'),
+     State('loan-ocr-next-change-input', 'value'),
+     State('loan-ocr-term-input', 'value'),
+     State('loan-ocr-payment-account-input', 'value'),
+     State('loan-ocr-repayment-account-input', 'value'),
+     State('loan-ocr-collateral-input', 'value'),
+     State('loan-ocr-borrowers-input', 'value')],
+    prevent_initial_call=True
+)
+def save_ocr_loan(n_clicks, name, loan_number, lender, original_amount, current_amount,
+                  amortized, base_rate, discount, effective_rate, currency,
+                  disbursement_date, binding_end, next_change, term, payment_account,
+                  repayment_account, collateral, borrowers_str):
+    """Save the OCR-extracted and edited loan data."""
+    if not n_clicks:
+        raise PreventUpdate
+    
+    if not name or not current_amount or not effective_rate or not disbursement_date:
+        return dbc.Alert("Fyll i minst namn, aktuellt belopp, effektiv ränta och utbetalningsdatum", color="warning"), {'display': 'block'}
+    
+    try:
+        # Parse borrowers
+        borrowers = [b.strip() for b in borrowers_str.split(',')] if borrowers_str else []
+        
+        # Prepare extended loan data
+        loan_manager = LoanManager()
+        
+        # Use current_amount as principal if original not provided
+        principal = float(original_amount) if original_amount else float(current_amount)
+        
+        loan = loan_manager.add_loan(
+            name=name,
+            principal=principal,
+            interest_rate=float(effective_rate),
+            start_date=disbursement_date,
+            term_months=int(term) if term else 360,
+            fixed_rate_end_date=binding_end if binding_end else None,
+            description=f"Importerat från bild. Långivare: {lender}" if lender else "Importerat från bild",
+            # Extended fields
+            loan_number=loan_number,
+            original_amount=float(original_amount) if original_amount else None,
+            current_amount=float(current_amount) if current_amount else None,
+            amortized=float(amortized) if amortized else None,
+            base_interest_rate=float(base_rate) if base_rate else None,
+            discount=float(discount) if discount else None,
+            effective_interest_rate=float(effective_rate) if effective_rate else None,
+            next_change_date=next_change if next_change else None,
+            disbursement_date=disbursement_date if disbursement_date else None,
+            borrowers=borrowers,
+            currency=currency if currency else 'SEK',
+            collateral=collateral,
+            lender=lender,
+            payment_account=payment_account,
+            repayment_account=repayment_account
+        )
+        
+        return dbc.Alert(f"✓ Lån '{name}' har sparats!", color="success", dismissable=True), {'display': 'none'}
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return dbc.Alert(f"Fel vid sparande: {str(e)}", color="danger"), {'display': 'block'}
+
+
+# Callback: Cancel OCR loan form
+@app.callback(
+    Output('loan-ocr-form-container', 'style', allow_duplicate=True),
+    Input('cancel-ocr-loan-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def cancel_ocr_loan(n_clicks):
+    """Hide the OCR loan form."""
+    if not n_clicks:
+        raise PreventUpdate
+    return {'display': 'none'}
 
 
 # Callback: History month selector

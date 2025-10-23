@@ -37,7 +37,8 @@ class LoanManager:
     def add_loan(self, name: str, principal: float, interest_rate: float,
                  start_date: str, term_months: int = 360, 
                  fixed_rate_end_date: Optional[str] = None,
-                 description: str = "") -> Dict:
+                 description: str = "",
+                 **kwargs) -> Dict:
         """Lägg till ett nytt lån.
         
         Args:
@@ -48,6 +49,7 @@ class LoanManager:
             term_months: Löptid i månader (default 360 = 30 år)
             fixed_rate_end_date: Datum när bindningstiden slutar (YYYY-MM-DD)
             description: Beskrivning/detaljer
+            **kwargs: Additional loan fields (loan_number, amortized, base_rate, etc.)
             
         Returns:
             Det nya lånet som dict
@@ -69,8 +71,23 @@ class LoanManager:
             'description': description,
             'status': 'active',  # active, paid_off, closed
             'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'payments': []  # Lista med återbetalningar
+            'payments': [],  # Lista med återbetalningar
+            'interest_payments': []  # Lista med räntebetalningar
         }
+        
+        # Add extended fields from OCR or manual input
+        extended_fields = [
+            'loan_number', 'original_amount', 'current_amount', 'amortized',
+            'base_interest_rate', 'discount', 'effective_interest_rate',
+            'rate_period', 'binding_period', 'next_change_date',
+            'disbursement_date', 'borrowers', 'borrower_shares', 'currency',
+            'collateral', 'lender', 'payment_interval', 'payment_account',
+            'repayment_account'
+        ]
+        
+        for field in extended_fields:
+            if field in kwargs and kwargs[field] is not None:
+                loan[field] = kwargs[field]
         
         loans.append(loan)
         self.save_loans(loans)
@@ -139,13 +156,15 @@ class LoanManager:
         
         return False
     
-    def add_payment(self, loan_id: str, amount: float, payment_date: str) -> bool:
-        """Registrera en återbetalning.
+    def add_payment(self, loan_id: str, amount: float, payment_date: str, 
+                    transaction_id: str = None) -> bool:
+        """Registrera en återbetalning (amortering).
         
         Args:
             loan_id: ID för lånet
             amount: Belopp som betalas
             payment_date: Datum för betalningen (YYYY-MM-DD)
+            transaction_id: Optional transaction ID for linking
             
         Returns:
             True om betalning registrerades
@@ -160,6 +179,8 @@ class LoanManager:
             'amount': amount,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
+        if transaction_id:
+            payment['transaction_id'] = transaction_id
         
         payments = loan.get('payments', [])
         payments.append(payment)
@@ -175,6 +196,41 @@ class LoanManager:
         # Markera som betald om saldo är 0
         if new_balance <= 0:
             updates['status'] = 'paid_off'
+        
+        return self.update_loan(loan_id, updates)
+    
+    def add_interest_payment(self, loan_id: str, amount: float, payment_date: str,
+                            transaction_id: str = None) -> bool:
+        """Registrera en räntebetalning.
+        
+        Args:
+            loan_id: ID för lånet
+            amount: Räntebelopp som betalas
+            payment_date: Datum för betalningen (YYYY-MM-DD)
+            transaction_id: Optional transaction ID for linking
+            
+        Returns:
+            True om betalning registrerades
+        """
+        loan = self.get_loan_by_id(loan_id)
+        if not loan:
+            return False
+        
+        # Lägg till räntebetalning i listan
+        interest_payment = {
+            'date': payment_date,
+            'amount': amount,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        if transaction_id:
+            interest_payment['transaction_id'] = transaction_id
+        
+        interest_payments = loan.get('interest_payments', [])
+        interest_payments.append(interest_payment)
+        
+        updates = {
+            'interest_payments': interest_payments
+        }
         
         return self.update_loan(loan_id, updates)
     
@@ -194,7 +250,7 @@ class LoanManager:
             if not loan:
                 return None
         else:
-            # Try to auto-match based on description
+            # Try to auto-match based on account number or description
             loan = self._auto_match_loan(transaction)
             if not loan:
                 return None
@@ -202,9 +258,18 @@ class LoanManager:
         # Extract payment amount (negative amounts for payments)
         amount = abs(float(transaction.get('amount', 0)))
         date = transaction.get('date', datetime.now().strftime('%Y-%m-%d'))
+        description = transaction.get('description', '').lower()
+        
+        # Determine if this is amortization or interest payment
+        is_interest = any(keyword in description for keyword in ['ränta', 'interest', 'ränteinbetalning'])
         
         # Register payment
-        success = self.add_payment(loan['id'], amount, date)
+        if is_interest:
+            success = self.add_interest_payment(loan['id'], amount, date, transaction.get('id'))
+            payment_type = 'interest'
+        else:
+            success = self.add_payment(loan['id'], amount, date, transaction.get('id'))
+            payment_type = 'amortization'
         
         if success:
             return {
@@ -213,13 +278,14 @@ class LoanManager:
                 'loan_name': loan['name'],
                 'amount': amount,
                 'date': date,
-                'new_balance': max(0, loan.get('current_balance', 0) - amount)
+                'payment_type': payment_type,
+                'new_balance': max(0, loan.get('current_balance', 0) - (amount if not is_interest else 0))
             }
         
         return None
     
     def _auto_match_loan(self, transaction: Dict) -> Optional[Dict]:
-        """Try to automatically match a transaction to a loan based on description.
+        """Try to automatically match a transaction to a loan based on account number or description.
         
         Args:
             transaction: Transaction dictionary
@@ -228,16 +294,37 @@ class LoanManager:
             Matched loan or None
         """
         description = transaction.get('description', '').lower()
+        account_number = transaction.get('account_number', '')
         loans = self.get_loans(status='active')
         
-        # Look for loan name or ID in transaction description
+        # First, try to match by account number
+        if account_number:
+            for loan in loans:
+                payment_account = loan.get('payment_account', '')
+                repayment_account = loan.get('repayment_account', '')
+                
+                # Normalize account numbers for comparison
+                normalized_trans_account = account_number.replace('-', '').replace(' ', '')
+                normalized_payment = payment_account.replace('-', '').replace(' ', '')
+                normalized_repayment = repayment_account.replace('-', '').replace(' ', '')
+                
+                if normalized_trans_account and (
+                    normalized_trans_account == normalized_payment or
+                    normalized_trans_account == normalized_repayment
+                ):
+                    return loan
+        
+        # Look for loan name, ID, or loan number in transaction description
         for loan in loans:
             loan_name = loan.get('name', '').lower()
             loan_id = loan.get('id', '').lower()
+            loan_number = str(loan.get('loan_number', '')).lower()
             
             if loan_name and loan_name in description:
                 return loan
             if loan_id and loan_id in description:
+                return loan
+            if loan_number and loan_number in description:
                 return loan
             
             # Check for common loan-related keywords
