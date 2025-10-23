@@ -352,4 +352,43 @@ class TestCreditCardManager:
             closed_cards = manager.get_cards(status='closed')
             assert len(closed_cards) == 1
             assert closed_cards[0]['name'] == "Closed Card"
+    
+    def test_add_card_with_initial_balance(self):
+        """Test adding a card with an initial balance (previous statement)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = CreditCardManager(yaml_dir=tmpdir)
+            
+            # Add card with initial balance of 22,489.03 SEK (previous statement)
+            card = manager.add_card(
+                name="Amex Platinum",
+                card_type="American Express",
+                last_four="31009",
+                credit_limit=150000.0,
+                initial_balance=22489.03
+            )
+            
+            # Check that initial balance is set correctly
+            assert card['current_balance'] == 22489.03
+            assert card['available_credit'] == 150000.0 - 22489.03
+            
+            # Now import new transactions (e.g., from September)
+            manager.add_transaction(card['id'], "2025-09-15", "New Purchase", -1000.0, "Shopping")
+            
+            # Balance should be initial + new transaction
+            updated_card = manager.get_card_by_id(card['id'])
+            assert updated_card['current_balance'] == 22489.03 + 1000.0
+            assert updated_card['available_credit'] == 150000.0 - 23489.03
+            
+            # Add a payment
+            manager.match_payment_to_card(
+                card_id=card['id'],
+                payment_amount=20000.0,
+                payment_date="2025-09-20",
+                transaction_id="TX-PAYMENT-001"
+            )
+            
+            # Balance should be reduced by payment
+            updated_card2 = manager.get_card_by_id(card['id'])
+            assert updated_card2['current_balance'] == 23489.03 - 20000.0
+            assert updated_card2['available_credit'] == 150000.0 - 3489.03
 

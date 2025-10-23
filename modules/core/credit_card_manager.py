@@ -38,7 +38,7 @@ class CreditCardManager:
     
     def add_card(self, name: str, card_type: str, last_four: str,
                  credit_limit: float, display_color: str = "#1f77b4",
-                 icon: str = "credit-card") -> Dict:
+                 icon: str = "credit-card", initial_balance: float = 0.0) -> Dict:
         """Lägg till ett nytt kreditkort.
         
         Args:
@@ -48,6 +48,7 @@ class CreditCardManager:
             credit_limit: Kreditgräns i SEK
             display_color: Färg för visualisering (hex-kod)
             icon: Ikon-namn för kortet
+            initial_balance: Föregående saldo/faktura (för om du inte importerar från början)
             
         Returns:
             Det nya kortet som dict
@@ -57,14 +58,17 @@ class CreditCardManager:
         # Generera unikt ID
         card_id = f"CARD-{str(uuid.uuid4())[:8]}"
         
+        # Calculate available credit based on initial balance
+        available_credit = credit_limit - initial_balance
+        
         card = {
             'id': card_id,
             'name': name,
             'card_type': card_type,
             'last_four': last_four,
             'credit_limit': credit_limit,
-            'current_balance': 0.0,  # Current outstanding balance
-            'available_credit': credit_limit,  # Available credit
+            'current_balance': initial_balance,  # Start with initial/previous balance
+            'available_credit': available_credit,  # Available credit after initial balance
             'display_color': display_color,
             'icon': icon,
             'transactions': [],  # List of transactions

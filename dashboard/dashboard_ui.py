@@ -745,15 +745,20 @@ def create_credit_cards_tab():
                             dbc.Col([
                                 html.Label(id='card-last-digits-label', children="Sista 4 siffror:", className="fw-bold"),
                                 dbc.Input(id='card-last-four-input', type='text', placeholder='1234', maxLength=5),
-                            ], width=4),
+                            ], width=3),
                             dbc.Col([
                                 html.Label("Kreditgräns (SEK):", className="fw-bold"),
                                 dbc.Input(id='card-limit-input', type='number', placeholder='50000'),
-                            ], width=4),
+                            ], width=3),
+                            dbc.Col([
+                                html.Label("Nuvarande saldo (SEK):", className="fw-bold"),
+                                dbc.Input(id='card-initial-balance-input', type='number', placeholder='0', value=0),
+                                html.Small("Föregående faktura/skuld om du inte importerar från början", className="text-muted"),
+                            ], width=3),
                             dbc.Col([
                                 html.Label("Färg:", className="fw-bold"),
                                 dbc.Input(id='card-color-input', type='color', value='#1f77b4'),
-                            ], width=4),
+                            ], width=3),
                         ], className="mb-3"),
                         dbc.Button("Lägg till kort", id='add-card-btn', color="primary"),
                         html.Div(id='card-add-status', className="mt-3")
@@ -4267,10 +4272,11 @@ def update_last_digits_label(card_type):
      State('card-type-dropdown', 'value'),
      State('card-last-four-input', 'value'),
      State('card-limit-input', 'value'),
+     State('card-initial-balance-input', 'value'),
      State('card-color-input', 'value')],
     prevent_initial_call=True
 )
-def add_credit_card(n_clicks, name, card_type, last_four, limit, color):
+def add_credit_card(n_clicks, name, card_type, last_four, limit, initial_balance, color):
     """Add a new credit card."""
     if not name or not card_type or not last_four or not limit:
         return dbc.Alert("Fyll i alla fält", color="warning")
@@ -4283,10 +4289,12 @@ def add_credit_card(n_clicks, name, card_type, last_four, limit, color):
             last_four=last_four,
             credit_limit=float(limit),
             display_color=color or "#1f77b4",
-            icon="credit-card"
+            icon="credit-card",
+            initial_balance=float(initial_balance or 0)
         )
         
-        return dbc.Alert(f"✓ Kreditkort '{name}' tillagt!", color="success", dismissable=True)
+        balance_note = f" (startsaldo: {float(initial_balance or 0):.2f} SEK)" if initial_balance and float(initial_balance) != 0 else ""
+        return dbc.Alert(f"✓ Kreditkort '{name}' tillagt{balance_note}!", color="success", dismissable=True)
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger")
 
