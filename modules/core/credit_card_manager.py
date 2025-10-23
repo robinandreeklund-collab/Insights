@@ -237,10 +237,9 @@ class CreditCardManager:
             raise ValueError("CSV must have Date, Description, and Amount columns")
         
         # Handle Swedish number format (comma as decimal separator)
-        if df['amount'].dtype == 'object':
-            # Replace comma with dot and remove quotes for Swedish format
-            df['amount'] = df['amount'].astype(str).str.replace(',', '.').str.replace('"', '').str.strip()
-            df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
+        # Always convert to string first to handle any format consistently
+        df['amount'] = df['amount'].astype(str).str.replace(',', '.').str.replace('"', '').str.strip()
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
         
         # Parse dates - handle both MM/DD/YYYY and YYYY-MM-DD formats
         if df['date'].dtype == 'object':
