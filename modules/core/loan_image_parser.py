@@ -254,14 +254,10 @@ class LoanImageParser:
             loan_data['currency'] = currency_match.group(1)
         
         # Collateral
-        collateral_patterns = [
-            r'(?:Säkerhet|Collateral)[:\s]*([^\n]+)',
-        ]
-        for pattern in collateral_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                loan_data['collateral'] = match.group(1).strip()
-                break
+        collateral_pattern = r'(?:Säkerhet|Collateral)[:\s]*([^\n]+)'
+        match = re.search(collateral_pattern, text, re.IGNORECASE)
+        if match:
+            loan_data['collateral'] = match.group(1).strip()
         
         # Lender
         lender_pattern = r'(?:Långivare|Lender|Bank)[:\s]*([^\n]+)'
