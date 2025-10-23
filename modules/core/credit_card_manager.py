@@ -278,9 +278,10 @@ class CreditCardManager:
             return None
     
     def import_transactions_from_csv(self, card_id: str, csv_path: str) -> Dict[str, int]:
-        """Importera transaktioner från CSV-fil.
+        """Importera transaktioner från CSV eller Excel-fil.
         
         CSV-filen förväntas ha kolumner: Date, Description, Amount
+        Excel-filen (.xlsx) konverteras automatiskt till CSV-format
         Valfria kolumner: Vendor, Category, Subcategory, Card_member, Account_number
         
         Stöder både Amex-format (svensk) och generiskt format.
@@ -289,7 +290,7 @@ class CreditCardManager:
         
         Args:
             card_id: ID för kortet
-            csv_path: Sökväg till CSV-fil
+            csv_path: Sökväg till CSV- eller Excel-fil (.csv, .xlsx)
             
         Returns:
             Dict med 'imported' (antal nya) och 'duplicates' (antal dubbletter hoppade över)
@@ -298,8 +299,50 @@ class CreditCardManager:
         if not card:
             return {'imported': 0, 'duplicates': 0}
         
-        # Load CSV
-        df = pd.read_csv(csv_path)
+        # Load file - automatically handle CSV or Excel
+        file_extension = csv_path.lower().split('.')[-1]
+        
+        if file_extension == 'xlsx':
+            # Read Excel file, skip first 3 rows to get to data
+            # Mastercard Excel exports have headers starting at row 3
+            df = pd.read_excel(csv_path, skiprows=3)
+            
+            # Find where actual transactions start (look for 'Köp/uttag' section)
+            purchase_start = None
+            for i, row in df.iterrows():
+                if 'Köp/uttag' in str(row.iloc[0]) or 'Köp/uttag' in str(row.iloc[1]):
+                    purchase_start = i + 2  # Skip 'Köp/uttag' and next header row
+                    break
+            
+            if purchase_start is not None:
+                # Get transactions starting from purchase section
+                df = df.iloc[purchase_start:].copy()
+                
+                # Clean up - remove rows with NaN in first column (date)
+                df = df[df.iloc[:, 0].notna()]
+                
+                # Stop at next section marker (rows that don't start with date)
+                valid_rows = []
+                for i, row in df.iterrows():
+                    first_col = str(row.iloc[0])
+                    if first_col.startswith('202'):  # Date format check (starts with year)
+                        valid_rows.append(row)
+                    else:
+                        break
+                
+                if valid_rows:
+                    df = pd.DataFrame(valid_rows)
+                    # Set proper column names based on the header row
+                    df.columns = ['Datum', 'Bokfört', 'Specifikation', 'Ort', 'Valuta', 'Utl. belopp', 'Belopp']
+                else:
+                    # If no valid transactions found, return empty
+                    return {'imported': 0, 'duplicates': 0}
+            else:
+                # No purchase section found, try to use data as-is
+                pass
+        else:
+            # Load CSV file normally
+            df = pd.read_csv(csv_path)
         
         # Normalize column names
         df.columns = [col.strip().lower() for col in df.columns]

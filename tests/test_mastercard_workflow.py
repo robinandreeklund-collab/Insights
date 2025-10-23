@@ -324,3 +324,39 @@ class TestMastercardWorkflow:
         # Clean up test file if we created it
         if csv_path.endswith('test_mastercard_actual.csv') and os.path.exists(csv_path):
             os.remove(csv_path)
+    
+    def test_excel_file_import(self, cc_manager):
+        """Test importing Excel (.xlsx) file directly."""
+        # Create a Mastercard for testing
+        card = cc_manager.add_card(
+            name="Mastercard Excel",
+            card_type="Mastercard",
+            last_four="9506",
+            credit_limit=50000.0,
+            display_color="#EB001B",
+            icon="mastercard"
+        )
+        
+        # Check if Excel file exists
+        xlsx_path = os.path.join(os.path.dirname(__file__), '..', 'mastercard_actual.xlsx')
+        
+        if os.path.exists(xlsx_path):
+            # Import Excel file directly
+            result = cc_manager.import_transactions_from_csv(
+                card_id=card['id'],
+                csv_path=xlsx_path
+            )
+            
+            # Verify import worked
+            assert result['imported'] > 0
+            
+            # Verify transactions
+            transactions = cc_manager.get_transactions(card['id'])
+            assert len(transactions) > 0
+            
+            # Verify amounts are negative (purchases)
+            for tx in transactions:
+                assert tx['amount'] < 0
+        else:
+            # Skip test if file doesn't exist
+            pytest.skip("Excel file not available for testing")

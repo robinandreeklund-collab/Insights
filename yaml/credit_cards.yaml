@@ -131,245 +131,245 @@ cards:
     vendor: APOTEK HJÄRTAT
 - available_credit: 44449.05
   card_type: Mastercard
-  created_at: '2025-10-23 10:10:14'
+  created_at: '2025-10-23 10:24:52'
   credit_limit: 50000.0
   current_balance: 5550.950000000001
   display_color: '#EB001B'
   icon: mastercard
-  id: CARD-676fc433
+  id: CARD-e9e0db94
   last_four: '9506'
-  name: Mastercard Test
+  name: Mastercard Excel Test
   status: active
   transactions:
   - amount: -130.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-21'
     description: PIZZERIA & REST
-    id: TX-caa03aa5
+    id: TX-0cc41c55
     subcategory: ''
     vendor: HJO
   - amount: -526.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-19'
     description: NORMAL SKÖVDE
-    id: TX-5479e4a2
+    id: TX-7b819e0e
     subcategory: ''
     vendor: SKOVDE
   - amount: -544.75
     category: Mat & Dryck
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-19'
     description: MAXI ICA STORMARKNAD S
-    id: TX-2cdf332b
+    id: TX-b3c6b4c7
     subcategory: Matinköp
     vendor: SKOVDE
   - amount: -69.0
     category: Mat & Dryck
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-17'
     description: ICA SUPERMARKET HJO
-    id: TX-93a86c8e
+    id: TX-36e0ed13
     subcategory: Matinköp
     vendor: HJO
   - amount: -108.69
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-17'
     description: HJOGOTTEN AB
-    id: TX-3f12571c
+    id: TX-5c15aef3
     subcategory: ''
     vendor: HJO
   - amount: -130.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-16'
     description: PIZZERIA & REST
-    id: TX-01741ebd
+    id: TX-dfdee8b0
     subcategory: ''
     vendor: HJO
   - amount: -165.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-15'
     description: HEM OCH HOBBY
-    id: TX-228cac83
+    id: TX-0cd1fa33
     subcategory: ''
     vendor: HJO
   - amount: -264.86
     category: Mat & Dryck
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-13'
     description: ICA SUPERMARKET HJO
-    id: TX-88feb18b
+    id: TX-1604c824
     subcategory: Matinköp
     vendor: HJO
   - amount: -149.0
     category: Mat & Dryck
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-10'
     description: OYUSUSHI
-    id: TX-38489dd3
+    id: TX-66a4f41c
     subcategory: Restaurang
     vendor: HJO
   - amount: -224.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-09'
     description: HEM OCH HOBBY
-    id: TX-2a0136eb
+    id: TX-68eb1123
     subcategory: ''
     vendor: HJO
   - amount: -135.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-07'
     description: LANTKROGEN I HJO AB
-    id: TX-e9b4425f
+    id: TX-48d71aa6
     subcategory: ''
     vendor: HJO
   - amount: -327.8
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-04'
     description: SP LH COSMETICS AB
-    id: TX-98b82a19
+    id: TX-dc97aeb5
     subcategory: ''
     vendor: STOCKHOLM
   - amount: -370.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-10-04'
     description: VARA BADHUS
-    id: TX-22ddbfa8
+    id: TX-74b61196
     subcategory: ''
     vendor: VARA
   - amount: -45.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-27'
     description: HEM OCH HOBBY
-    id: TX-ca41047a
+    id: TX-88a70b43
     subcategory: ''
     vendor: HJO
   - amount: -300.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-27'
     description: HEM OCH HOBBY
-    id: TX-5dc2163d
+    id: TX-f99cfe1e
     subcategory: ''
     vendor: HJO
   - amount: -211.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-26'
     description: HEM OCH HOBBY
-    id: TX-0b6c6d81
+    id: TX-8075125d
     subcategory: ''
     vendor: HJO
   - amount: -20.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-20'
     description: RYDE SWEDEN AB
-    id: TX-cea99ccb
+    id: TX-685e1fd2
     subcategory: ''
     vendor: ALINGSAS
   - amount: -30.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-20'
     description: RYDE SWEDEN AB
-    id: TX-1efcfd94
+    id: TX-11b330d2
     subcategory: ''
     vendor: ALINGSAS
   - amount: -156.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-20'
     description: LOOMISP*NAMFON THAI RE
-    id: TX-4f807b31
+    id: TX-22920b07
     subcategory: ''
     vendor: GOTEBORG
   - amount: -88.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-20'
     description: LOOMISP*NAMFON THAI RE
-    id: TX-676c5061
+    id: TX-62d295ee
     subcategory: ''
     vendor: GOTEBORG
   - amount: -88.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-20'
     description: LOOMISP*NAMFON THAI RE
-    id: TX-ce35aaa9
+    id: TX-6655f9bb
     subcategory: ''
     vendor: GOTEBORG
   - amount: -196.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-20'
     description: MASALA KITCHEN GAMLEST
-    id: TX-b3c4df39
+    id: TX-67406d63
     subcategory: ''
     vendor: GOTEBORG
   - amount: -298.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-19'
     description: HEM OCH HOBBY
-    id: TX-4bca838b
+    id: TX-d48fda60
     subcategory: ''
     vendor: HJO
   - amount: -360.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-18'
     description: HEM OCH HOBBY
-    id: TX-d88072bb
+    id: TX-2a236b2a
     subcategory: ''
     vendor: HJO
   - amount: -139.0
     category: Mat & Dryck
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-17'
     description: CASTELLO SUSHI
-    id: TX-9220691b
+    id: TX-17e6e205
     subcategory: Restaurang
     vendor: HJO
   - amount: -30.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-12'
     description: DAMASKUS MINILIVS
-    id: TX-7b92a19d
+    id: TX-2ed9711d
     subcategory: ''
     vendor: HJO
   - amount: -165.85
     category: Mat & Dryck
-    created_at: '2025-10-23 10:10:14'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-09'
     description: COOP HJO
-    id: TX-794e8437
+    id: TX-46440abf
     subcategory: Matinköp
     vendor: HJO
   - amount: -135.0
     category: Övrigt
-    created_at: '2025-10-23 10:10:15'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-09-02'
     description: LANTKROGEN I HJO AB
-    id: TX-ba79a1b5
+    id: TX-c7c5ae94
     subcategory: ''
     vendor: HJO
   - amount: -145.0
     category: Mat & Dryck
-    created_at: '2025-10-23 10:10:15'
+    created_at: '2025-10-23 10:24:52'
     date: '2025-08-31'
     description: OYUSUSHI
-    id: TX-20785b98
+    id: TX-79cd7411
     subcategory: Restaurang
     vendor: HJO

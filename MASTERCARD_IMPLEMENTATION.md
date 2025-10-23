@@ -7,9 +7,13 @@ This document describes the Mastercard implementation in the Insights system. Ma
 ## Features
 
 ### 1. CSV Import for Mastercard
-Import Mastercard transactions from CSV files with automatic categorization and balance tracking.
+Import Mastercard transactions from CSV or Excel files with automatic categorization and balance tracking.
 
-**Supported Formats:**
+**Supported File Formats:**
+- **CSV files** (.csv) - Standard text format
+- **Excel files** (.xlsx) - **NEW: Automatic conversion and import**
+
+**Supported Data Formats:**
 
 **Format 1: Swedish Mastercard Export (Actual)**
 ```csv
@@ -27,6 +31,8 @@ Datum,Beskrivning,Kortmedlem,Konto #,Belopp
 ```
 
 **Key Features:**
+- **Excel files** (.xlsx) automatically converted to CSV format
+- **Excel parsing** handles Mastercard export structure with multiple sections
 - **Format 1** (Actual): YYYY-MM-DD dates, decimal point, positive amounts = purchases
 - **Format 2** (Generic): MM/DD/YYYY dates, comma decimal, positive amounts = purchases
 - Both formats: Payments (negative amounts) automatically filtered
@@ -145,6 +151,13 @@ card = manager.add_card(
 result = manager.import_transactions_from_csv(
     card_id=card['id'],
     csv_path='mastercard_sample.csv'
+)
+
+# Import from Excel (.xlsx) - NEW!
+# Automatically converts Excel to CSV format
+result = manager.import_transactions_from_csv(
+    card_id=card['id'],
+    csv_path='transactions-2025-10-21-to-2025-08-31.xlsx'
 )
 
 print(f"Imported {result['imported']} transactions")

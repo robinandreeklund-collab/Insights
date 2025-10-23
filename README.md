@@ -151,6 +151,7 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
   - Lägg till kreditkortskonton med namn, typ, kreditgräns, färg och ikon
   - **Redigera och ta bort kreditkort** via dashboard (namn, typ, kreditgräns, färg, ikon)
   - CSV-import av transaktioner från kontoutdrag (generiskt format med Date, Description, Amount)
+  - **Excel-import** (.xlsx) - Automatisk konvertering av Excel-filer till CSV-format
   - **Stöd för svensk Mastercard CSV** med två format:
     - **Format 1 (Aktuell export)**: Datum, Specifikation, Ort, Belopp (YYYY-MM-DD, decimal punkt)
     - **Format 2 (Generisk)**: Datum, Beskrivning, Belopp (MM/DD/YYYY, komma decimal)
