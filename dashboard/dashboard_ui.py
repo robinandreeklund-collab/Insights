@@ -4434,22 +4434,34 @@ def import_card_csv(contents, filename, card_id):
                     )
             
             # Import transactions
-            count = manager.import_transactions_from_csv(detected_card_id, tmp_path)
+            result = manager.import_transactions_from_csv(detected_card_id, tmp_path)
             
             # Get card info for message
             card = manager.get_card_by_id(detected_card_id)
             card_name = card.get('name', 'okänt kort') if card else 'okänt kort'
             
+            # Build message
+            imported = result.get('imported', 0)
+            duplicates = result.get('duplicates', 0)
+            
+            message_parts = []
+            if imported > 0:
+                message_parts.append(f"{imported} nya transaktioner importerade")
+            if duplicates > 0:
+                message_parts.append(f"{duplicates} dubbletter hoppade över")
+            
+            message = " och ".join(message_parts) if message_parts else "Inga nya transaktioner"
+            
             if not card_id and detected_card_id:
                 # Auto-detected
                 return dbc.Alert(
-                    f"✓ {count} transaktioner importerade från {filename} till {card_name} (automatiskt detekterat)!",
+                    f"✓ {message} från {filename} till {card_name} (automatiskt detekterat)!",
                     color="success",
                     dismissable=True
                 )
             else:
                 return dbc.Alert(
-                    f"✓ {count} transaktioner importerade från {filename} till {card_name}!",
+                    f"✓ {message} från {filename} till {card_name}!",
                     color="success",
                     dismissable=True
                 )

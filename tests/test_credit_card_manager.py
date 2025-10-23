@@ -257,9 +257,10 @@ class TestCreditCardManager:
             csv_data.to_csv(csv_path, index=False)
             
             # Import transactions
-            count = manager.import_transactions_from_csv(card['id'], csv_path)
+            result = manager.import_transactions_from_csv(card['id'], csv_path)
             
-            assert count == 3
+            assert result['imported'] == 3
+            assert result['duplicates'] == 0
             
             # Check that transactions were added
             transactions = manager.get_transactions(card['id'])
@@ -268,6 +269,47 @@ class TestCreditCardManager:
             # Check balance
             card_after = manager.get_card_by_id(card['id'])
             assert card_after['current_balance'] == 1625.50  # Sum of all purchases
+    
+    def test_import_csv_with_duplicates(self):
+        """Test that duplicate transactions are detected and skipped."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = CreditCardManager(yaml_dir=tmpdir)
+            
+            # Create a credit card
+            card = manager.add_card(
+                name="Test Card",
+                card_type="Visa",
+                last_four="1234",
+                credit_limit=10000.0
+            )
+            
+            # Create CSV with transactions
+            csv_data = pd.DataFrame({
+                'Date': ['2025-10-15', '2025-10-20'],
+                'Description': ['ICA Supermarket', 'Shell Gas Station'],
+                'Amount': [-856.50, -650.00]
+            })
+            
+            csv_path = os.path.join(tmpdir, 'test_transactions.csv')
+            csv_data.to_csv(csv_path, index=False)
+            
+            # Import first time
+            result1 = manager.import_transactions_from_csv(card['id'], csv_path)
+            assert result1['imported'] == 2
+            assert result1['duplicates'] == 0
+            
+            # Import same file again - should detect duplicates
+            result2 = manager.import_transactions_from_csv(card['id'], csv_path)
+            assert result2['imported'] == 0
+            assert result2['duplicates'] == 2
+            
+            # Check that we still only have 2 transactions
+            transactions = manager.get_transactions(card['id'])
+            assert len(transactions) == 2
+            
+            # Balance should be correct (not doubled)
+            card_after = manager.get_card_by_id(card['id'])
+            assert card_after['current_balance'] == 1506.50  # 856.50 + 650.00
     
     def test_utilization_calculation(self):
         """Test credit utilization percentage calculation."""

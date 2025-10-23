@@ -139,10 +139,44 @@ class CreditCardManager:
         
         return False
     
+    def _is_duplicate_transaction(self, card: Dict, date: str, description: str, 
+                                   amount: float, card_member: str = "") -> bool:
+        """Check if a transaction already exists to avoid duplicates.
+        
+        Args:
+            card: Card dictionary to check
+            date: Transaction date
+            description: Transaction description
+            amount: Transaction amount
+            card_member: Optional card member name
+            
+        Returns:
+            True if duplicate found, False otherwise
+        """
+        existing_txs = card.get('transactions', [])
+        
+        for tx in existing_txs:
+            # Match on date, description, and amount
+            # Also match card_member if provided (for dual cards)
+            if (tx.get('date') == date and 
+                tx.get('description') == description and 
+                abs(tx.get('amount', 0) - amount) < 0.01):  # Allow tiny floating point differences
+                
+                # If card_member is specified, it must also match
+                if card_member:
+                    if tx.get('card_member', '') == card_member:
+                        return True
+                else:
+                    # If no card_member specified, consider it a duplicate
+                    return True
+        
+        return False
+    
     def add_transaction(self, card_id: str, date: str, description: str,
                        amount: float, category: str = "Övrigt",
                        subcategory: str = "", vendor: str = "",
-                       card_member: str = "", account_number: str = "") -> Optional[Dict]:
+                       card_member: str = "", account_number: str = "",
+                       skip_duplicate_check: bool = False) -> Optional[Dict]:
         """Lägg till en transaktion till ett kreditkort.
         
         Args:
@@ -155,9 +189,10 @@ class CreditCardManager:
             vendor: Leverantör/handlare
             card_member: Kortmedlem/innehavare (för tvillingkort)
             account_number: Kontonummer (sista 4-5 siffror)
+            skip_duplicate_check: Om True, hoppa över duplikatkontroll (används för manuella tillägg)
             
         Returns:
-            Den skapade transaktionen, eller None om kortet inte finns
+            Den skapade transaktionen, eller None om kortet inte finns eller transaktionen är en duplikat
         """
         cards = self.load_cards()
         
@@ -166,6 +201,12 @@ class CreditCardManager:
                 # Ensure transactions array exists
                 if 'transactions' not in card:
                     card['transactions'] = []
+                
+                # Check for duplicates (unless explicitly skipped)
+                if not skip_duplicate_check:
+                    if self._is_duplicate_transaction(card, date, description, amount, card_member):
+                        # Duplicate found - skip this transaction
+                        return None
                 
                 # Generate transaction ID
                 tx_id = f"TX-{str(uuid.uuid4())[:8]}"
@@ -244,7 +285,7 @@ class CreditCardManager:
         except Exception:
             return None
     
-    def import_transactions_from_csv(self, card_id: str, csv_path: str) -> int:
+    def import_transactions_from_csv(self, card_id: str, csv_path: str) -> Dict[str, int]:
         """Importera transaktioner från CSV-fil.
         
         CSV-filen förväntas ha kolumner: Date, Description, Amount
@@ -252,17 +293,18 @@ class CreditCardManager:
         
         Stöder både Amex-format (svensk) och generiskt format.
         Hanterar även kortmedlem (cardholder) för att spåra utgifter per person.
+        Automatisk dublettdetektering förhindrar att samma transaktion importeras flera gånger.
         
         Args:
             card_id: ID för kortet
             csv_path: Sökväg till CSV-fil
             
         Returns:
-            Antal importerade transaktioner
+            Dict med 'imported' (antal nya) och 'duplicates' (antal dubbletter hoppade över)
         """
         card = self.get_card_by_id(card_id)
         if not card:
-            return 0
+            return {'imported': 0, 'duplicates': 0}
         
         # Load CSV
         df = pd.read_csv(csv_path)
@@ -326,6 +368,8 @@ class CreditCardManager:
         
         # Import transactions
         imported_count = 0
+        duplicate_count = 0
+        
         for _, row in df.iterrows():
             # Skip rows with invalid data
             if pd.isna(row['amount']) or pd.isna(row['date']):
@@ -376,7 +420,8 @@ class CreditCardManager:
             card_member = row.get('card_member', '')
             account_number = row.get('account_number', '')
             
-            self.add_transaction(
+            # Try to add transaction (will return None if duplicate)
+            result = self.add_transaction(
                 card_id=card_id,
                 date=str(row['date']),
                 description=str(row['description']),
@@ -387,9 +432,13 @@ class CreditCardManager:
                 card_member=str(card_member) if pd.notna(card_member) else '',
                 account_number=str(account_number) if pd.notna(account_number) else ''
             )
-            imported_count += 1
+            
+            if result:
+                imported_count += 1
+            else:
+                duplicate_count += 1
         
-        return imported_count
+        return {'imported': imported_count, 'duplicates': duplicate_count}
     
     def get_transactions(self, card_id: str, category: Optional[str] = None,
                         start_date: Optional[str] = None,
