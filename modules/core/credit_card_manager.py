@@ -542,6 +542,9 @@ class CreditCardManager:
                              payment_date: str, transaction_id: Optional[str] = None) -> bool:
         """Matcha en betalning från bankkonto till kreditkortet.
         
+        Uppdaterar endast kortets saldo. Lägger INTE till betalningen som en transaktion 
+        på kreditkortet eftersom betalningar redan finns i bankkontoutdraget.
+        
         Args:
             card_id: ID för kortet
             payment_amount: Belopp som betalats (positivt tal)
@@ -555,27 +558,20 @@ class CreditCardManager:
         
         for card in cards:
             if card.get('id') == card_id:
-                # Add payment as a transaction
-                payment_tx = {
-                    'id': f"PAY-{str(uuid.uuid4())[:8]}",
-                    'date': payment_date,
-                    'description': f"Payment from bank account",
-                    'vendor': 'Payment',
-                    'amount': payment_amount,  # Positive amount (reduces balance)
-                    'category': 'Betalning',
-                    'subcategory': 'Kreditkortsbetalning',
-                    'matched_transaction_id': transaction_id,
-                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                
-                if 'transactions' not in card:
-                    card['transactions'] = []
-                
-                card['transactions'].append(payment_tx)
-                
-                # Update balance
+                # Update balance only (don't add payment as transaction)
+                # Payments are already in bank account transactions
                 card['current_balance'] = card.get('current_balance', 0.0) - payment_amount
                 card['available_credit'] = card.get('credit_limit', 0.0) - card['current_balance']
+                
+                # Track the payment for reference (optional metadata)
+                if 'payment_history' not in card:
+                    card['payment_history'] = []
+                
+                card['payment_history'].append({
+                    'date': payment_date,
+                    'amount': payment_amount,
+                    'matched_transaction_id': transaction_id
+                })
                 
                 self.save_cards(cards)
                 return True

@@ -232,11 +232,17 @@ class TestCreditCardManager:
             assert card_after['current_balance'] == 0.0
             assert card_after['available_credit'] == 50000.0
             
-            # Check that payment transaction was added
+            # Check that payment is tracked in payment_history (not as a transaction)
+            assert 'payment_history' in card_after
+            assert len(card_after['payment_history']) == 1
+            assert card_after['payment_history'][0]['amount'] == 2500.0
+            assert card_after['payment_history'][0]['matched_transaction_id'] == "TX-BANK-123"
+            
+            # Check that NO payment transaction was added to transactions list
             transactions = manager.get_transactions(card['id'])
-            payment_tx = [tx for tx in transactions if tx.get('matched_transaction_id')]
-            assert len(payment_tx) == 1
-            assert payment_tx[0]['matched_transaction_id'] == "TX-BANK-123"
+            # Should only have the original purchase, not the payment
+            assert len(transactions) == 1
+            assert transactions[0]['description'] == "Store"
     
     def test_import_transactions_from_csv(self):
         """Test importing transactions from CSV file."""
