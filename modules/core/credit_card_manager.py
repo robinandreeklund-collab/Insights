@@ -308,7 +308,9 @@ class CreditCardManager:
         column_mapping = {
             'datum': 'date',
             'beskrivning': 'description',
+            'specifikation': 'description',  # Mastercard uses "Specifikation"
             'belopp': 'amount',
+            'ort': 'vendor',  # Use city/location as vendor
             'leverantör': 'vendor',
             'kategori': 'category',
             'underkategori': 'subcategory',

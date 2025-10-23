@@ -269,3 +269,58 @@ class TestMastercardWorkflow:
         # Note: This test verifies that credit card transactions are stored
         # separately and don't mix with bank account transactions
         # Bank account balance is managed separately by AccountManager
+    
+    def test_actual_mastercard_csv_format(self, cc_manager):
+        """Test importing actual Mastercard CSV with Swedish column names (Specifikation, Ort)."""
+        # Create a Mastercard for testing
+        card = cc_manager.add_card(
+            name="Mastercard Actual",
+            card_type="Mastercard",
+            last_four="9506",
+            credit_limit=50000.0,
+            display_color="#EB001B",
+            icon="mastercard"
+        )
+        
+        # Import the actual format CSV (if it exists)
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'mastercard_actual_clean.csv')
+        
+        if not os.path.exists(csv_path):
+            # Create a test file with actual format
+            import pandas as pd
+            test_data = pd.DataFrame({
+                'Datum': ['2025-10-21', '2025-10-19', '2025-10-17'],
+                'Bokfört': ['2025-10-22', '2025-10-20', '2025-10-20'],
+                'Specifikation': ['PIZZERIA & REST', 'MAXI ICA STORMARKNAD', 'ICA SUPERMARKET HJO'],
+                'Ort': ['HJO', 'SKOVDE', 'HJO'],
+                'Valuta': ['SEK', 'SEK', 'SEK'],
+                'Utl. belopp': [0, 0, 0],
+                'Belopp': [130.0, 544.75, 69.0]
+            })
+            csv_path = os.path.join(os.path.dirname(__file__), '..', 'test_mastercard_actual.csv')
+            test_data.to_csv(csv_path, index=False)
+        
+        # Import should work with Swedish column names
+        result = cc_manager.import_transactions_from_csv(
+            card_id=card['id'],
+            csv_path=csv_path
+        )
+        
+        # Verify import worked
+        assert result['imported'] >= 3
+        
+        # Verify transactions
+        transactions = cc_manager.get_transactions(card['id'])
+        assert len(transactions) >= 3
+        
+        # Verify amounts are negative (purchases)
+        for tx in transactions:
+            assert tx['amount'] < 0
+        
+        # Verify vendor is populated from Ort column
+        vendors = [tx.get('vendor', '') for tx in transactions]
+        assert any(vendors)  # At least some vendors should be set
+        
+        # Clean up test file if we created it
+        if csv_path.endswith('test_mastercard_actual.csv') and os.path.exists(csv_path):
+            os.remove(csv_path)

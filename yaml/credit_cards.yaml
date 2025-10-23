@@ -129,3 +129,247 @@ cards:
     id: TX-a287fe3e
     subcategory: Medicin
     vendor: APOTEK HJÄRTAT
+- available_credit: 44449.05
+  card_type: Mastercard
+  created_at: '2025-10-23 10:10:14'
+  credit_limit: 50000.0
+  current_balance: 5550.950000000001
+  display_color: '#EB001B'
+  icon: mastercard
+  id: CARD-676fc433
+  last_four: '9506'
+  name: Mastercard Test
+  status: active
+  transactions:
+  - amount: -130.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-21'
+    description: PIZZERIA & REST
+    id: TX-caa03aa5
+    subcategory: ''
+    vendor: HJO
+  - amount: -526.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-19'
+    description: NORMAL SKÖVDE
+    id: TX-5479e4a2
+    subcategory: ''
+    vendor: SKOVDE
+  - amount: -544.75
+    category: Mat & Dryck
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-19'
+    description: MAXI ICA STORMARKNAD S
+    id: TX-2cdf332b
+    subcategory: Matinköp
+    vendor: SKOVDE
+  - amount: -69.0
+    category: Mat & Dryck
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-17'
+    description: ICA SUPERMARKET HJO
+    id: TX-93a86c8e
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -108.69
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-17'
+    description: HJOGOTTEN AB
+    id: TX-3f12571c
+    subcategory: ''
+    vendor: HJO
+  - amount: -130.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-16'
+    description: PIZZERIA & REST
+    id: TX-01741ebd
+    subcategory: ''
+    vendor: HJO
+  - amount: -165.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-15'
+    description: HEM OCH HOBBY
+    id: TX-228cac83
+    subcategory: ''
+    vendor: HJO
+  - amount: -264.86
+    category: Mat & Dryck
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-13'
+    description: ICA SUPERMARKET HJO
+    id: TX-88feb18b
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -149.0
+    category: Mat & Dryck
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-10'
+    description: OYUSUSHI
+    id: TX-38489dd3
+    subcategory: Restaurang
+    vendor: HJO
+  - amount: -224.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-09'
+    description: HEM OCH HOBBY
+    id: TX-2a0136eb
+    subcategory: ''
+    vendor: HJO
+  - amount: -135.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-07'
+    description: LANTKROGEN I HJO AB
+    id: TX-e9b4425f
+    subcategory: ''
+    vendor: HJO
+  - amount: -327.8
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-04'
+    description: SP LH COSMETICS AB
+    id: TX-98b82a19
+    subcategory: ''
+    vendor: STOCKHOLM
+  - amount: -370.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-10-04'
+    description: VARA BADHUS
+    id: TX-22ddbfa8
+    subcategory: ''
+    vendor: VARA
+  - amount: -45.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-27'
+    description: HEM OCH HOBBY
+    id: TX-ca41047a
+    subcategory: ''
+    vendor: HJO
+  - amount: -300.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-27'
+    description: HEM OCH HOBBY
+    id: TX-5dc2163d
+    subcategory: ''
+    vendor: HJO
+  - amount: -211.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-26'
+    description: HEM OCH HOBBY
+    id: TX-0b6c6d81
+    subcategory: ''
+    vendor: HJO
+  - amount: -20.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-20'
+    description: RYDE SWEDEN AB
+    id: TX-cea99ccb
+    subcategory: ''
+    vendor: ALINGSAS
+  - amount: -30.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-20'
+    description: RYDE SWEDEN AB
+    id: TX-1efcfd94
+    subcategory: ''
+    vendor: ALINGSAS
+  - amount: -156.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-20'
+    description: LOOMISP*NAMFON THAI RE
+    id: TX-4f807b31
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -88.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-20'
+    description: LOOMISP*NAMFON THAI RE
+    id: TX-676c5061
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -88.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-20'
+    description: LOOMISP*NAMFON THAI RE
+    id: TX-ce35aaa9
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -196.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-20'
+    description: MASALA KITCHEN GAMLEST
+    id: TX-b3c4df39
+    subcategory: ''
+    vendor: GOTEBORG
+  - amount: -298.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-19'
+    description: HEM OCH HOBBY
+    id: TX-4bca838b
+    subcategory: ''
+    vendor: HJO
+  - amount: -360.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-18'
+    description: HEM OCH HOBBY
+    id: TX-d88072bb
+    subcategory: ''
+    vendor: HJO
+  - amount: -139.0
+    category: Mat & Dryck
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-17'
+    description: CASTELLO SUSHI
+    id: TX-9220691b
+    subcategory: Restaurang
+    vendor: HJO
+  - amount: -30.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-12'
+    description: DAMASKUS MINILIVS
+    id: TX-7b92a19d
+    subcategory: ''
+    vendor: HJO
+  - amount: -165.85
+    category: Mat & Dryck
+    created_at: '2025-10-23 10:10:14'
+    date: '2025-09-09'
+    description: COOP HJO
+    id: TX-794e8437
+    subcategory: Matinköp
+    vendor: HJO
+  - amount: -135.0
+    category: Övrigt
+    created_at: '2025-10-23 10:10:15'
+    date: '2025-09-02'
+    description: LANTKROGEN I HJO AB
+    id: TX-ba79a1b5
+    subcategory: ''
+    vendor: HJO
+  - amount: -145.0
+    category: Mat & Dryck
+    created_at: '2025-10-23 10:10:15'
+    date: '2025-08-31'
+    description: OYUSUSHI
+    id: TX-20785b98
+    subcategory: Restaurang
+    vendor: HJO

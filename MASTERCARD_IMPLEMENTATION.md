@@ -9,20 +9,29 @@ This document describes the Mastercard implementation in the Insights system. Ma
 ### 1. CSV Import for Mastercard
 Import Mastercard transactions from CSV files with automatic categorization and balance tracking.
 
-**Supported Format:**
+**Supported Formats:**
+
+**Format 1: Swedish Mastercard Export (Actual)**
+```csv
+Datum,Bokfört,Specifikation,Ort,Valuta,Utl. belopp,Belopp
+2025-10-21,2025-10-22,PIZZERIA & REST,HJO,SEK,0,130.0
+2025-10-19,2025-10-20,MAXI ICA STORMARKNAD S,SKOVDE,SEK,0,544.75
+2025-10-17,2025-10-20,ICA SUPERMARKET HJO,HJO,SEK,0,69.0
+```
+
+**Format 2: Generic CSV with Cardholder**
 ```csv
 Datum,Beskrivning,Kortmedlem,Konto #,Belopp
 10/15/2025,ICA SUPERMARKET MALMÖ,EXEMPEL ANVÄNDARE,-12345,"1250,50"
 10/18/2025,SHELL BENSINSTATION,EXEMPEL ANVÄNDARE,-12345,"650,00"
-09/28/2025,"BETALNING MOTTAGEN, TACK",EXEMPEL ANVÄNDARE,-12345,"-8500,00"
 ```
 
 **Key Features:**
-- Swedish date format (MM/DD/YYYY)
-- Comma as decimal separator ("1250,50")
-- Positive amounts = purchases
-- Negative amounts = payments (automatically filtered)
+- **Format 1** (Actual): YYYY-MM-DD dates, decimal point, positive amounts = purchases
+- **Format 2** (Generic): MM/DD/YYYY dates, comma decimal, positive amounts = purchases
+- Both formats: Payments (negative amounts) automatically filtered
 - Cardholder tracking (Kortmedlem)
+- Location/City tracking (Ort)
 - Account number tracking (Konto #)
 
 ### 2. Transaction History View
