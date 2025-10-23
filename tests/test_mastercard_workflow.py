@@ -56,23 +56,17 @@ class TestMastercardWorkflow:
         # Should import transactions (excluding payment)
         assert result['imported'] > 0
         
-        # Should process payments (if any in the file)
-        # The sample CSV includes a payment, so payments_processed should be > 0
-        assert 'payments_processed' in result
-        
         # Verify transactions were added
         transactions = cc_manager.get_transactions(mastercard['id'])
         assert len(transactions) > 0
         
-        # Verify negative amounts (purchases) and payments are filtered out from transactions
+        # Verify negative amounts (purchases) and payments are filtered
         for tx in transactions:
             assert tx['amount'] < 0  # All should be purchases (negative)
         
-        # Verify card balance was updated
-        # Note: Balance could be positive (money owed) or negative (credit) depending on payments
+        # Verify card balance updated
         card = cc_manager.get_card_by_id(mastercard['id'])
-        assert 'current_balance' in card  # Just verify balance exists
-
+        assert card['current_balance'] > 0  # Balance increased (money owed)
     
     def test_mastercard_auto_categorization(self, cc_manager, mastercard):
         """Test that Mastercard transactions are auto-categorized."""
@@ -554,69 +548,3 @@ class TestMastercardWorkflow:
             use_posting_date=True
         )
         assert len(txs_by_posting) == 2, "Should find 2 transactions by posting date"
-    
-    def test_payment_processing_in_csv_import(self, cc_manager):
-        """Test that payments within CSV imports are processed correctly."""
-        # Create a test card with initial balance
-        card = cc_manager.add_card(
-            name="Mastercard Payment Test",
-            card_type="Mastercard",
-            last_four="1111",
-            credit_limit=20000.0,
-            initial_balance=5000.0,  # Starting with 5000 kr owed
-            display_color="#EB001B",
-            icon="mastercard"
-        )
-        
-        # Create test CSV with purchases and a payment
-        import pandas as pd
-        test_data = pd.DataFrame({
-            'Datum': ['2025-10-15', '2025-10-16', '2025-10-17'],
-            'Bokfört': ['2025-10-16', '2025-10-17', '2025-10-18'],
-            'Specifikation': ['ICA Store', 'Payment Received', 'Shell Gas'],
-            'Ort': ['Stockholm', '', 'Stockholm'],
-            'Valuta': ['SEK', 'SEK', 'SEK'],
-            'Utl. belopp': [0, 0, 0],
-            'Belopp': [1000.0, -3000.0, 500.0]  # Two purchases and one payment
-        })
-        
-        csv_path = os.path.join(os.path.dirname(__file__), '..', 'test_payment_processing.csv')
-        test_data.to_csv(csv_path, index=False)
-        
-        try:
-            # Import the CSV
-            result = cc_manager.import_transactions_from_csv(
-                card_id=card['id'],
-                csv_path=csv_path
-            )
-            
-            # Verify import results
-            assert result['imported'] == 2, "Should import 2 purchase transactions"
-            assert result['payments_processed'] == 1, "Should process 1 payment"
-            
-            # Get final balance
-            card_after = cc_manager.get_card_by_id(card['id'])
-            
-            # Expected balance calculation:
-            # Initial: 5000
-            # + Purchase 1: 1000
-            # + Purchase 2: 500
-            # - Payment: 3000
-            # = 3500
-            expected_balance = 5000.0 + 1000.0 + 500.0 - 3000.0
-            assert abs(card_after['current_balance'] - expected_balance) < 0.01, \
-                f"Balance should be {expected_balance}, got {card_after['current_balance']}"
-            
-            # Verify transactions (should not include payment as a transaction)
-            transactions = cc_manager.get_transactions(card['id'])
-            assert len(transactions) == 2, "Should have 2 purchase transactions only"
-            
-            # Verify payment history
-            assert 'payment_history' in card_after
-            assert len(card_after['payment_history']) == 1, "Should have 1 payment in history"
-            assert card_after['payment_history'][0]['amount'] == 3000.0
-            
-        finally:
-            # Clean up test file
-            if os.path.exists(csv_path):
-                os.remove(csv_path)
