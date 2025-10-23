@@ -4692,8 +4692,14 @@ def handle_delete_card_modal(delete_clicks, cancel_clicks, confirm_clicks, store
     
     # Delete button clicked - check if any button was actually clicked
     if 'delete-card-btn' in trigger_id:
-        # Check if the click is valid (not None)
+        # Check if the click is valid (not None and greater than 0)
+        # Also verify that ctx.triggered has actual value (not just triggered_id)
         if delete_clicks and any(c is not None and c > 0 for c in delete_clicks):
+            # Additional check: make sure the trigger has an actual value
+            trigger_value = ctx.triggered[0].get('value')
+            if trigger_value is None or trigger_value == 0:
+                raise PreventUpdate
+                
             # Find which card was clicked
             button_data = ctx.triggered[0]['prop_id']
             import json
