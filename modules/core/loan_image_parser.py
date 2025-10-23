@@ -264,14 +264,10 @@ class LoanImageParser:
                 break
         
         # Lender
-        lender_patterns = [
-            r'(?:Långivare|Lender|Bank)[:\s]*([^\n]+)',
-        ]
-        for pattern in lender_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                loan_data['lender'] = match.group(1).strip()
-                break
+        lender_pattern = r'(?:Långivare|Lender|Bank)[:\s]*([^\n]+)'
+        match = re.search(lender_pattern, text, re.IGNORECASE)
+        if match:
+            loan_data['lender'] = match.group(1).strip()
         
         # Payment interval
         interval_pattern = r'(?:Betalningsintervall|Payment\s*interval)[:\s]*([^\n]+)'
