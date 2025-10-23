@@ -278,9 +278,10 @@ class CreditCardManager:
             return None
     
     def import_transactions_from_csv(self, card_id: str, csv_path: str) -> Dict[str, int]:
-        """Importera transaktioner från CSV-fil.
+        """Importera transaktioner från CSV eller Excel-fil.
         
         CSV-filen förväntas ha kolumner: Date, Description, Amount
+        Excel-filen (.xlsx) konverteras automatiskt till CSV-format
         Valfria kolumner: Vendor, Category, Subcategory, Card_member, Account_number
         
         Stöder både Amex-format (svensk) och generiskt format.
@@ -289,7 +290,7 @@ class CreditCardManager:
         
         Args:
             card_id: ID för kortet
-            csv_path: Sökväg till CSV-fil
+            csv_path: Sökväg till CSV- eller Excel-fil (.csv, .xlsx)
             
         Returns:
             Dict med 'imported' (antal nya) och 'duplicates' (antal dubbletter hoppade över)
@@ -298,8 +299,88 @@ class CreditCardManager:
         if not card:
             return {'imported': 0, 'duplicates': 0}
         
-        # Load CSV
-        df = pd.read_csv(csv_path)
+        # Load file - automatically handle CSV or Excel
+        file_extension = csv_path.lower().split('.')[-1]
+        
+        if file_extension == 'xlsx':
+            # Read Excel file without skipping rows to get full structure
+            # Mastercard Excel exports have multiple sections
+            df_raw = pd.read_excel(csv_path, header=None)
+            
+            all_transactions = []
+            current_cardholder = None
+            
+            # Scan through the file to find all transaction sections
+            i = 0
+            while i < len(df_raw):
+                row = df_raw.iloc[i]
+                first_col = str(row.iloc[0]) if pd.notna(row.iloc[0]) else ''
+                second_col = str(row.iloc[1]) if len(row) > 1 and pd.notna(row.iloc[1]) else ''
+                
+                # Check for cardholder line (e.g., "525412******9506  EVELINA FRÖJD")
+                if '******' in first_col:
+                    current_cardholder = first_col + ' ' + second_col if second_col else first_col
+                    i += 1
+                    continue
+                
+                # Check for section markers ("Köp/uttag" or "Totalt övriga händelser")
+                if 'Köp/uttag' in first_col or 'övriga händelser' in first_col:
+                    section_name = first_col
+                    i += 1
+                    
+                    # Next row should be the header
+                    if i < len(df_raw):
+                        header_row = df_raw.iloc[i]
+                        # Check if it's a proper header row (look for 'Datum' in any column)
+                        if any('Datum' in str(cell) for cell in header_row):
+                            i += 1
+                            
+                            # Extract transactions from this section
+                            while i < len(df_raw):
+                                tx_row = df_raw.iloc[i]
+                                first_col_tx = str(tx_row.iloc[0]) if pd.notna(tx_row.iloc[0]) else ''
+                                
+                                # Check for section end markers
+                                if 'Totalt belopp' in first_col_tx or 'Summa' in first_col_tx:
+                                    break
+                                
+                                # Check for cardholder marker (next section starting)
+                                if '******' in first_col_tx:
+                                    break
+                                
+                                # Skip rows that are not transaction rows (like "Valutakurs:")
+                                try:
+                                    # Try to parse the date in 'YYYY-MM-DD' format
+                                    datetime.strptime(first_col_tx, "%Y-%m-%d")
+                                except (ValueError, TypeError):
+                                    i += 1
+                                    continue
+                                
+                                # This is a valid transaction row
+                                tx_dict = {
+                                    'Datum': tx_row.iloc[0] if pd.notna(tx_row.iloc[0]) else '',
+                                    'Bokfört': tx_row.iloc[1] if len(tx_row) > 1 and pd.notna(tx_row.iloc[1]) else '',
+                                    'Specifikation': tx_row.iloc[2] if len(tx_row) > 2 and pd.notna(tx_row.iloc[2]) else '',
+                                    'Ort': tx_row.iloc[3] if len(tx_row) > 3 and pd.notna(tx_row.iloc[3]) else '',
+                                    'Valuta': tx_row.iloc[4] if len(tx_row) > 4 and pd.notna(tx_row.iloc[4]) else '',
+                                    'Utl. belopp': tx_row.iloc[5] if len(tx_row) > 5 and pd.notna(tx_row.iloc[5]) else 0,
+                                    'Belopp': tx_row.iloc[6] if len(tx_row) > 6 and pd.notna(tx_row.iloc[6]) else 0,
+                                    'Kortmedlem': current_cardholder if current_cardholder else ''
+                                }
+                                all_transactions.append(tx_dict)
+                                i += 1
+                            continue
+                
+                i += 1
+            
+            if all_transactions:
+                df = pd.DataFrame(all_transactions)
+            else:
+                # If no transactions found, return empty
+                return {'imported': 0, 'duplicates': 0}
+        else:
+            # Load CSV file normally
+            df = pd.read_csv(csv_path)
         
         # Normalize column names
         df.columns = [col.strip().lower() for col in df.columns]
@@ -308,7 +389,9 @@ class CreditCardManager:
         column_mapping = {
             'datum': 'date',
             'beskrivning': 'description',
+            'specifikation': 'description',  # Mastercard uses "Specifikation"
             'belopp': 'amount',
+            'ort': 'vendor',  # Use city/location as vendor
             'leverantör': 'vendor',
             'kategori': 'category',
             'underkategori': 'subcategory',

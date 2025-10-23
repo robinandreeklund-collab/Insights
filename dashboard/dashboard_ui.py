@@ -828,8 +828,8 @@ def create_credit_cards_tab():
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H5("Importera transaktioner från CSV", className="card-title"),
-                        html.P("Systemet försöker automatiskt detektera vilket kort transaktionerna tillhör. Du kan också välja kort manuellt nedan.", className="text-muted small"),
+                        html.H5("Importera transaktioner från CSV eller Excel", className="card-title"),
+                        html.P("Stöder både CSV (.csv) och Excel (.xlsx) filer. Systemet försöker automatiskt detektera vilket kort transaktionerna tillhör. Du kan också välja kort manuellt nedan.", className="text-muted small"),
                         dcc.Dropdown(
                             id='card-import-selector',
                             placeholder='Valfritt: Välj kort manuellt...',
@@ -840,7 +840,7 @@ def create_credit_cards_tab():
                             children=html.Div([
                                 html.I(className="bi bi-filetype-csv", style={'fontSize': '48px'}),
                                 html.Br(),
-                                'Dra och släpp eller klicka för att välja CSV-fil'
+                                'Dra och släpp eller klicka för att välja CSV eller Excel-fil'
                             ]),
                             style={
                                 'width': '100%',
@@ -4422,9 +4422,15 @@ def import_card_csv(contents, filename, card_id):
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         
-        # Save to temporary file
+        # Determine file extension from filename
+        import os
+        file_ext = os.path.splitext(filename)[1] if filename else '.csv'
+        if not file_ext:
+            file_ext = '.csv'
+        
+        # Save to temporary file with correct extension
         import tempfile
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(mode='wb', suffix=file_ext, delete=False) as tmp_file:
             tmp_file.write(decoded)
             tmp_path = tmp_file.name
         

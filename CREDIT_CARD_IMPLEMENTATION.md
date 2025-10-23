@@ -152,7 +152,9 @@ Datum,Beskrivning,Kortmedlem,Konto #,Belopp
 - Handles Swedish number format (comma as decimal separator)
 - Auto-categorizes all transactions using existing rules and AI
 
-**Sample File:** `credit_card_sample.csv` included in repository
+**Sample Files:**
+- `credit_card_sample.csv` - Amex format example
+- `mastercard_sample.csv` - Mastercard format example (Swedish)
 
 ### Create a Credit Card
 

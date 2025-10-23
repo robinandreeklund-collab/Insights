@@ -1,1 +1,36 @@
-cards: []
+cards:
+- available_credit: 49915.21
+  card_type: Mastercard
+  created_at: '2025-10-23 11:54:36'
+  credit_limit: 50000.0
+  current_balance: 84.79000000000087
+  display_color: '#EB001B'
+  icon: mastercard
+  id: CARD-28e3734f
+  last_four: '7203'
+  name: SEB Mastercard
+  payment_history:
+  - amount: 12815.21
+    date: '2025-09-20'
+    matched_transaction_id: bg_payment_test
+  - amount: 100.0
+    date: '2025-10-23'
+    matched_transaction_id: new_bg_payment
+  status: active
+  transactions:
+  - amount: -5000.0
+    category: Övrigt
+    created_at: '2025-10-23 11:54:36'
+    date: '2025-09-01'
+    description: Purchase 1
+    id: TX-1f25b69d
+    subcategory: ''
+    vendor: Purchase 1
+  - amount: -8000.0
+    category: Övrigt
+    created_at: '2025-10-23 11:54:36'
+    date: '2025-09-15'
+    description: Purchase 2
+    id: TX-e3d987e0
+    subcategory: ''
+    vendor: Purchase 2

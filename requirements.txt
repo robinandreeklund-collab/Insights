@@ -8,6 +8,7 @@ dash-bootstrap-components>=1.5.0
 # Data processing
 pandas>=2.0.0
 numpy>=1.24.0
+openpyxl>=3.0.0  # Excel file support for credit card imports
 
 # YAML handling
 pyyaml>=6.0

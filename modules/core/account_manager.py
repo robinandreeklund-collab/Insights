@@ -463,7 +463,9 @@ class AccountManager:
             'visa',
             'kreditkort', 'credit card',
             'kortbetalning', 'card payment',
-            'cc payment', 'cc-payment'
+            'cc payment', 'cc-payment',
+            'seb kort bank',  # Swedish BG payment for credit cards (e.g., "Betalning BG 595-4300 SEB KORT BANK")
+            'kort bank'  # Generic Swedish credit card bank payment pattern
         ]
         
         marked_count = 0
@@ -526,6 +528,24 @@ class AccountManager:
                     if last_four and last_four in description:
                         matched_card = card
                         break
+                
+                # If no card matched yet, try to infer from context
+                # For Swedish BG payments ("SEB KORT BANK"), if there's only one Mastercard, use it
+                if not matched_card and 'seb kort bank' in description:
+                    mastercard_cards = [c for c in cards if c.get('card_type', '').lower() == 'mastercard']
+                    if len(mastercard_cards) == 1:
+                        matched_card = mastercard_cards[0]
+                    elif len(mastercard_cards) > 1:
+                        # If multiple Mastercards, try to match by last 4 from BG number
+                        # BG format: "Betalning BG 595-4300 SEB KORT BANK"
+                        # Extract last 4 digits from BG number if present
+                        bg_match = re.search(r'bg\s+[\d-]+(\d{4})', description)
+                        if bg_match:
+                            bg_last_four = bg_match.group(1)
+                            for card in mastercard_cards:
+                                if card.get('last_four') == bg_last_four:
+                                    matched_card = card
+                                    break
             
             if matched:
                 tx['is_credit_card_payment'] = True
