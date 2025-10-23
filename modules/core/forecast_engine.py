@@ -69,14 +69,17 @@ def calculate_average_income_and_expenses(transactions: List[dict], days: int = 
     }
 
 
-def forecast_balance(current_balance: float, transactions: List[dict], forecast_days: int = 30) -> List[Dict]:
+def forecast_balance(current_balance: float, transactions: List[dict], forecast_days: int = 30, 
+                    upcoming_bills: List[dict] = None, expected_income: List[dict] = None) -> List[Dict]:
     """
-    Forecast balance for the next N days based on historical averages.
+    Forecast balance for the next N days based on historical averages plus upcoming bills and income.
     
     Args:
         current_balance: Current account balance
         transactions: List of historical transactions
         forecast_days: Number of days to forecast (default: 30)
+        upcoming_bills: List of upcoming bills with 'due_date' and 'amount'
+        expected_income: List of expected income with 'date' and 'amount'
         
     Returns:
         List of dictionaries with date, predicted_balance, cumulative_income, and cumulative_expenses
@@ -87,6 +90,28 @@ def forecast_balance(current_balance: float, transactions: List[dict], forecast_
     avg_daily_expenses = stats['avg_daily_expenses']
     avg_daily_net = avg_daily_income - avg_daily_expenses
     
+    # Build a map of specific transactions by date
+    upcoming_bills = upcoming_bills or []
+    expected_income = expected_income or []
+    
+    date_adjustments = {}  # {date_str: {'income': amount, 'expense': amount}}
+    
+    # Add upcoming bills
+    for bill in upcoming_bills:
+        date_str = bill.get('due_date', '')
+        if date_str:
+            if date_str not in date_adjustments:
+                date_adjustments[date_str] = {'income': 0, 'expense': 0}
+            date_adjustments[date_str]['expense'] += bill.get('amount', 0)
+    
+    # Add expected income
+    for income in expected_income:
+        date_str = income.get('date', '')
+        if date_str:
+            if date_str not in date_adjustments:
+                date_adjustments[date_str] = {'income': 0, 'expense': 0}
+            date_adjustments[date_str]['income'] += income.get('amount', 0)
+    
     # Generate forecast
     forecast = []
     balance = current_balance
@@ -95,23 +120,37 @@ def forecast_balance(current_balance: float, transactions: List[dict], forecast_
     
     for day in range(forecast_days + 1):
         forecast_date = datetime.now() + timedelta(days=day)
+        date_str = forecast_date.strftime('%Y-%m-%d')
+        
+        # Apply specific adjustments for this date
+        day_income = avg_daily_income
+        day_expense = avg_daily_expenses
+        
+        if date_str in date_adjustments:
+            # Add specific bills/income on top of historical average
+            day_income += date_adjustments[date_str]['income']
+            day_expense += date_adjustments[date_str]['expense']
+        
         forecast.append({
-            'date': forecast_date.strftime('%Y-%m-%d'),
+            'date': date_str,
             'predicted_balance': round(balance, 2),
             'cumulative_income': round(cumulative_income, 2),
             'cumulative_expenses': round(cumulative_expenses, 2),
             'day': day
         })
+        
         # Update balance and cumulatives for next day
-        balance += avg_daily_net
-        cumulative_income += avg_daily_income
-        cumulative_expenses += avg_daily_expenses
+        day_net = day_income - day_expense
+        balance += day_net
+        cumulative_income += day_income
+        cumulative_expenses += day_expense
     
     return forecast
 
 
 def get_forecast_summary(current_balance: float, transactions_file: str = "yaml/transactions.yaml", 
-                         forecast_days: int = 30) -> Dict:
+                         forecast_days: int = 30, upcoming_bills: List[dict] = None, 
+                         expected_income: List[dict] = None) -> Dict:
     """
     Get a complete forecast summary with statistics.
     
@@ -119,13 +158,15 @@ def get_forecast_summary(current_balance: float, transactions_file: str = "yaml/
         current_balance: Current account balance
         transactions_file: Path to transactions YAML file
         forecast_days: Number of days to forecast
+        upcoming_bills: List of upcoming bills to include in forecast
+        expected_income: List of expected income to include in forecast
         
     Returns:
         Dictionary with forecast data and statistics
     """
     transactions = load_transactions(transactions_file)
     stats = calculate_average_income_and_expenses(transactions)
-    forecast = forecast_balance(current_balance, transactions, forecast_days)
+    forecast = forecast_balance(current_balance, transactions, forecast_days, upcoming_bills, expected_income)
     
     # Calculate additional insights
     final_balance = forecast[-1]['predicted_balance'] if forecast else current_balance

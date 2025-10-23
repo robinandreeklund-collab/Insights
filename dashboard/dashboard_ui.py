@@ -1989,12 +1989,56 @@ def update_overview(n):
     """Update the overview tab with current data."""
     manager = AccountManager()
     accounts = manager.get_accounts()
+    bill_manager = BillManager()
+    income_tracker = IncomeTracker()
     
     # Calculate total balance
     total_balance = sum(acc.get('balance', 0) for acc in accounts)
     
-    # Get forecast
-    forecast_summary = get_forecast_summary(total_balance)
+    # Get upcoming bills for forecast
+    upcoming_bills = bill_manager.get_upcoming_bills(days=30)
+    
+    # Get expected income from persons for the next 30 days
+    from modules.core.person_manager import PersonManager
+    pm = PersonManager()
+    persons = pm.get_persons()
+    
+    expected_income = []
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    
+    # For each person, check if they have a payment day coming up
+    for person in persons:
+        payment_day = person.get('payment_day', 25)
+        monthly_income = person.get('monthly_income', 0)
+        
+        if monthly_income > 0:
+            # Check current month
+            current_month_date = datetime(today.year, today.month, payment_day)
+            if current_month_date >= today and current_month_date <= today + timedelta(days=30):
+                expected_income.append({
+                    'date': current_month_date.strftime('%Y-%m-%d'),
+                    'amount': monthly_income,
+                    'person': person.get('name', '')
+                })
+            
+            # Check next month
+            next_month = today.month + 1 if today.month < 12 else 1
+            next_year = today.year if today.month < 12 else today.year + 1
+            try:
+                next_month_date = datetime(next_year, next_month, payment_day)
+                if next_month_date <= today + timedelta(days=30):
+                    expected_income.append({
+                        'date': next_month_date.strftime('%Y-%m-%d'),
+                        'amount': monthly_income,
+                        'person': person.get('name', '')
+                    })
+            except ValueError:
+                # Handle invalid dates (e.g., Feb 31)
+                pass
+    
+    # Get forecast with upcoming bills and expected income
+    forecast_summary = get_forecast_summary(total_balance, upcoming_bills=upcoming_bills, expected_income=expected_income)
     forecast_data = forecast_summary.get('forecast', [])
     
     # Create forecast graph
