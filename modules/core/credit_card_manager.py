@@ -451,3 +451,87 @@ class CreditCardManager:
                 return True
         
         return False
+    
+    def update_transaction(self, card_id: str, transaction_id: str, 
+                          category: Optional[str] = None,
+                          subcategory: Optional[str] = None,
+                          description: Optional[str] = None,
+                          amount: Optional[float] = None) -> bool:
+        """Uppdatera en kreditkortstransaktion.
+        
+        Args:
+            card_id: ID för kortet
+            transaction_id: ID för transaktionen
+            category: Ny kategori (valfritt)
+            subcategory: Ny underkategori (valfritt)
+            description: Ny beskrivning (valfritt)
+            amount: Nytt belopp (valfritt)
+            
+        Returns:
+            True om uppdateringen lyckades
+        """
+        cards = self.load_cards()
+        
+        for card in cards:
+            if card.get('id') == card_id:
+                transactions = card.get('transactions', [])
+                
+                for tx in transactions:
+                    if tx.get('id') == transaction_id:
+                        # Update fields if provided
+                        if category is not None:
+                            tx['category'] = category
+                        if subcategory is not None:
+                            tx['subcategory'] = subcategory
+                        if description is not None:
+                            tx['description'] = description
+                        if amount is not None:
+                            # Need to recalculate balance
+                            old_amount = tx['amount']
+                            tx['amount'] = amount
+                            
+                            # Adjust card balance
+                            balance_diff = old_amount - amount
+                            card['current_balance'] = card.get('current_balance', 0.0) + balance_diff
+                            card['available_credit'] = card.get('credit_limit', 0.0) - card['current_balance']
+                        
+                        tx['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        
+                        self.save_cards(cards)
+                        return True
+                
+                return False
+        
+        return False
+    
+    def delete_transaction(self, card_id: str, transaction_id: str) -> bool:
+        """Ta bort en kreditkortstransaktion.
+        
+        Args:
+            card_id: ID för kortet
+            transaction_id: ID för transaktionen
+            
+        Returns:
+            True om borttagningen lyckades
+        """
+        cards = self.load_cards()
+        
+        for card in cards:
+            if card.get('id') == card_id:
+                transactions = card.get('transactions', [])
+                
+                # Find and remove transaction
+                for i, tx in enumerate(transactions):
+                    if tx.get('id') == transaction_id:
+                        removed_tx = transactions.pop(i)
+                        
+                        # Adjust card balance (reverse the transaction)
+                        card['current_balance'] = card.get('current_balance', 0.0) - removed_tx['amount']
+                        card['available_credit'] = card.get('credit_limit', 0.0) - card['current_balance']
+                        
+                        self.save_cards(cards)
+                        return True
+                
+                return False
+        
+        return False
