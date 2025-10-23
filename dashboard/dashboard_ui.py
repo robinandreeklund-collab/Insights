@@ -4442,15 +4442,11 @@ def import_card_csv(contents, filename, card_id):
             
             # Build message
             imported = result.get('imported', 0)
-            duplicates = result.get('duplicates', 0)
             
-            message_parts = []
             if imported > 0:
-                message_parts.append(f"{imported} nya transaktioner importerade")
-            if duplicates > 0:
-                message_parts.append(f"{duplicates} dubbletter hoppade över")
-            
-            message = " och ".join(message_parts) if message_parts else "Inga nya transaktioner"
+                message = f"{imported} transaktioner importerade"
+            else:
+                message = "Inga nya transaktioner"
             
             if not card_id and detected_card_id:
                 # Auto-detected

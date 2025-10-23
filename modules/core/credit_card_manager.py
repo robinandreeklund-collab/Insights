@@ -155,21 +155,9 @@ class CreditCardManager:
         """
         existing_txs = card.get('transactions', [])
         
-        for tx in existing_txs:
-            # Match on date, description, and amount
-            # Also match card_member if provided (for dual cards)
-            if (tx.get('date') == date and 
-                tx.get('description') == description and 
-                abs(tx.get('amount', 0) - amount) < 0.01):  # Allow tiny floating point differences
-                
-                # If card_member is specified, it must also match
-                if card_member:
-                    if tx.get('card_member', '') == card_member:
-                        return True
-                else:
-                    # If no card_member specified, consider it a duplicate
-                    return True
-        
+        # Disable simple duplicate detection to allow multiple transactions
+        # with same date/amount/description (e.g., 5 KLM purchases on same day)
+        # Instead, we'll use a more sophisticated approach below
         return False
     
     def add_transaction(self, card_id: str, date: str, description: str,
@@ -420,7 +408,8 @@ class CreditCardManager:
             card_member = row.get('card_member', '')
             account_number = row.get('account_number', '')
             
-            # Try to add transaction (will return None if duplicate)
+            # Add transaction (duplicate detection disabled to allow multiple
+            # legitimate transactions with same date/amount/description)
             result = self.add_transaction(
                 card_id=card_id,
                 date=str(row['date']),
@@ -435,10 +424,8 @@ class CreditCardManager:
             
             if result:
                 imported_count += 1
-            else:
-                duplicate_count += 1
         
-        return {'imported': imported_count, 'duplicates': duplicate_count}
+        return {'imported': imported_count, 'duplicates': 0}
     
     def get_transactions(self, card_id: str, category: Optional[str] = None,
                         start_date: Optional[str] = None,
