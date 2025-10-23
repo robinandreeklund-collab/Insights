@@ -87,10 +87,21 @@ The loans tab now displays:
 
 ### Importing a Loan from Image
 
+The image upload feature works **with or without OCR** installed:
+
+**With Tesseract OCR (automatic extraction):**
+1. Install Tesseract OCR (see installation instructions)
+2. Navigate to the Loans tab (Lån) in the dashboard
+3. In the "Importera lån från bild" section, click or drag-and-drop an image file
+4. The system will automatically extract loan details using OCR
+5. Review and edit the extracted information in the editable form
+6. Click "Spara lån" to save the loan
+
+**Without Tesseract OCR (manual entry with image reference):**
 1. Navigate to the Loans tab (Lån) in the dashboard
 2. In the "Importera lån från bild" section, click or drag-and-drop an image file
-3. The system will process the image using OCR to extract loan details
-4. Review and edit the extracted information in the editable form
+3. The form will appear with empty fields
+4. Manually fill in the loan details using the uploaded image as a visual reference
 5. Click "Spara lån" to save the loan
 
 **Supported Image Formats:**
@@ -98,7 +109,7 @@ The loans tab now displays:
 - JPEG/JPG
 - Other image formats supported by PIL/Pillow
 
-**Tips for Best Results:**
+**Tips for Best OCR Results (when Tesseract is installed):**
 - Use high-quality, clear images
 - Ensure text is readable and not blurred
 - Swedish and English text are supported

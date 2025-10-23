@@ -6,9 +6,12 @@ This PR successfully implements comprehensive enhancements to the loan managemen
 
 ## What's New
 
-### 1. OCR-Based Loan Import
+### 1. Image-Based Loan Import (OCR Optional)
 - Upload screenshots/images of loan information
-- Automatic extraction of 20+ fields including:
+- **Works with or without Tesseract OCR:**
+  - **With OCR**: Automatic extraction of 20+ fields
+  - **Without OCR**: Image serves as visual reference for manual entry
+- Automatic extraction includes (when OCR available):
   - Loan identification (number, lender)
   - Amounts (original, current, amortized)
   - Interest rates (base, discount, effective)
@@ -17,6 +20,7 @@ This PR successfully implements comprehensive enhancements to the loan managemen
   - Borrower information
   - Collateral and other details
 - Editable form for review and correction before saving
+- **No installation barriers** - fully functional without OCR
 
 ### 2. Enhanced Data Model
 - Extended loan structure with 20+ fields (backward compatible)

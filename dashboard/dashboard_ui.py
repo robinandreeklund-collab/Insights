@@ -890,7 +890,7 @@ def create_loans_tab():
                 dbc.Card([
                     dbc.CardBody([
                         html.H5("Importera lån från bild", className="card-title"),
-                        html.P("Ladda upp en skärmdump eller bild av låneuppgifter för automatisk extraktion.", 
+                        html.P("Ladda upp en skärmdump eller bild av låneuppgifter. Bilden används som referens när du fyller i formuläret.", 
                                className="text-muted"),
                         dcc.Upload(
                             id='loan-image-upload',
@@ -3367,107 +3367,76 @@ def process_loan_image(contents, filename):
     if not contents:
         raise PreventUpdate
     
+    loan_data = {}
+    ocr_attempted = False
+    ocr_success = False
+    
     try:
-        # Import here to avoid issues if OCR not available
+        # Try to use OCR if available
         from modules.core.loan_image_parser import LoanImageParser, OCR_AVAILABLE, check_tesseract_installed
         
-        if not OCR_AVAILABLE:
-            return (
-                dbc.Alert("OCR dependencies inte installerade. Funktionen är inte tillgänglig.", color="warning"),
-                {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
-                None, None, None, 360, None, None, None, None
-            )
-        
-        # Check if Tesseract is actually installed
-        is_installed, message = check_tesseract_installed()
-        if not is_installed:
-            # Format the error message with line breaks for the alert
-            error_lines = message.split('\n')
-            error_content = [html.Div(line, style={'marginBottom': '5px'}) for line in error_lines if line.strip()]
-            
-            return (
-                dbc.Alert([
-                    html.H5("Tesseract OCR krävs", className="alert-heading"),
-                    html.Hr(),
-                    html.Div(error_content)
-                ], color="warning", style={'whiteSpace': 'pre-wrap'}),
-                {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
-                None, None, None, 360, None, None, None, None
-            )
-        
-        # Parse the base64 image data
-        parser = LoanImageParser()
-        loan_data = parser.parse_loan_from_base64(contents)
-        
-        # Prepare borrowers string (comma-separated)
-        borrowers_str = ', '.join(loan_data.get('borrowers', [])) if loan_data.get('borrowers') else None
-        
-        # Show success message and display form
+        if OCR_AVAILABLE:
+            # Check if Tesseract is actually installed
+            is_installed, message = check_tesseract_installed()
+            if is_installed:
+                ocr_attempted = True
+                # Parse the base64 image data
+                parser = LoanImageParser()
+                loan_data = parser.parse_loan_from_base64(contents)
+                ocr_success = True
+    except Exception as e:
+        # OCR failed, but we can still continue without it
+        import traceback
+        print(f"OCR extraction failed: {e}")
+        traceback.print_exc()
+        ocr_attempted = True
+        ocr_success = False
+    
+    # Prepare borrowers string (comma-separated)
+    borrowers_str = ', '.join(loan_data.get('borrowers', [])) if loan_data.get('borrowers') else None
+    
+    # Show appropriate message and display form
+    if ocr_success:
         status = dbc.Alert([
             html.I(className="fas fa-check-circle me-2"),
-            f"Bilden '{filename}' har bearbetats. Granska uppgifterna nedan."
+            f"Bilden '{filename}' har bearbetats med OCR. Granska uppgifterna nedan."
         ], color="success")
-        
-        return (
-            status,
-            {'display': 'block'},  # Show form
-            # Generate a default name if not extracted
-            loan_data.get('lender', 'Lån') if loan_data.get('lender') else 'Lån',
-            loan_data.get('loan_number'),
-            loan_data.get('lender'),
-            loan_data.get('original_amount'),
-            loan_data.get('current_amount') or loan_data.get('original_amount'),
-            loan_data.get('amortized'),
-            loan_data.get('base_interest_rate'),
-            loan_data.get('discount'),
-            loan_data.get('effective_interest_rate'),
-            loan_data.get('currency', 'SEK'),
-            loan_data.get('disbursement_date'),
-            loan_data.get('next_change_date'),  # Use next change as binding end if available
-            loan_data.get('next_change_date'),
-            360,  # Default term
-            loan_data.get('payment_account'),
-            loan_data.get('repayment_account'),
-            loan_data.get('collateral'),
-            borrowers_str
-        )
+    elif ocr_attempted:
+        status = dbc.Alert([
+            html.I(className="fas fa-info-circle me-2"),
+            f"Bilden '{filename}' har laddats upp. OCR-extraktion misslyckades, men du kan fylla i uppgifterna manuellt med bilden som referens."
+        ], color="info")
+    else:
+        status = dbc.Alert([
+            html.I(className="fas fa-info-circle me-2"),
+            f"Bilden '{filename}' har laddats upp. Fyll i låneuppgifterna manuellt med bilden som referens. ",
+            html.Br(),
+            html.Small("Tips: Installera Tesseract OCR för automatisk extraktion av data från bilden.", className="text-muted")
+        ], color="info")
     
-    except ImportError as e:
-        return (
-            dbc.Alert([
-                html.H5("Installation krävs", className="alert-heading"),
-                html.P("OCR-modulerna är inte installerade."),
-                html.P("Installera med: pip install pytesseract Pillow opencv-python-headless")
-            ], color="warning"),
-            {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
-            None, None, None, 360, None, None, None, None
-        )
-    except RuntimeError as e:
-        # This handles the Tesseract not found error with helpful instructions
-        error_lines = str(e).split('\n')
-        error_content = [html.Div(line, style={'marginBottom': '5px'}) for line in error_lines if line.strip()]
-        
-        return (
-            dbc.Alert([
-                html.H5("Tesseract OCR krävs", className="alert-heading"),
-                html.Hr(),
-                html.Div(error_content)
-            ], color="warning", style={'whiteSpace': 'pre-wrap'}),
-            {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
-            None, None, None, 360, None, None, None, None
-        )
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return (
-            dbc.Alert([
-                html.H5("Fel vid bearbetning", className="alert-heading"),
-                html.P(f"Ett oväntat fel uppstod: {str(e)}"),
-                html.P("Se konsolen för mer detaljerad information.", className="text-muted")
-            ], color="danger"),
-            {'display': 'none'}, None, None, None, None, None, None, None, None, None, 'SEK',
-            None, None, None, 360, None, None, None, None
-        )
+    return (
+        status,
+        {'display': 'block'},  # Show form
+        # Use extracted data if available, otherwise None (empty fields)
+        loan_data.get('lender', loan_data.get('name')) if loan_data.get('lender') or loan_data.get('name') else None,
+        loan_data.get('loan_number'),
+        loan_data.get('lender'),
+        loan_data.get('original_amount'),
+        loan_data.get('current_amount') or loan_data.get('original_amount'),
+        loan_data.get('amortized'),
+        loan_data.get('base_interest_rate'),
+        loan_data.get('discount'),
+        loan_data.get('effective_interest_rate'),
+        loan_data.get('currency', 'SEK'),
+        loan_data.get('disbursement_date'),
+        loan_data.get('next_change_date'),
+        loan_data.get('next_change_date'),
+        360,  # Default term
+        loan_data.get('payment_account'),
+        loan_data.get('repayment_account'),
+        loan_data.get('collateral'),
+        borrowers_str
+    )
 
 
 # Callback: Save OCR-extracted loan
