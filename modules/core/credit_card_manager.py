@@ -656,12 +656,8 @@ class CreditCardManager:
             return 0.0
         
         transactions = card.get('transactions', [])
-        initial_balance = 0.0  # Assuming card was created with 0 balance or initial_balance is factored in
-        
-        # Start from initial balance if set
-        # Note: If card was created with initial_balance, it's already in current_balance
-        # We need to recalculate from scratch
-        balance = 0.0
+        # Start from initial balance if set on the card, otherwise 0.0
+        balance = card.get('initial_balance', 0.0)
         
         for tx in transactions:
             # Determine which date to use
