@@ -349,7 +349,10 @@ class CreditCardManager:
                                     break
                                 
                                 # Skip rows that are not transaction rows (like "Valutakurs:")
-                                if not first_col_tx.startswith('202'):
+                                try:
+                                    # Try to parse the date in 'YYYY-MM-DD' format
+                                    datetime.strptime(first_col_tx, "%Y-%m-%d")
+                                except (ValueError, TypeError):
                                     i += 1
                                     continue
                                 
