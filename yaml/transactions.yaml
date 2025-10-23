@@ -1,1 +1,16 @@
-transactions: []
+transactions:
+- account: Test Bank Account
+  date: '2025-10-23'
+  amount: -2000.0
+  description: Betalning BG 595-4300 SEB KORT BANK
+  id: a5aee6bb-35cb-4d8c-b4a8-933a2b590e18
+  is_credit_card_payment: true
+  credit_card_payment_label: Inbetalning till kreditkort
+- account: Test Bank Account
+  date: '2025-10-23'
+  amount: -4000.0
+  description: Mastercard Betalning 2345
+  id: dfee0aa0-74cb-4c33-9a60-3f5d255ac1b6
+  is_credit_card_payment: true
+  credit_card_payment_label: Inbetalning till kreditkort Mastercard Premium
+  matched_credit_card_id: CARD-fec33ae2
