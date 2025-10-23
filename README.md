@@ -151,6 +151,7 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
   - Lägg till kreditkortskonton med namn, typ, kreditgräns, färg och ikon
   - **Redigera och ta bort kreditkort** via dashboard (namn, typ, kreditgräns, färg, ikon)
   - CSV-import av transaktioner från kontoutdrag (generiskt format med Date, Description, Amount)
+  - **Stöd för svensk Mastercard CSV** med datum i MM/DD/YYYY och belopp med komma ("1250,50")
   - Automatisk kategorisering av kreditkortstransaktioner
   - **Redigera kategori och underkategori** för varje kreditkortstransaktion
   - Visa aktuellt saldo, tillgänglig kredit och utnyttjandegrad per kort
@@ -158,7 +159,8 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
   - Transaktionshistorik med filtrering
   - AI-träning på kreditkortstransaktioner (via manuell kategorisering)
   - **Automatisk betalningsmatching** mot bankkonto (uppdaterar kortsaldo automatiskt)
-  - **Visuell markering av kreditkortsbetalningar** (t.ex. "Inbetalning till kreditkort Amex")
+  - **Detekterar svensk BG-betalning** (t.ex. "Betalning BG 595-4300 SEB KORT BANK")
+  - **Visuell markering av kreditkortsbetalningar** (t.ex. "Inbetalning till kreditkort Mastercard")
   - **Stilfulla kortikoner** för Amex, Visa, Mastercard med varumärkesspecifik design
 
 ### 6. Historik
