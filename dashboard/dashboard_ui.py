@@ -57,6 +57,7 @@ try:
     moon_icon = icons.moon_icon
     sun_icon = icons.sun_icon
     beaker_icon = icons.beaker_icon
+    get_card_icon = icons.get_card_icon
 except Exception:
     # Fallback if icons not available
     traceback.print_exc()
@@ -73,6 +74,7 @@ except Exception:
     def moon_icon(size=16): return ""
     def sun_icon(size=16): return ""
     def beaker_icon(size=16): return ""
+    def get_card_icon(card_type, size=48): return ""
 
 
 def clear_data_on_exit(signum=None, frame=None):
@@ -4293,7 +4295,12 @@ def update_cards_overview(n_clicks):
                         ], width=6),
                         dbc.Col([
                             html.Div([
-                                html.I(className="bi bi-credit-card", style={'fontSize': '32px', 'color': card.get('display_color', '#1f77b4')})
+                                html.Div([
+                                    html.Div(
+                                        dangerously_allow_html=True,
+                                        children=get_card_icon(card.get('card_type', ''), size=48)
+                                    )
+                                ], style={'display': 'inline-block'})
                             ], style={'textAlign': 'right'})
                         ], width=4),
                         dbc.Col([
@@ -4601,6 +4608,141 @@ def handle_delete_card_modal(delete_clicks, cancel_clicks, confirm_clicks, store
             return True, message, card_id
     
     raise PreventUpdate
+
+
+# Callback: Handle Credit Card Transaction Selection and Editing
+@app.callback(
+    Output('card-tx-edit-container', 'children'),
+    [Input('card-transactions-table', 'selected_rows'),
+     Input('card-details-selector', 'value')],
+    State('card-transactions-table', 'data'),
+    prevent_initial_call=True
+)
+def handle_card_tx_selection(selected_rows, card_id, table_data):
+    """Display edit form when a transaction is selected."""
+    if not selected_rows or not table_data or not card_id:
+        return ""
+    
+    selected_idx = selected_rows[0]
+    selected_tx = table_data[selected_idx]
+    
+    # Category manager for dropdowns
+    cat_manager = CategoryManager()
+    categories = cat_manager.get_categories()
+    
+    category_options = [{'label': cat, 'value': cat} for cat in categories.keys()]
+    
+    selected_category = selected_tx.get('category', '')
+    subcategory_options = []
+    if selected_category and selected_category in categories:
+        subcategory_options = [{'label': sub, 'value': sub} for sub in categories[selected_category]]
+    
+    return dbc.Card([
+        dbc.CardBody([
+            html.H6("Redigera transaktion", className="card-title"),
+            html.P(f"{selected_tx.get('description', '')} - {selected_tx.get('amount', 0)} SEK", className="text-muted"),
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Kategori:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='edit-card-tx-category',
+                        options=category_options,
+                        value=selected_category,
+                        placeholder='Välj kategori'
+                    )
+                ], width=6),
+                dbc.Col([
+                    html.Label("Underkategori:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='edit-card-tx-subcategory',
+                        options=subcategory_options,
+                        value=selected_tx.get('subcategory', ''),
+                        placeholder='Välj underkategori'
+                    )
+                ], width=6),
+            ], className="mb-3"),
+            dbc.ButtonGroup([
+                dbc.Button("💾 Spara kategorisering", id='save-card-tx-btn', color="primary", size="sm"),
+                dbc.Button("🤖 Träna AI", id='train-card-tx-btn', color="success", size="sm", className="ms-2"),
+            ]),
+            html.Div(id='card-tx-edit-status', className="mt-2"),
+            dcc.Store(id='selected-card-tx-idx', data=selected_idx),
+            dcc.Store(id='selected-card-id', data=card_id)
+        ])
+    ], className="border-primary")
+
+
+@app.callback(
+    Output('edit-card-tx-subcategory', 'options'),
+    Input('edit-card-tx-category', 'value')
+)
+def update_card_tx_subcategories(category):
+    """Update subcategory options when category changes."""
+    if not category:
+        return []
+    
+    cat_manager = CategoryManager()
+    categories = cat_manager.get_categories()
+    
+    if category in categories:
+        return [{'label': sub, 'value': sub} for sub in categories[category]]
+    
+    return []
+
+
+@app.callback(
+    Output('card-tx-edit-status', 'children'),
+    [Input('save-card-tx-btn', 'n_clicks'),
+     Input('train-card-tx-btn', 'n_clicks')],
+    [State('selected-card-id', 'data'),
+     State('card-transactions-table', 'data'),
+     State('selected-card-tx-idx', 'data'),
+     State('edit-card-tx-category', 'value'),
+     State('edit-card-tx-subcategory', 'value')],
+    prevent_initial_call=True
+)
+def save_card_tx_category(save_clicks, train_clicks, card_id, table_data, tx_idx, category, subcategory):
+    """Save credit card transaction category."""
+    ctx = callback_context
+    if not ctx.triggered or tx_idx is None or not table_data:
+        raise PreventUpdate
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    try:
+        manager = CreditCardManager()
+        selected_tx = table_data[tx_idx]
+        tx_id = selected_tx.get('id')
+        
+        if not tx_id:
+            return dbc.Alert("Fel: Transaktions-ID saknas", color="danger", dismissable=True)
+        
+        # Update transaction
+        success = manager.update_transaction(
+            card_id=card_id,
+            transaction_id=tx_id,
+            category=category,
+            subcategory=subcategory
+        )
+        
+        if not success:
+            return dbc.Alert("Fel vid uppdatering", color="danger", dismissable=True)
+        
+        # If train button was clicked, also train AI
+        if 'train-card-tx-btn' in trigger_id:
+            trainer = AITrainer()
+            trainer.add_training_entry(
+                description=selected_tx.get('description', ''),
+                category=category,
+                subcategory=subcategory,
+                manual=True
+            )
+            return dbc.Alert("✓ Kategorisering sparad och AI tränad!", color="success", dismissable=True)
+        
+        return dbc.Alert("✓ Kategorisering sparad!", color="success", dismissable=True)
+        
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
 
 
 if __name__ == "__main__":

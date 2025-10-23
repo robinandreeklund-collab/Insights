@@ -75,6 +75,23 @@ def get_icon_svg(name, size=16, color="currentColor"):
         "beaker": f'''<svg width="{size}" height="{size}" viewBox="0 0 16 16" fill="{color}">
             <path d="M5.5 1.5a.5.5 0 0 1 .5.5v1h4V2a.5.5 0 0 1 1 0v1h.5A.5.5 0 0 1 12 3.5v10a.5.5 0 0 1-.5.5h-7A.5.5 0 0 1 4 13.5v-10A.5.5 0 0 1 4.5 3H5V2a.5.5 0 0 1 .5-.5ZM5 4v1.5a.5.5 0 0 0 1 0V4h4v1.5a.5.5 0 0 0 1 0V4h.5v9.5h-7V4H5Z"></path>
         </svg>''',
+        
+        "amex": f'''<svg width="{size}" height="{size}" viewBox="0 0 48 48" fill="{color}">
+            <rect width="48" height="48" rx="4" fill="#006FCF"/>
+            <text x="24" y="30" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">AMEX</text>
+        </svg>''',
+        
+        "visa": f'''<svg width="{size}" height="{size}" viewBox="0 0 48 48" fill="{color}">
+            <rect width="48" height="48" rx="4" fill="#1A1F71"/>
+            <text x="24" y="30" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#F7B600">VISA</text>
+        </svg>''',
+        
+        "mastercard": f'''<svg width="{size}" height="{size}" viewBox="0 0 48 48">
+            <rect width="48" height="48" rx="4" fill="#EB001B"/>
+            <circle cx="18" cy="24" r="10" fill="#EB001B"/>
+            <circle cx="30" cy="24" r="10" fill="#F79E1B"/>
+            <path d="M24 14 a10 10 0 0 0 0 20 a10 10 0 0 0 0-20" fill="#FF5F00"/>
+        </svg>''',
     }
     
     return icons.get(name, icons["file"])
@@ -146,3 +163,17 @@ def sun_icon(size=16):
 
 def beaker_icon(size=16):
     return get_icon_svg("beaker", size)
+
+
+def get_card_icon(card_type, size=48):
+    """Get appropriate icon for credit card type."""
+    card_type_lower = card_type.lower() if card_type else ""
+    
+    if "amex" in card_type_lower or "american express" in card_type_lower:
+        return get_icon_svg("amex", size)
+    elif "visa" in card_type_lower:
+        return get_icon_svg("visa", size)
+    elif "mastercard" in card_type_lower or "master card" in card_type_lower:
+        return get_icon_svg("mastercard", size)
+    else:
+        return get_icon_svg("credit-card", size)
