@@ -79,7 +79,7 @@ def forecast_balance(current_balance: float, transactions: List[dict], forecast_
         forecast_days: Number of days to forecast (default: 30)
         
     Returns:
-        List of dictionaries with date and predicted_balance
+        List of dictionaries with date, predicted_balance, cumulative_income, and cumulative_expenses
     """
     # Calculate historical averages
     stats = calculate_average_income_and_expenses(transactions)
@@ -90,16 +90,22 @@ def forecast_balance(current_balance: float, transactions: List[dict], forecast_
     # Generate forecast
     forecast = []
     balance = current_balance
+    cumulative_income = 0
+    cumulative_expenses = 0
     
     for day in range(forecast_days + 1):
         forecast_date = datetime.now() + timedelta(days=day)
         forecast.append({
             'date': forecast_date.strftime('%Y-%m-%d'),
             'predicted_balance': round(balance, 2),
+            'cumulative_income': round(cumulative_income, 2),
+            'cumulative_expenses': round(cumulative_expenses, 2),
             'day': day
         })
-        # Update balance for next day
+        # Update balance and cumulatives for next day
         balance += avg_daily_net
+        cumulative_income += avg_daily_income
+        cumulative_expenses += avg_daily_expenses
     
     return forecast
 
