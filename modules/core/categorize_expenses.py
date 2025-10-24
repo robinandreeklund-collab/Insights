@@ -173,35 +173,46 @@ def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data:
             
             # Categorize each transaction
             for idx, row in df.iterrows():
-                # Skip if already categorized
-                if row.get('category') and row.get('subcategory'):
-                    continue
-                
-                description = str(row.get('description', ''))
-                amount = float(row.get('amount', 0))
-                merchant = str(row.get('merchant', '')) if 'merchant' in row else None
-                account_type = str(row.get('account_type', '')) if 'account_type' in row else None
-                
-                # Use categorization engine
-                result = engine.categorize(
-                    description=description,
-                    amount=amount,
-                    merchant=merchant,
-                    account_type=account_type,
-                    use_ai=use_ml,
-                    use_semantic=True
-                )
-                
-                # Apply categorization
-                if result:
-                    df.at[idx, 'category'] = result['category']
-                    df.at[idx, 'subcategory'] = result['subcategory']
-                    df.at[idx, 'confidence_score'] = result.get('confidence_score', 0.0)
-                    df.at[idx, 'categorization_source'] = result.get('source', 'unknown')
+                try:
+                    # Skip if already categorized
+                    if row.get('category') and row.get('subcategory'):
+                        continue
+                    
+                    description = str(row.get('description', ''))
+                    amount = float(row.get('amount', 0))
+                    merchant = str(row.get('merchant', '')) if 'merchant' in row else None
+                    account_type = str(row.get('account_type', '')) if 'account_type' in row else None
+                    
+                    # Use categorization engine
+                    result = engine.categorize(
+                        description=description,
+                        amount=amount,
+                        merchant=merchant,
+                        account_type=account_type,
+                        use_ai=use_ml,
+                        use_semantic=False  # Disable semantic for now due to compatibility issues
+                    )
+                    
+                    # Apply categorization
+                    if result:
+                        df.at[idx, 'category'] = result['category']
+                        df.at[idx, 'subcategory'] = result['subcategory']
+                        df.at[idx, 'confidence_score'] = result.get('confidence_score', 0.0)
+                        df.at[idx, 'categorization_source'] = result.get('source', 'unknown')
+                except Exception as row_error:
+                    # If single transaction fails, log and continue with default
+                    print(f"Error categorizing transaction at row {idx}: {row_error}")
+                    df.at[idx, 'category'] = 'Övrigt'
+                    df.at[idx, 'subcategory'] = 'Okategoriserat'
+                    df.at[idx, 'confidence_score'] = 0.0
+                    df.at[idx, 'categorization_source'] = 'error_fallback'
             
             return df
         except Exception as e:
-            print(f"Categorization engine error: {e}. Falling back to legacy method.")
+            import traceback
+            print(f"Categorization engine error: {e}")
+            traceback.print_exc()
+            print("Falling back to legacy method.")
     
     # Fallback to legacy categorization method
     # Load rules if not provided
