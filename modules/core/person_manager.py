@@ -188,14 +188,15 @@ class PersonManager:
         Returns:
             Dictionary mapping category to total amount spent
         """
-        from datetime import datetime, timedelta
+        from datetime import datetime
+        from dateutil.relativedelta import relativedelta
         
         # Load credit card data
         cc_data = self._load_yaml(self.credit_cards_file)
         cards = cc_data.get('credit_cards', [])
         
         # Calculate cutoff date
-        cutoff_date = (datetime.now() - timedelta(days=30*months)).strftime('%Y-%m-%d')
+        cutoff_date = (datetime.now() - relativedelta(months=months)).strftime('%Y-%m-%d')
         
         # Aggregate spending by category
         category_totals = defaultdict(float)
