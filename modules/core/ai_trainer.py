@@ -5,6 +5,7 @@ import yaml
 from typing import List, Dict, Optional
 from datetime import datetime
 import re
+import numpy as np
 
 # Try to import ML categorizer
 try:
@@ -12,6 +13,30 @@ try:
     ML_AVAILABLE = True
 except ImportError:
     ML_AVAILABLE = False
+
+
+def convert_numpy_types(obj):
+    """Convert numpy types to native Python types recursively.
+    
+    Args:
+        obj: Object to convert
+        
+    Returns:
+        Object with numpy types converted to Python types
+    """
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_numpy_types(item) for item in obj)
+    return obj
 
 
 class AITrainer:
@@ -40,9 +65,11 @@ class AITrainer:
         return {}
     
     def _save_yaml(self, filepath: str, data: dict) -> None:
-        """Save data to YAML file."""
+        """Save data to YAML file, converting numpy types to native Python types."""
+        # Convert any numpy types to native Python types
+        cleaned_data = convert_numpy_types(data)
         with open(filepath, 'w', encoding='utf-8') as f:
-            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            yaml.dump(cleaned_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
     
     def get_training_data(self) -> List[Dict]:
         """Get all training data."""

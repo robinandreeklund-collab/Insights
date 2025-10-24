@@ -177,7 +177,7 @@ class MLCategorizer:
         
         try:
             # Predict category
-            predicted_category = self.model.predict([description])[0]
+            predicted_category = str(self.model.predict([description])[0])
             
             result = {
                 'category': predicted_category,

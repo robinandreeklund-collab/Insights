@@ -6,6 +6,31 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import re
 from collections import defaultdict
+import numpy as np
+
+
+def convert_numpy_types(obj):
+    """Convert numpy types to native Python types recursively.
+    
+    Args:
+        obj: Object to convert
+        
+    Returns:
+        Object with numpy types converted to Python types
+    """
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_numpy_types(item) for item in obj)
+    return obj
 
 
 class AdminDashboard:
@@ -34,9 +59,11 @@ class AdminDashboard:
         return {}
     
     def _save_yaml(self, filepath: str, data: Dict) -> None:
-        """Save data to YAML file."""
+        """Save data to YAML file, converting numpy types to native Python types."""
+        # Convert any numpy types to native Python types
+        cleaned_data = convert_numpy_types(data)
         with open(filepath, 'w', encoding='utf-8') as f:
-            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            yaml.dump(cleaned_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
     
     def get_all_transactions(self, filters: Optional[Dict] = None) -> List[Dict]:
         """Get all transactions with optional filtering.
