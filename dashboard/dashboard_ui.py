@@ -6142,9 +6142,10 @@ def update_admin_stats(n):
      Output('admin-merge-to-category', 'options'),
      Output('admin-delete-category', 'options'),
      Output('admin-delete-move-to-category', 'options')],
-    Input('admin-refresh-interval', 'n_intervals')
+    [Input('admin-refresh-interval', 'n_intervals'),
+     Input('current-tab', 'data')]
 )
-def populate_admin_dropdowns(n):
+def populate_admin_dropdowns(n, current_tab):
     """Populate dropdowns with sources, accounts, and categories."""
     try:
         # Get sources
@@ -6189,7 +6190,8 @@ def update_admin_bulk_subcategories(category):
     [Output('admin-transaction-table-container', 'children'),
      Output('admin-transaction-count', 'children')],
     [Input('admin-apply-filters-btn', 'n_clicks'),
-     Input('admin-refresh-interval', 'n_intervals')],
+     Input('admin-refresh-interval', 'n_intervals'),
+     Input('admin-bulk-action-status', 'children')],
     [State('admin-filter-source', 'value'),
      State('admin-filter-account', 'value'),
      State('admin-filter-category', 'value'),
@@ -6197,7 +6199,7 @@ def update_admin_bulk_subcategories(category):
      State('admin-filter-date-from', 'value'),
      State('admin-filter-date-to', 'value')]
 )
-def update_admin_transaction_table(n_clicks, n_intervals, source, account, category, status, date_from, date_to):
+def update_admin_transaction_table(n_clicks, n_intervals, bulk_status, source, account, category, status, date_from, date_to):
     """Update transaction table with filters."""
     try:
         # Build filters
