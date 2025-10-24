@@ -47,7 +47,7 @@ class RetrainingPipeline:
         try:
             from modules.core.ai_trainer import AITrainer
             trainer = AITrainer()
-            training_data = trainer._load_training_data()
+            training_data = trainer.get_training_data()
             
             # Count samples
             total_samples = len(training_data)
@@ -87,10 +87,10 @@ class RetrainingPipeline:
             logger.info("Step 1: Loading training data...")
             from modules.core.ai_trainer import AITrainer
             trainer = AITrainer()
-            training_data = trainer._load_training_data()
+            training_data = trainer.get_training_data()
             
             if not training_data or len(training_data) < 4:
-                result['message'] = f"Insufficient training data: {len(training_data)} samples (need at least 4)"
+                result['message'] = f"Insufficient training data: {len(training_data) if training_data else 0} samples (need at least 4)"
                 logger.warning(result['message'])
                 return result
             
