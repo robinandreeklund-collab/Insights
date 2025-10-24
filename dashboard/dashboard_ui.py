@@ -6158,8 +6158,8 @@ def populate_admin_dropdowns(n, current_tab):
         
         # Get accounts
         account_manager = AccountManager()
-        accounts = account_manager.list_accounts()
-        account_options = [{'label': a, 'value': a} for a in accounts]
+        accounts = account_manager.get_accounts()
+        account_options = [{'label': acc.get('name', ''), 'value': acc.get('name', '')} for acc in accounts]
         
         # Get categories
         categories = category_manager.get_categories()
