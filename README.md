@@ -2,9 +2,22 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 8 - Förbättrad utgiftsanalys och personhantering
+## 🎯 Projektstatus: Sprint 9 - Admin Dashboard för AI-träning och kategorisering
 
-**Sprint 8 Status:** Förbättrad filtrering av interna överföringar, persistent månadval, utökad prognosgraf och ny Personer-panel!
+**Sprint 9 Status:** Komplett Admin Dashboard för effektiv AI-träning och kategorihantering!
+
+Sprint 9 har implementerat:
+- ✅ **Admin Dashboard**: Kraftfullt verktyg för admins att träna AI och hantera kategorier
+- ✅ **Avancerad filtrering**: Filtrera transaktioner på källa, datum, belopp, kategori och konto
+- ✅ **Bulk-operationer**: Uppdatera och träna AI med flera transaktioner samtidigt
+- ✅ **Kategorihantering**: Skapa, slå ihop och ta bort kategorier direkt i dashboarden
+- ✅ **Statistik**: Kategorifördelning, okategoriserade transaktioner och AI-träffsäkerhet
+- ✅ **Alla CSV-format**: Stöd för Nordea, Amex och Mastercard
+- ✅ **Omfattande tester**: 56 tester godkända (20 nya för Admin Dashboard)
+- ✅ **Säkerhet**: CodeQL-godkänd utan säkerhetsproblem
+- ✅ **Dokumentation**: Fullständig användarguide och implementationssammanfattning
+
+**Sprint 8 Status (tidigare):** Förbättrad filtrering av interna överföringar, persistent månadval, utökad prognosgraf och ny Personer-panel!
 
 Sprint 8 har implementerat:
 - ✅ **Filtrering av interna överföringar**: Överföringar mellan egna konton exkluderas nu från alla utgiftsberäkningar
@@ -232,7 +245,37 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - Aktivera/inaktivera notifieringar
 - Justera gränsvärden och trösklar
 
+### 12. Admin Dashboard (NYtt i denna version!)
+- **NYtt: Admin Dashboard** för effektiv AI-träning och kategorisering
+  - **Kraftfull filtrering**: Filtrera transaktioner på källa, datum, belopp, kategori, konto och okategoriserad status
+  - **Transaktionslista**: Interaktiv tabell med sortering, paginering och visuell markering av okategoriserade
+  - **Bulk-operationer**: Uppdatera kategori och träna AI för flera transaktioner samtidigt
+  - **Kategorihantering**: 
+    - Skapa nya kategorier med underkategorier
+    - Slå ihop kategorier för att konsolidera data
+    - Ta bort kategorier och flytta transaktioner
+  - **Detaljerad statistik**:
+    - Kategorifördelning (antal och belopp)
+    - Okategoriserade transaktioner (antal och procent)
+    - AI-träningsframsteg (totalt, manuella prover, nya prover senaste 7 dagarna)
+    - Kategoriseringsregler (totalt och AI-genererade)
+  - **Stöd för alla CSV-format**: Nordea, American Express, Mastercard
+  - **Real-time uppdateringar**: Statistik uppdateras automatiskt var 10:e sekund
+  - **Användarvänligt gränssnitt**: Tydliga instruktioner, färgkodning och direktfeedback
+  - Se [ADMIN_DASHBOARD_GUIDE.md](ADMIN_DASHBOARD_GUIDE.md) för komplett användarguide
+
 ## 🔄 Senaste förbättringar (Denna version)
+
+### Admin Dashboard
+- Komplett admin-gränssnitt för AI-träning och kategorisering
+- Kraftfulla filtreringsmöjligheter för att hitta rätt transaktioner
+- Bulk-operationer för effektiv hantering av stora datamängder
+- Kategorihantering direkt i dashboarden (skapa, slå ihop, ta bort)
+- Detaljerad statistik för att följa AI-träningsframsteg
+- Responsiv design med GitHub-inspirerat tema
+- 20 nya tester för admin-funktionalitet (56 totalt godkända)
+- Säkerhetsgodkänd med CodeQL
+- Omfattande dokumentation
 
 ### Interna överföringar
 - Automatisk detektering och filtrering av överföringar mellan egna konton
