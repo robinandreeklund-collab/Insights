@@ -12,6 +12,7 @@ openpyxl>=3.0.0  # Excel file support for credit card imports
 
 # Machine Learning
 scikit-learn>=1.3.0
+sentence-transformers>=2.2.0  # Semantic matching with embeddings
 
 # YAML handling
 pyyaml>=6.0

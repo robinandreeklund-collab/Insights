@@ -1,0 +1,218 @@
+categorization_engine:
+  name: "Insights Categorization Engine"
+  version: "1.0"
+  description: >
+    Självlärande klassificeringsmotor för hushållsekonomiska transaktioner.
+    Kombinerar regelbaserad logik, AI-prediktion, semantisk matchning och manuell feedback.
+    Stöd för retraining, fallback, confidence-gränser, kategoriträd och YAML-konfiguration.
+
+  strategy:
+    primary: "AI-prediktion"
+    fallback: "Rule-based"
+    override: "Manual"
+    semantic_layer: true
+    feedback_loop: true
+    retrain_trigger: 10
+    highlight_uncertain: true
+
+  confidence_threshold:
+    minimum: 0.65
+    fallback_to_rule_based: true
+    flag_for_review: true
+
+  input_features:
+    - transaction_description
+    - merchant
+    - amount
+    - date
+    - account_type
+    - payment_method
+    - location
+
+  output_fields:
+    - category
+    - subcategory
+    - confidence_score
+    - source: [ai, rule, manual]
+    - flagged: boolean
+
+  training:
+    source: training_data.yaml
+    update_on_manual_override: true
+    retrain_on_threshold: 10
+    model_type: "LogisticRegression"
+    model_options:
+      - RandomForest
+      - XGBoost
+      - DistilBERT
+    vectorization: "TF-IDF"
+    semantic_embedding: "SentenceTransformer"
+    evaluation_metrics:
+      - accuracy
+      - precision
+      - recall
+      - f1_score
+
+  rule_base:
+    source: categorization_rules.yaml
+    match_fields:
+      - description
+      - merchant
+      - keywords
+    match_type: "contains"
+    priority: high
+    editable: true
+
+  semantic_matching:
+    enabled: true
+    engine: "SBERT"
+    similarity_threshold: 0.75
+    category_vectors: semantic_vectors.yaml
+
+  manual_override:
+    enabled: true
+    ui_component: "account_panel"
+    training_enabled: true
+    audit_log: true
+
+  fallback_logic:
+    if_confidence_below: 0.65
+    use: "rule_based"
+    log_uncertain: true
+    notify_user: true
+
+  categories:
+    - name: "Boende"
+      subcategories:
+        - Hyra
+        - El
+        - Vatten
+        - Hemförsäkring
+        - Underhåll
+        - Möbler
+        - Hemelektronik
+        - Städning
+        - Renovering
+        - Fastighetsskatt
+
+    - name: "Transport"
+      subcategories:
+        - Bränsle
+        - Bilförsäkring
+        - Reparation
+        - Parkering
+        - Tåg
+        - Buss
+        - Flyg
+        - Cykel
+        - Bilhyra
+        - Däck
+        - Fordonsskatt
+
+    - name: "Mat"
+      subcategories:
+        - Livsmedel
+        - Restaurang
+        - Takeaway
+        - Kafé
+        - Matleverans
+        - Delikatesser
+        - Alkohol
+
+    - name: "Nöje"
+      subcategories:
+        - Streaming
+        - Bio
+        - Böcker
+        - Spel
+        - Musik
+        - Evenemang
+        - Kultur
+        - Resor
+
+    - name: "Hälsa"
+      subcategories:
+        - Medicin
+        - Vård
+        - Tandvård
+        - Gym
+        - Massage
+        - Psykolog
+        - Optiker
+
+    - name: "Barn"
+      subcategories:
+        - Kläder
+        - Skola
+        - Aktiviteter
+        - Förskola
+        - Leksaker
+        - Mat
+        - Hälsa
+
+    - name: "Kläder"
+      subcategories:
+        - Vuxen
+        - Barn
+        - Skor
+        - Accessoarer
+        - Sportkläder
+
+    - name: "Kommunikation"
+      subcategories:
+        - Mobil
+        - Internet
+        - TV-abonnemang
+        - Post
+        - Streaming
+        - Molntjänster
+
+    - name: "Överföring"
+      subcategories:
+        - Intern (Robin → Frugan)
+        - Extern (till annan bank)
+        - Sparkonto
+        - Kreditkort
+        - Swish
+        - Autogiro
+
+    - name: "Fakturabetalning"
+      subcategories:
+        - Kreditkort
+        - El
+        - Hyra
+        - Vatten
+        - Övrigt
+        - Samlingsfaktura
+
+    - name: "Inkomst"
+      subcategories:
+        - Lön
+        - Bidrag
+        - Återbetalning
+        - Föräldrapenning
+        - Sidoinkomst
+        - Pension
+        - Skatteåterbäring
+
+    - name: "Övrigt"
+      subcategories:
+        - Gåva
+        - Donation
+        - Okänd
+        - Justering
+        - Avgift
+        - Förlust
+
+  audit:
+    log_manual_overrides: true
+    log_uncertain_predictions: true
+    log_fallbacks: true
+    export_format: "categorization_audit.yaml"
+
+  ui_integration:
+    dashboard_component: "account_panel"
+    show_confidence: true
+    allow_override: true
+    highlight_uncertain: true
+    show_source: true
