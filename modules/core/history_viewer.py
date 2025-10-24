@@ -36,6 +36,8 @@ class HistoryViewer:
     def get_monthly_summary(self, month: str = None) -> Dict:
         """Get monthly summary of income and expenses.
         
+        Excludes internal transfers from expense calculations.
+        
         Args:
             month: Month in format 'YYYY-MM'. If None, uses current month.
             
@@ -53,19 +55,19 @@ class HistoryViewer:
             if tx.get('date', '').startswith(month)
         ]
         
-        # Calculate totals
-        income = sum(tx['amount'] for tx in monthly_txs if tx['amount'] > 0)
-        expenses = sum(abs(tx['amount']) for tx in monthly_txs if tx['amount'] < 0)
+        # Calculate totals (excluding internal transfers)
+        income = sum(tx['amount'] for tx in monthly_txs if tx['amount'] > 0 and not tx.get('is_internal_transfer', False))
+        expenses = sum(abs(tx['amount']) for tx in monthly_txs if tx['amount'] < 0 and not tx.get('is_internal_transfer', False))
         net = income - expenses
         
-        # Count transactions
-        income_count = len([tx for tx in monthly_txs if tx['amount'] > 0])
-        expense_count = len([tx for tx in monthly_txs if tx['amount'] < 0])
+        # Count transactions (excluding internal transfers)
+        income_count = len([tx for tx in monthly_txs if tx['amount'] > 0 and not tx.get('is_internal_transfer', False)])
+        expense_count = len([tx for tx in monthly_txs if tx['amount'] < 0 and not tx.get('is_internal_transfer', False)])
         
-        # Category breakdown for expenses
+        # Category breakdown for expenses (excluding internal transfers)
         category_breakdown = defaultdict(float)
         for tx in monthly_txs:
-            if tx['amount'] < 0:
+            if tx['amount'] < 0 and not tx.get('is_internal_transfer', False):
                 category = tx.get('category', 'Okategoriserat')
                 category_breakdown[category] += abs(tx['amount'])
         
@@ -153,6 +155,8 @@ class HistoryViewer:
     def get_top_expenses(self, month: str = None, top_n: int = 10) -> List[Dict]:
         """Get top N expenses for a given month.
         
+        Excludes internal transfers from the results.
+        
         Args:
             month: Month in format 'YYYY-MM'. If None, uses current month.
             top_n: Number of top expenses to return
@@ -165,10 +169,12 @@ class HistoryViewer:
         
         transactions = self._load_transactions()
         
-        # Filter transactions for the month (expenses only)
+        # Filter transactions for the month (expenses only, excluding internal transfers)
         monthly_expenses = [
             tx for tx in transactions
-            if tx.get('date', '').startswith(month) and tx['amount'] < 0
+            if tx.get('date', '').startswith(month) 
+            and tx['amount'] < 0
+            and not tx.get('is_internal_transfer', False)
         ]
         
         # Sort by amount (absolute value)

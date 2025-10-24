@@ -34,6 +34,7 @@ from modules.core.agent_interface import AgentInterface
 from modules.core.settings_panel import SettingsPanel
 from modules.core.ai_trainer import AITrainer
 from modules.core.category_manager import CategoryManager
+from modules.core.person_manager import PersonManager
 
 # Import icon helpers using importlib to avoid sys.path modification
 import importlib.util
@@ -237,7 +238,7 @@ def create_overview_tab():
 
 # Create input tab content with CSV upload
 def create_input_tab():
-    """Create the Input tab with drag-and-drop CSV upload and income input."""
+    """Create the Input tab with drag-and-drop CSV upload."""
     return html.Div([
         html.H3("Inmatning", className="mt-3 mb-4"),
         
@@ -275,10 +276,15 @@ def create_input_tab():
             ], width=12)
         ], className="mb-4"),
         
-        # Income input section
+        # Info message about income
         dbc.Row([
             dbc.Col([
-                create_income_section()
+                dbc.Alert([
+                    html.I(className="bi bi-info-circle me-2"),
+                    "För att lägga till inkomster, gå till fliken ",
+                    html.Strong("Personer"),
+                    " och välj en person."
+                ], color="info")
             ], width=12)
         ])
     ], className="p-3")
@@ -1064,8 +1070,8 @@ def create_loans_tab():
                                 dbc.Input(id='loan-interest-input', type='number', placeholder='3.5', step='0.1'),
                             ], width=4),
                             dbc.Col([
-                                html.Label("Löptid (månader):", className="fw-bold"),
-                                dbc.Input(id='loan-term-input', type='number', placeholder='360', value='360'),
+                                html.Label("Löptid (månader, valfritt):", className="fw-bold"),
+                                dbc.Input(id='loan-term-input', type='number', placeholder='Lämna tomt för dynamisk beräkning', value=''),
                             ], width=4),
                             dbc.Col([
                                 html.Label("Startdatum:", className="fw-bold"),
@@ -1204,7 +1210,8 @@ def create_history_tab():
             ], width=12)
         ]),
         
-        # Interval for auto-refresh
+        # Store for persisting selected month and interval for auto-refresh
+        dcc.Store(id='history-selected-month', storage_type='session'),
         dcc.Interval(id='history-interval', interval=5000, n_intervals=0)
     ], className="p-3")
 
@@ -1266,55 +1273,6 @@ def create_agent_tab():
             ], width=12)
         ])
     ], className="p-3")
-
-
-# Create income tab content (add to Input tab)
-def create_income_section():
-    """Create income input section to be added to Input tab."""
-    return dbc.Card([
-        dbc.CardBody([
-            html.H5("Lägg till inkomst", className="card-title mb-3"),
-            dbc.Row([
-                dbc.Col([
-                    html.Label("Person:", className="fw-bold"),
-                    dbc.Input(id='income-person-input', type='text', placeholder='T.ex. Robin'),
-                ], width=4),
-                dbc.Col([
-                    html.Label("Konto:", className="fw-bold"),
-                    dcc.Dropdown(id='income-account-dropdown', placeholder='Välj konto...'),
-                ], width=4),
-                dbc.Col([
-                    html.Label("Kategori:", className="fw-bold"),
-                    dcc.Dropdown(
-                        id='income-category-dropdown',
-                        options=[
-                            {'label': 'Lön', 'value': 'Lön'},
-                            {'label': 'Bonus', 'value': 'Bonus'},
-                            {'label': 'Återbäring', 'value': 'Återbäring'},
-                            {'label': 'Övrigt', 'value': 'Övrigt'}
-                        ],
-                        value='Lön'
-                    ),
-                ], width=4),
-            ], className="mb-3"),
-            dbc.Row([
-                dbc.Col([
-                    html.Label("Belopp (SEK):", className="fw-bold"),
-                    dbc.Input(id='income-amount-input', type='number', placeholder='0.00'),
-                ], width=4),
-                dbc.Col([
-                    html.Label("Datum:", className="fw-bold"),
-                    dbc.Input(id='income-date-input', type='date'),
-                ], width=4),
-                dbc.Col([
-                    html.Label("Beskrivning:", className="fw-bold"),
-                    dbc.Input(id='income-description-input', type='text', placeholder='Valfri beskrivning...'),
-                ], width=4),
-            ], className="mb-3"),
-            dbc.Button("Lägg till inkomst", id='add-income-btn', color="success"),
-            html.Div(id='income-add-status', className="mt-3")
-        ])
-    ])
 
 
 # Create monthly analysis tab content
@@ -1424,6 +1382,177 @@ def create_monthly_analysis_tab():
         
         # Interval for auto-refresh
         dcc.Interval(id='monthly-analysis-interval', interval=10000, n_intervals=0)
+    ], className="p-3")
+
+
+# Create people tab content
+def create_people_tab():
+    """Create the People tab for managing family members."""
+    return html.Div([
+        html.H3("Personer", className="mt-3 mb-4"),
+        html.P("Hantera familjemedlemmar, deras inkomster, konton och utgiftsanalys."),
+        
+        # Top section: Add new person + Select person
+        dbc.Row([
+            # Add person card
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Lägg till ny person", className="card-title mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Namn:", className="fw-bold"),
+                                dbc.Input(id='person-name-input', type='text', placeholder='T.ex. Robin'),
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Månadsinkomst (SEK):", className="fw-bold"),
+                                dbc.Input(id='person-income-input', type='number', placeholder='30000'),
+                            ], width=6),
+                        ], className="mb-3"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Betalningsdag:", className="fw-bold"),
+                                dbc.Input(id='person-payment-day-input', type='number', placeholder='25', min=1, max=31),
+                            ], width=6),
+                            dbc.Col([
+                                html.Label("Beskrivning:", className="fw-bold"),
+                                dbc.Input(id='person-description-input', type='text', placeholder='Valfri beskrivning'),
+                            ], width=6),
+                        ], className="mb-3"),
+                        dbc.Button("Lägg till person", id='add-person-btn', color="success", className="w-100"),
+                        html.Div(id='person-add-status', className="mt-3")
+                    ])
+                ])
+            ], width=6),
+            
+            # Select person card
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Välj person", className="card-title mb-3"),
+                        html.Label("Hantera vald person:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='selected-person-dropdown',
+                            placeholder="Välj en person...",
+                            className="mb-3"
+                        ),
+                        html.Div(id='selected-person-info', className="mt-3")
+                    ])
+                ])
+            ], width=6)
+        ], className="mb-4"),
+        
+        # Selected person details section (only shown when person is selected)
+        html.Div(id='person-details-section', children=[
+            dbc.Row([
+                # Income management for selected person
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H5("Lägg till inkomst", className="card-title mb-3"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Konto:", className="fw-bold"),
+                                    dcc.Dropdown(id='income-account-dropdown', placeholder='Välj konto...'),
+                                ], width=4),
+                                dbc.Col([
+                                    html.Label("Kategori:", className="fw-bold"),
+                                    dcc.Dropdown(
+                                        id='income-category-dropdown',
+                                        options=[
+                                            {'label': 'Lön', 'value': 'Lön'},
+                                            {'label': 'Bonus', 'value': 'Bonus'},
+                                            {'label': 'Återbäring', 'value': 'Återbäring'},
+                                            {'label': 'Övrigt', 'value': 'Övrigt'}
+                                        ],
+                                        value='Lön'
+                                    ),
+                                ], width=4),
+                                dbc.Col([
+                                    html.Label("Belopp (SEK):", className="fw-bold"),
+                                    dbc.Input(id='income-amount-input', type='number', placeholder='0.00'),
+                                ], width=4),
+                            ], className="mb-3"),
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Label("Datum:", className="fw-bold"),
+                                    dbc.Input(id='income-date-input', type='date'),
+                                ], width=6),
+                                dbc.Col([
+                                    html.Label("Beskrivning:", className="fw-bold"),
+                                    dbc.Input(id='income-description-input', type='text', placeholder='Valfri beskrivning...'),
+                                ], width=6),
+                            ], className="mb-3"),
+                            dbc.Button("Lägg till inkomst", id='add-income-btn', color="success", className="w-100"),
+                            html.Div(id='income-add-status', className="mt-3")
+                        ])
+                    ])
+                ], width=6),
+                
+                # Account linking for selected person
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H5("Koppla konton", className="card-title mb-3"),
+                            html.Label("Välj konton för denna person:", className="fw-bold"),
+                            dcc.Dropdown(
+                                id='person-accounts-dropdown',
+                                placeholder='Välj konton...',
+                                multi=True,
+                                className="mb-3"
+                            ),
+                            dbc.Button("Spara kontokopplingar", id='save-person-accounts-btn', color="primary", className="w-100"),
+                            html.Div(id='person-accounts-status', className="mt-3")
+                        ])
+                    ])
+                ], width=6)
+            ], className="mb-4"),
+        ], style={'display': 'none'}),  # Hidden by default
+        
+        # Income history and spending analysis
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Inkomsthistorik", className="card-title"),
+                        dcc.Dropdown(
+                            id='person-income-selector',
+                            placeholder="Välj person...",
+                            className="mb-3"
+                        ),
+                        dcc.Graph(id='person-income-graph')
+                    ])
+                ])
+            ], width=6),
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Utgifter per kategori", className="card-title"),
+                        dcc.Dropdown(
+                            id='person-spending-selector',
+                            placeholder="Välj person...",
+                            className="mb-3"
+                        ),
+                        dcc.Graph(id='person-spending-graph')
+                    ])
+                ])
+            ], width=6)
+        ], className="mb-4"),
+        
+        # People list section (moved to bottom)
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("Alla registrerade personer", className="card-title"),
+                        html.Div(id='people-list-display')
+                    ])
+                ])
+            ], width=12)
+        ]),
+        
+        # Interval for auto-refresh
+        dcc.Interval(id='people-interval', interval=5000, n_intervals=0)
     ], className="p-3")
 
 
@@ -1656,6 +1785,12 @@ app.layout = html.Div([
                     ], className="sidebar-nav-item"),
                     html.Li([
                         html.A([
+                            html.Span("👥", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Personer", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-people", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
                             html.Span("❓", className="sidebar-nav-icon", style={'display': 'inline-block'}),
                             html.Span("Frågebaserad analys", style={'marginLeft': '8px'}),
                         ], href="#", id="nav-agent", className="sidebar-nav-link"),
@@ -1682,8 +1817,8 @@ app.layout = html.Div([
 @app.callback(
     [Output('tab-content', 'children'),
      Output('current-tab', 'data')] +
-    [Output(f'nav-{tab}', 'className') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
-    [Input(f'nav-{tab}', 'n_clicks') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']],
+    [Output(f'nav-{tab}', 'className') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'settings']],
+    [Input(f'nav-{tab}', 'n_clicks') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'settings']],
     prevent_initial_call=True
 )
 def navigate_tabs(*args):
@@ -1704,6 +1839,7 @@ def navigate_tabs(*args):
         'nav-history': ('history', create_history_tab()),
         'nav-monthly-analysis': ('monthly-analysis', create_monthly_analysis_tab()),
         'nav-loans': ('loans', create_loans_tab()),
+        'nav-people': ('people', create_people_tab()),
         'nav-agent': ('agent', create_agent_tab()),
         'nav-settings': ('settings', create_settings_tab()),
     }
@@ -1715,7 +1851,7 @@ def navigate_tabs(*args):
     
     # Update active class for nav items
     nav_classes = []
-    for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'agent', 'settings']:
+    for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'settings']:
         if f'nav-{tab}' == button_id:
             nav_classes.append('sidebar-nav-link active')
         else:
@@ -1853,18 +1989,64 @@ def update_overview(n):
     """Update the overview tab with current data."""
     manager = AccountManager()
     accounts = manager.get_accounts()
+    bill_manager = BillManager()
+    income_tracker = IncomeTracker()
     
     # Calculate total balance
     total_balance = sum(acc.get('balance', 0) for acc in accounts)
     
-    # Get forecast
-    forecast_summary = get_forecast_summary(total_balance)
+    # Get upcoming bills for forecast
+    upcoming_bills = bill_manager.get_upcoming_bills(days=30)
+    
+    # Get expected income from persons for the next 30 days
+    from modules.core.person_manager import PersonManager
+    pm = PersonManager()
+    persons = pm.get_persons()
+    
+    expected_income = []
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    
+    # For each person, check if they have a payment day coming up
+    for person in persons:
+        payment_day = person.get('payment_day', 25)
+        monthly_income = person.get('monthly_income', 0)
+        
+        if monthly_income > 0:
+            # Check current month
+            current_month_date = datetime(today.year, today.month, payment_day)
+            if current_month_date >= today and current_month_date <= today + timedelta(days=30):
+                expected_income.append({
+                    'date': current_month_date.strftime('%Y-%m-%d'),
+                    'amount': monthly_income,
+                    'person': person.get('name', '')
+                })
+            
+            # Check next month
+            next_month = today.month + 1 if today.month < 12 else 1
+            next_year = today.year if today.month < 12 else today.year + 1
+            try:
+                next_month_date = datetime(next_year, next_month, payment_day)
+                if next_month_date <= today + timedelta(days=30):
+                    expected_income.append({
+                        'date': next_month_date.strftime('%Y-%m-%d'),
+                        'amount': monthly_income,
+                        'person': person.get('name', '')
+                    })
+            except ValueError:
+                # Handle invalid dates (e.g., Feb 31)
+                pass
+    
+    # Get forecast with upcoming bills and expected income
+    forecast_summary = get_forecast_summary(total_balance, upcoming_bills=upcoming_bills, expected_income=expected_income)
     forecast_data = forecast_summary.get('forecast', [])
     
     # Create forecast graph
     if forecast_data:
         forecast_df = pd.DataFrame(forecast_data)
         forecast_fig = go.Figure()
+        
+        # Add balance line
         forecast_fig.add_trace(go.Scatter(
             x=forecast_df['date'],
             y=forecast_df['predicted_balance'],
@@ -1873,12 +2055,39 @@ def update_overview(n):
             line=dict(color='#0d6efd', width=3),
             marker=dict(size=6)
         ))
+        
+        # Add cumulative income line
+        forecast_fig.add_trace(go.Scatter(
+            x=forecast_df['date'],
+            y=forecast_df['cumulative_income'],
+            mode='lines',
+            name='Kumulativa inkomster',
+            line=dict(color='#198754', width=2, dash='dash'),
+        ))
+        
+        # Add cumulative expenses line (as negative for clarity)
+        forecast_fig.add_trace(go.Scatter(
+            x=forecast_df['date'],
+            y=[-x for x in forecast_df['cumulative_expenses']],
+            mode='lines',
+            name='Kumulativa utgifter',
+            line=dict(color='#dc3545', width=2, dash='dash'),
+        ))
+        
         forecast_fig.update_layout(
             title='30-dagars prognos',
             xaxis_title='Datum',
-            yaxis_title='Saldo (SEK)',
+            yaxis_title='SEK',
             hovermode='x unified',
-            template='plotly_white'
+            template='plotly_white',
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
         )
     else:
         forecast_fig = go.Figure()
@@ -1996,7 +2205,9 @@ def update_enhanced_overview(n):
     thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
     recent_expenses = [
         tx for tx in transactions 
-        if tx.get('amount', 0) < 0 and tx.get('date', '') >= thirty_days_ago
+        if tx.get('amount', 0) < 0 
+        and tx.get('date', '') >= thirty_days_ago
+        and not tx.get('is_internal_transfer', False)
     ]
     recent_expenses.sort(key=lambda x: x.get('amount', 0))
     
@@ -3536,21 +3747,37 @@ def cancel_ocr_loan(n_clicks):
 @app.callback(
     Output('history-month-selector', 'options'),
     Output('history-month-selector', 'value'),
-    Input('history-interval', 'n_intervals')
+    Output('history-selected-month', 'data'),
+    Input('history-interval', 'n_intervals'),
+    Input('history-month-selector', 'value'),
+    State('history-selected-month', 'data')
 )
-def update_history_month_options(n):
-    """Update available months for history view."""
+def update_history_month_options(n, selected_month, stored_month):
+    """Update available months for history view and persist selection."""
+    ctx = callback_context
+    
     try:
         viewer = HistoryViewer()
         months = viewer.get_all_months()
         
         if not months:
-            return [], None
+            return [], None, None
         
         options = [{'label': month, 'value': month} for month in months]
-        return options, months[0] if months else None
+        
+        # Determine which month to display
+        # Priority: user selection > stored value > latest month
+        if ctx.triggered and ctx.triggered[0]['prop_id'] == 'history-month-selector.value':
+            # User just changed the selection
+            return options, selected_month, selected_month
+        elif stored_month and stored_month in months:
+            # Use stored selection
+            return options, stored_month, stored_month
+        else:
+            # Default to latest month
+            return options, months[0], months[0]
     except:
-        return [], None
+        return [], None, None
 
 
 # Callback: Monthly summary display
@@ -3697,10 +3924,11 @@ def process_agent_query(n_clicks, query):
 # Callback: Income account dropdown
 @app.callback(
     Output('income-account-dropdown', 'options'),
-    Input('overview-interval', 'n_intervals')
+    [Input('people-interval', 'n_intervals'),
+     Input('selected-person-dropdown', 'value')]
 )
-def update_income_account_dropdown(n):
-    """Update account dropdown for income input."""
+def update_income_account_dropdown(n, selected_person):
+    """Update account dropdown for income input in People panel."""
     try:
         manager = AccountManager()
         accounts = manager.get_accounts()
@@ -3713,7 +3941,7 @@ def update_income_account_dropdown(n):
 @app.callback(
     Output('income-add-status', 'children'),
     Input('add-income-btn', 'n_clicks'),
-    State('income-person-input', 'value'),
+    State('selected-person-dropdown', 'value'),
     State('income-account-dropdown', 'value'),
     State('income-amount-input', 'value'),
     State('income-date-input', 'value'),
@@ -3722,8 +3950,11 @@ def update_income_account_dropdown(n):
     prevent_initial_call=True
 )
 def add_income(n_clicks, person, account, amount, date, description, category):
-    """Add income entry."""
-    if not all([person, account, amount, date]):
+    """Add income entry for selected person."""
+    if not person:
+        return dbc.Alert("Välj en person först.", color="warning")
+    
+    if not all([account, amount, date]):
         return dbc.Alert("Fyll i alla obligatoriska fält.", color="warning")
     
     try:
@@ -5269,6 +5500,337 @@ def save_card_tx_category(save_clicks, train_clicks, card_id, table_data, tx_idx
         
     except Exception as e:
         return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+# Callback: Add person
+@app.callback(
+    Output('person-add-status', 'children'),
+    Input('add-person-btn', 'n_clicks'),
+    State('person-name-input', 'value'),
+    State('person-income-input', 'value'),
+    State('person-payment-day-input', 'value'),
+    State('person-description-input', 'value'),
+    prevent_initial_call=True
+)
+def add_person(n_clicks, name, income, payment_day, description):
+    """Add a new person."""
+    if not name:
+        return dbc.Alert("Fyll i namn", color="warning")
+    
+    try:
+        pm = PersonManager()
+        person = pm.add_person(
+            name=name,
+            monthly_income=float(income) if income else 0.0,
+            payment_day=int(payment_day) if payment_day else 25,
+            description=description or ""
+        )
+        return dbc.Alert(f"✓ Person '{name}' tillagd!", color="success", dismissable=True)
+    except ValueError as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="warning")
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Update people list
+@app.callback(
+    Output('people-list-display', 'children'),
+    Input('people-interval', 'n_intervals'),
+    Input('add-person-btn', 'n_clicks')
+)
+def update_people_list(n, add_clicks):
+    """Update the people list display."""
+    try:
+        pm = PersonManager()
+        persons = pm.get_persons()
+        
+        if not persons:
+            return html.P("Inga personer registrerade", className="text-muted")
+        
+        rows = []
+        for person in persons:
+            rows.append(html.Tr([
+                html.Td(person.get('name', 'N/A')),
+                html.Td(f"{person.get('monthly_income', 0):,.2f} SEK"),
+                html.Td(f"Den {person.get('payment_day', 'N/A')}:e"),
+                html.Td(person.get('description', '')),
+            ]))
+        
+        return dbc.Table([
+            html.Thead(html.Tr([
+                html.Th("Namn"),
+                html.Th("Månadsinkomst"),
+                html.Th("Betalningsdag"),
+                html.Th("Beskrivning"),
+            ])),
+            html.Tbody(rows)
+        ], striped=True, hover=True)
+        
+    except Exception as e:
+        return html.P(f"Fel: {str(e)}", className="text-danger")
+
+
+# Callback: Update person income selector
+@app.callback(
+    Output('person-income-selector', 'options'),
+    Input('people-interval', 'n_intervals')
+)
+def update_person_income_selector(n):
+    """Update person selector for income history."""
+    try:
+        pm = PersonManager()
+        persons = pm.get_persons()
+        return [{'label': p['name'], 'value': p['name']} for p in persons]
+    except:
+        return []
+
+
+# Callback: Update person spending selector
+@app.callback(
+    Output('person-spending-selector', 'options'),
+    Input('people-interval', 'n_intervals')
+)
+def update_person_spending_selector(n):
+    """Update person selector for spending analysis."""
+    try:
+        pm = PersonManager()
+        persons = pm.get_persons()
+        return [{'label': p['name'], 'value': p['name']} for p in persons]
+    except:
+        return []
+
+
+# Callback: Update selected person dropdown
+@app.callback(
+    Output('selected-person-dropdown', 'options'),
+    Input('people-interval', 'n_intervals'),
+    Input('add-person-btn', 'n_clicks')
+)
+def update_selected_person_dropdown(n, add_clicks):
+    """Update selected person dropdown options."""
+    try:
+        pm = PersonManager()
+        persons = pm.get_persons()
+        return [{'label': p['name'], 'value': p['name']} for p in persons]
+    except:
+        return []
+
+
+# Callback: Show/hide person details section and display info
+@app.callback(
+    [Output('person-details-section', 'style'),
+     Output('selected-person-info', 'children')],
+    Input('selected-person-dropdown', 'value')
+)
+def toggle_person_details(selected_person):
+    """Show person details section when a person is selected."""
+    if not selected_person:
+        return {'display': 'none'}, ""
+    
+    try:
+        pm = PersonManager()
+        person = pm.get_person_by_name(selected_person)
+        
+        if not person:
+            return {'display': 'none'}, ""
+        
+        info = html.Div([
+            html.P([
+                html.Strong("Månadsinkomst: "),
+                f"{person.get('monthly_income', 0):,.2f} SEK"
+            ], className="mb-1"),
+            html.P([
+                html.Strong("Betalningsdag: "),
+                f"Den {person.get('payment_day', 'N/A')}:e"
+            ], className="mb-1"),
+        ])
+        
+        return {'display': 'block'}, info
+    except:
+        return {'display': 'none'}, ""
+
+
+# Callback: Update person accounts dropdown
+@app.callback(
+    [Output('person-accounts-dropdown', 'options'),
+     Output('person-accounts-dropdown', 'value')],
+    Input('selected-person-dropdown', 'value'),
+    Input('people-interval', 'n_intervals')
+)
+def update_person_accounts_dropdown(selected_person, n):
+    """Update accounts dropdown for selected person."""
+    try:
+        manager = AccountManager()
+        accounts = manager.get_accounts()
+        options = [{'label': acc['name'], 'value': acc['name']} for acc in accounts]
+        
+        if not selected_person:
+            return options, []
+        
+        # Get person's current linked accounts
+        pm = PersonManager()
+        person = pm.get_person_by_name(selected_person)
+        
+        if person and 'linked_accounts' in person:
+            return options, person['linked_accounts']
+        
+        return options, []
+    except:
+        return [], []
+
+
+# Callback: Save person account links
+@app.callback(
+    Output('person-accounts-status', 'children'),
+    Input('save-person-accounts-btn', 'n_clicks'),
+    State('selected-person-dropdown', 'value'),
+    State('person-accounts-dropdown', 'value'),
+    prevent_initial_call=True
+)
+def save_person_accounts(n_clicks, selected_person, linked_accounts):
+    """Save account links for selected person."""
+    if not selected_person:
+        return dbc.Alert("Välj en person först.", color="warning")
+    
+    try:
+        pm = PersonManager()
+        person = pm.get_person_by_name(selected_person)
+        
+        if not person:
+            return dbc.Alert("Person hittades inte.", color="danger")
+        
+        # Update person with linked accounts
+        pm.update_person(
+            person_id=person['id'],
+            name=person['name'],
+            monthly_income=person.get('monthly_income'),
+            payment_day=person.get('payment_day'),
+            description=person.get('description')
+        )
+        
+        # Save linked accounts separately
+        data = pm._load_yaml(pm.persons_file)
+        for p in data.get('persons', []):
+            if p['id'] == person['id']:
+                p['linked_accounts'] = linked_accounts or []
+                break
+        
+        pm._save_yaml(pm.persons_file, data)
+        
+        account_count = len(linked_accounts) if linked_accounts else 0
+        return dbc.Alert(f"✓ {account_count} konto(n) kopplade till {selected_person}", color="success", dismissable=True)
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger")
+
+
+# Callback: Update person income graph
+@app.callback(
+    Output('person-income-graph', 'figure'),
+    Input('person-income-selector', 'value'),
+    Input('people-interval', 'n_intervals')
+)
+def update_person_income_graph(person_name, n):
+    """Update income history graph for selected person."""
+    if not person_name:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Välj en person för att se inkomsthistorik",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
+    
+    try:
+        pm = PersonManager()
+        history = pm.get_income_history(person_name, months=12)
+        
+        if not history:
+            fig = go.Figure()
+            fig.add_annotation(
+                text=f"Ingen inkomstdata för {person_name}",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False
+            )
+            return fig
+        
+        months = [h['month'] for h in history]
+        amounts = [h['amount'] for h in history]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=months,
+            y=amounts,
+            name='Inkomst',
+            marker_color='#198754'
+        ))
+        
+        fig.update_layout(
+            title=f'Inkomsthistorik - {person_name}',
+            xaxis_title='Månad',
+            yaxis_title='Belopp (SEK)',
+            template='plotly_white'
+        )
+        
+        return fig
+        
+    except Exception as e:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"Fel: {str(e)}",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
+
+
+# Callback: Update person spending graph
+@app.callback(
+    Output('person-spending-graph', 'figure'),
+    Input('person-spending-selector', 'value'),
+    Input('people-interval', 'n_intervals')
+)
+def update_person_spending_graph(person_name, n):
+    """Update spending by category graph for selected person."""
+    if not person_name:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Välj en person för att se utgiftsanalys",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
+    
+    try:
+        pm = PersonManager()
+        spending = pm.get_person_spending_by_category(person_name, months=6)
+        
+        if not spending:
+            fig = go.Figure()
+            fig.add_annotation(
+                text=f"Ingen utgiftsdata för {person_name}",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False
+            )
+            return fig
+        
+        # Create pie chart
+        fig = px.pie(
+            values=list(spending.values()),
+            names=list(spending.keys()),
+            title=f'Utgifter per kategori - {person_name} (senaste 6 månaderna)'
+        )
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        
+        return fig
+        
+    except Exception as e:
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"Fel: {str(e)}",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
 
 
 if __name__ == "__main__":

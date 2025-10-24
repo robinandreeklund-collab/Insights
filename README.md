@@ -2,9 +2,21 @@
 
 Insights är ett transparent, modulärt och agentförberett system för hushållsekonomi. Det kombinerar regelbaserad och AI-driven transaktionsklassificering, prognoser, frågebaserad analys och full kontroll över konton, fakturor, inkomster och lån – allt styrt via YAML och ett interaktivt Dash-gränssnitt.
 
-## 🎯 Projektstatus: Sprint 7 - Lånehantering med OCR och avancerad matchning
+## 🎯 Projektstatus: Sprint 8 - Förbättrad utgiftsanalys och personhantering
 
-**Sprint 7 Status:** OCR-baserad låneimport, utökad datamodell och smart transaktionsmatchning implementerad!
+**Sprint 8 Status:** Förbättrad filtrering av interna överföringar, persistent månadval, utökad prognosgraf och ny Personer-panel!
+
+Sprint 8 har implementerat:
+- ✅ **Filtrering av interna överföringar**: Överföringar mellan egna konton exkluderas nu från alla utgiftsberäkningar
+- ✅ **Persistent månadval i Historik**: Valt månad sparas i sessionen och återställs vid sidladdning
+- ✅ **Utökad Saldo & prognos-graf**: Visar nu förväntat saldo, kumulativa inkomster och kumulativa utgifter
+- ✅ **Valfri lånehantering**: Löptid för lån är nu valfritt för dynamiska återbetalningar
+- ✅ **Personer-panel**: Ny flik för att hantera familjemedlemmar, spåra inkomster och analysera utgifter per person
+- ✅ **Inkomsthistorik**: Visualisering av inkomster över tid per person
+- ✅ **Per-person utgiftsanalys**: Detaljerad uppdelning av utgifter per kategori baserat på kreditkortsallokeringar
+- ✅ **Omfattande tester**: 255 tester godkända (från 245), 10 nya tester för PersonManager
+
+**Sprint 7 Status (tidigare):** OCR-baserad låneimport, utökad datamodell och smart transaktionsmatchning implementerad!
 
 Sprint 7 har implementerat:
 - ✅ **OCR-baserad låneimport**: Ladda upp skärmdumpar av lån och extrahera automatiskt alla detaljer
@@ -206,11 +218,49 @@ python import_flow.py "PERSONKONTO 880104-7591 - 2025-10-21 15.38.56.csv"
 - Månadssammanställningar
 - Prognoser baserat på historik
 
-### 9. Inställningar
+### 10. Personer (NYtt i denna version!)
+- Hantera familjemedlemmar
+- Registrera återkommande inkomster per person
+- Betalningsdag och förväntade utbetalningar
+- Inkomsthistorik visualisering
+- Per-person utgiftsanalys per kategori
+- Använder kreditkortsallokeringar för att dela upp utgifter mellan personer
+
+### 11. Inställningar
 - Konfigurera valuta och decimaler
 - Anpassa visningsinställningar
 - Aktivera/inaktivera notifieringar
 - Justera gränsvärden och trösklar
+
+## 🔄 Senaste förbättringar (Denna version)
+
+### Interna överföringar
+- Automatisk detektering och filtrering av överföringar mellan egna konton
+- Exkluderas från utgiftsstatistik och prognoser
+- Visas inte i "Största utgifter" eller "Topputgifter"
+- Korrekt beräkning av månadsutgifter
+
+### Historik
+- Månadsvalet i Historik är nu persistent (sparas i sessionen)
+- Interna överföringar exkluderas från "Största utgifter"
+
+### Ekonomisk översikt
+- Saldo & prognos-grafen visar nu tre linjer:
+  - Förväntat saldo (blå)
+  - Kumulativa inkomster (grön, streckad)
+  - Kumulativa utgifter (röd, streckad)
+- Topputgifter exkluderar interna överföringar
+
+### Lånehantering
+- Löptid (månader) är nu valfritt/dynamiskt
+- Kan lämnas tomt för lån utan fast löptid
+
+### Personer-panel
+- Ny flik för att hantera familjemedlemmar
+- Registrera personer med månadsinkomst och betalningsdag
+- Visualisera inkomsthistorik per person
+- Se utgifter per kategori för varje person baserat på kreditkortsanvändning
+- Stöd för framtida förväntade utbetalningar per månad
 
 ## 🛠️ Installation
 
