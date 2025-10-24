@@ -6,6 +6,14 @@ import yaml
 import os
 import re
 
+# Try to import ML categorizer
+try:
+    from modules.core.ml_categorizer import MLCategorizer
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+    print("Warning: ML categorizer not available. Install scikit-learn to enable ML features.")
+
 
 def load_categorization_rules(rules_file: str = "yaml/categorization_rules.yaml") -> List[dict]:
     """Load categorization rules from YAML file."""
@@ -123,14 +131,15 @@ def categorize_by_ai_heuristic(description: str, amount: float, training_data: L
     return None
 
 
-def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data: List[dict] = None) -> pd.DataFrame:
+def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data: List[dict] = None, use_ml: bool = True) -> pd.DataFrame:
     """
-    Automatically categorize transactions using rules and AI.
+    Automatically categorize transactions using rules, ML, and heuristics.
     
     Args:
         data: DataFrame with transaction data
         rules: List of categorization rules (optional, will load from file if not provided)
         training_data: List of training data (optional)
+        use_ml: Whether to use ML model for categorization (default: True)
         
     Returns:
         DataFrame with categorized transactions
@@ -150,6 +159,17 @@ def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data:
                 data_dict = yaml.safe_load(f) or {}
                 training_data = data_dict.get('training_data', [])
     
+    # Initialize ML categorizer if available and requested
+    ml_categorizer = None
+    if use_ml and ML_AVAILABLE:
+        ml_categorizer = MLCategorizer()
+        if not ml_categorizer.is_trained:
+            # Try to train if we have enough data
+            result = ml_categorizer.train()
+            if not result['success']:
+                ml_categorizer = None
+                print(f"ML model not available: {result['message']}")
+    
     # Initialize category columns if they don't exist
     if 'category' not in df.columns:
         df['category'] = ''
@@ -165,17 +185,21 @@ def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data:
         description = str(row.get('description', ''))
         amount = float(row.get('amount', 0))
         
-        # Try rule-based categorization first (higher priority)
+        # Try rule-based categorization first (highest priority)
         result = categorize_by_rules(description, rules)
         
-        # If no rule match, try AI/heuristic
+        # If no rule match, try ML model
+        if not result and ml_categorizer is not None:
+            result = ml_categorizer.predict(description, return_probability=True)
+        
+        # If no ML match, try heuristic
         if not result:
             result = categorize_by_ai_heuristic(description, amount, training_data)
         
         # Apply categorization
         if result:
             df.at[idx, 'category'] = result['category']
-            df.at[idx, 'subcategory'] = result['subcategory']
+            df.at[idx, 'subcategory'] = result.get('subcategory', '')
         else:
             # Default category
             df.at[idx, 'category'] = 'Övrigt'

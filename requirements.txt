@@ -10,6 +10,9 @@ pandas>=2.0.0
 numpy>=1.24.0
 openpyxl>=3.0.0  # Excel file support for credit card imports
 
+# Machine Learning
+scikit-learn>=1.3.0
+
 # YAML handling
 pyyaml>=6.0
 

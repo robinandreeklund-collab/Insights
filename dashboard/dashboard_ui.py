@@ -1942,6 +1942,32 @@ def create_admin_tab():
                     ])
                 ])
             ], width=12)
+        ], className="mb-4"),
+        
+        # ML Model Training
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("🧠 Maskininlärning (ML Model)", className="card-title"),
+                        html.P("Träna en MultinomialNB-modell för bättre kategorisering", className="text-muted"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div(id='admin-ml-model-info', className="mb-3")
+                            ], width=12)
+                        ]),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Träna ML-modell", id='admin-train-ml-btn', color="success", className="me-2"),
+                                dbc.Button("Tvinga omträning", id='admin-retrain-ml-btn', color="warning", className="me-2"),
+                                html.Div(id='admin-ml-train-status', className="d-inline-block")
+                            ], width=12)
+                        ])
+                    ])
+                ])
+            ], width=12)
         ]),
         
         # Store for selected transactions
@@ -6495,6 +6521,96 @@ def update_admin_ai_stats(n):
         ])
     except Exception as e:
         return html.Div(f"Fel vid hämtning av AI-statistik: {str(e)}", className="text-danger")
+
+
+@app.callback(
+    Output('admin-ml-model-info', 'children'),
+    Input('admin-refresh-interval', 'n_intervals')
+)
+def update_ml_model_info(n):
+    """Update ML model information."""
+    try:
+        from modules.core.ai_trainer import AITrainer
+        trainer = AITrainer()
+        info = trainer.get_ml_model_info()
+        
+        if not info.get('ml_available', False):
+            return dbc.Alert(
+                "ML-funktioner ej tillgängliga. Installera scikit-learn för att aktivera ML-modellen.",
+                color="warning"
+            )
+        
+        if info.get('is_trained', False):
+            return html.Div([
+                dbc.Alert([
+                    html.Strong("✓ ML-modell tränad och redo!"),
+                    html.Br(),
+                    f"Kategorier: {', '.join(info.get('categories', []))}",
+                    html.Br(),
+                    f"Träningsprover: {info.get('total_samples', 0)}"
+                ], color="success"),
+                html.Small(f"Kategorifördelning: {info.get('category_distribution', {})}", className="text-muted")
+            ])
+        else:
+            return dbc.Alert(
+                f"ML-modell ej tränad. Behöver minst 2 kategorier med 2+ exempel vardera. "
+                f"Nuvarande träningsprover: {info.get('total_samples', 0)}",
+                color="info"
+            )
+    except Exception as e:
+        return dbc.Alert(f"Fel vid hämtning av ML-info: {str(e)}", color="danger")
+
+
+@app.callback(
+    Output('admin-ml-train-status', 'children'),
+    [Input('admin-train-ml-btn', 'n_clicks'),
+     Input('admin-retrain-ml-btn', 'n_clicks')],
+    prevent_initial_call=True
+)
+def handle_ml_training(train_clicks, retrain_clicks):
+    """Handle ML model training."""
+    from dash import callback_context
+    
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    try:
+        from modules.core.ai_trainer import AITrainer
+        trainer = AITrainer()
+        
+        if button_id == 'admin-train-ml-btn':
+            result = trainer.train_ml_model(force_retrain=False)
+        else:  # retrain button
+            result = trainer.train_ml_model(force_retrain=True)
+        
+        if result.get('success', False):
+            return dbc.Alert(
+                [
+                    html.Strong("✓ " + result['message']),
+                    html.Br(),
+                    f"Prover: {result.get('samples_used', 0)}, Kategorier: {len(result.get('categories', []))}"
+                ],
+                color="success",
+                dismissable=True,
+                duration=5000
+            )
+        else:
+            return dbc.Alert(
+                result.get('message', 'Träning misslyckades'),
+                color="warning",
+                dismissable=True,
+                duration=5000
+            )
+    except Exception as e:
+        return dbc.Alert(
+            f"Fel vid träning: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=5000
+        )
 
 
 if __name__ == "__main__":
