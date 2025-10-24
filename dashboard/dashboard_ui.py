@@ -1071,7 +1071,7 @@ def create_loans_tab():
                             ], width=4),
                             dbc.Col([
                                 html.Label("Löptid (månader, valfritt):", className="fw-bold"),
-                                dbc.Input(id='loan-term-input', type='number', placeholder='Lämna tomt för dynamisk', value=''),
+                                dbc.Input(id='loan-term-input', type='number', placeholder='Lämna tomt för dynamisk beräkning', value=''),
                             ], width=4),
                             dbc.Col([
                                 html.Label("Startdatum:", className="fw-bold"),
