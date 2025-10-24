@@ -62,7 +62,22 @@ class SemanticMatcher:
         """Initialize SentenceTransformer model if available."""
         try:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(self.model_name)
+            
+            # Try to initialize model with explicit device mapping
+            try:
+                import torch
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                self.model = SentenceTransformer(self.model_name, device=device)
+            except Exception as e:
+                # Fallback to default initialization
+                logger.warning(f"Device-specific init failed, using default: {e}")
+                try:
+                    self.model = SentenceTransformer(self.model_name)
+                except Exception as e2:
+                    # Final fallback: use a simpler model
+                    logger.warning(f"Failed to load {self.model_name}, trying paraphrase-MiniLM-L3-v2: {e2}")
+                    self.model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
+            
             logger.info(f"Loaded SentenceTransformer model: {self.model_name}")
             
             # Pre-compute embeddings for all examples
@@ -72,6 +87,7 @@ class SemanticMatcher:
             self.model = None
         except Exception as e:
             logger.error(f"Failed to initialize SentenceTransformer: {e}")
+            logger.info("Semantic matching will be disabled. System will use AI and rules only.")
             self.model = None
     
     def _compute_example_embeddings(self):
@@ -79,26 +95,33 @@ class SemanticMatcher:
         if not self.model:
             return
         
-        logger.info("Computing embeddings for category examples...")
-        for category, subcategories in self.vectors_data.items():
-            if not isinstance(subcategories, dict):
-                continue
-            
-            for subcategory, examples in subcategories.items():
-                if not isinstance(examples, list):
+        try:
+            logger.info("Computing embeddings for category examples...")
+            for category, subcategories in self.vectors_data.items():
+                if not isinstance(subcategories, dict):
                     continue
                 
-                key = f"{category}/{subcategory}"
-                try:
-                    embeddings = self.model.encode(examples, convert_to_tensor=False)
-                    self.embeddings_cache[key] = {
-                        'examples': examples,
-                        'embeddings': embeddings
-                    }
-                except Exception as e:
-                    logger.error(f"Failed to compute embeddings for {key}: {e}")
-        
-        logger.info(f"Computed embeddings for {len(self.embeddings_cache)} categories")
+                for subcategory, examples in subcategories.items():
+                    if not isinstance(examples, list):
+                        continue
+                    
+                    key = f"{category}/{subcategory}"
+                    try:
+                        embeddings = self.model.encode(examples, convert_to_tensor=False, show_progress_bar=False)
+                        self.embeddings_cache[key] = {
+                            'examples': examples,
+                            'embeddings': embeddings
+                        }
+                    except Exception as e:
+                        logger.error(f"Failed to compute embeddings for {key}: {e}")
+            
+            logger.info(f"Computed embeddings for {len(self.embeddings_cache)} categories")
+        except Exception as e:
+            logger.error(f"Error during embedding computation: {e}")
+            # Clear cache and disable model if embedding computation fails
+            self.embeddings_cache = {}
+            self.model = None
+            logger.warning("Semantic matching disabled due to embedding computation failure")
     
     def match(self, text: str) -> Optional[Dict]:
         """
