@@ -1771,11 +1771,21 @@ def create_admin_tab():
                         dbc.Row([
                             dbc.Col([
                                 html.Label("Från datum:", className="fw-bold"),
-                                dcc.Input(id='admin-filter-date-from', type='date', className="form-control")
+                                dcc.DatePickerSingle(
+                                    id='admin-filter-date-from',
+                                    placeholder='Välj startdatum',
+                                    display_format='YYYY-MM-DD',
+                                    className="w-100"
+                                )
                             ], width=4),
                             dbc.Col([
                                 html.Label("Till datum:", className="fw-bold"),
-                                dcc.Input(id='admin-filter-date-to', type='date', className="form-control")
+                                dcc.DatePickerSingle(
+                                    id='admin-filter-date-to',
+                                    placeholder='Välj slutdatum',
+                                    display_format='YYYY-MM-DD',
+                                    className="w-100"
+                                )
                             ], width=4),
                             dbc.Col([
                                 html.Div([
@@ -6215,7 +6225,6 @@ def update_admin_transaction_table(n_clicks, n_intervals, source, account, categ
         table_data = []
         for tx in transactions:
             table_data.append({
-                'Välj': False,
                 'ID': tx.get('id', ''),
                 'Datum': tx.get('date', ''),
                 'Beskrivning': tx.get('description', ''),
@@ -6230,7 +6239,6 @@ def update_admin_transaction_table(n_clicks, n_intervals, source, account, categ
         table = dash_table.DataTable(
             id='admin-transaction-table',
             columns=[
-                {'name': 'Välj', 'id': 'Välj', 'presentation': 'markdown', 'editable': True},
                 {'name': 'Datum', 'id': 'Datum'},
                 {'name': 'Beskrivning', 'id': 'Beskrivning'},
                 {'name': 'Belopp', 'id': 'Belopp'},
@@ -6273,7 +6281,8 @@ def update_admin_transaction_table(n_clicks, n_intervals, source, account, categ
 @app.callback(
     Output('admin-selected-count', 'children'),
     Input('admin-transaction-table', 'selected_rows'),
-    State('admin-transaction-table', 'data')
+    State('admin-transaction-table', 'data'),
+    prevent_initial_call=True
 )
 def update_selected_count(selected_rows, data):
     """Update count of selected transactions."""
@@ -6289,7 +6298,8 @@ def update_selected_count(selected_rows, data):
     [State('admin-transaction-table', 'selected_rows'),
      State('admin-transaction-table', 'data'),
      State('admin-bulk-category', 'value'),
-     State('admin-bulk-subcategory', 'value')]
+     State('admin-bulk-subcategory', 'value')],
+    prevent_initial_call=True
 )
 def handle_bulk_actions(update_clicks, train_clicks, selected_rows, data, category, subcategory):
     """Handle bulk update and training actions."""
