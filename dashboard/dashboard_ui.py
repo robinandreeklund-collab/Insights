@@ -1829,7 +1829,11 @@ def create_admin_tab():
                         dbc.Row([
                             dbc.Col([
                                 html.Label("Kategori:", className="fw-bold"),
-                                dcc.Dropdown(id='admin-bulk-category', placeholder="Välj kategori...")
+                                dcc.Dropdown(
+                                    id='admin-bulk-category', 
+                                    placeholder="Välj kategori...",
+                                    options=[{'label': cat, 'value': cat} for cat in CategoryManager().get_categories().keys()]
+                                )
                             ], width=4),
                             dbc.Col([
                                 html.Label("Underkategori:", className="fw-bold"),
@@ -6165,6 +6169,9 @@ def populate_admin_dropdowns(n, current_tab):
                 category_options, category_options, category_options,
                 category_options, category_options)
     except Exception as e:
+        print(f"Error populating dropdowns: {str(e)}")
+        import traceback
+        traceback.print_exc()
         empty = []
         return (empty, empty, empty, empty, empty, empty, empty, empty)
 
@@ -6190,8 +6197,7 @@ def update_admin_bulk_subcategories(category):
     [Output('admin-transaction-table-container', 'children'),
      Output('admin-transaction-count', 'children')],
     [Input('admin-apply-filters-btn', 'n_clicks'),
-     Input('admin-refresh-interval', 'n_intervals'),
-     Input('admin-bulk-action-status', 'children')],
+     Input('admin-refresh-interval', 'n_intervals')],
     [State('admin-filter-source', 'value'),
      State('admin-filter-account', 'value'),
      State('admin-filter-category', 'value'),
@@ -6199,7 +6205,7 @@ def update_admin_bulk_subcategories(category):
      State('admin-filter-date-from', 'value'),
      State('admin-filter-date-to', 'value')]
 )
-def update_admin_transaction_table(n_clicks, n_intervals, bulk_status, source, account, category, status, date_from, date_to):
+def update_admin_transaction_table(n_clicks, n_intervals, source, account, category, status, date_from, date_to):
     """Update transaction table with filters."""
     try:
         # Build filters
