@@ -72,7 +72,7 @@ def calculate_average_income_and_expenses(transactions: List[dict], days: int = 
 def forecast_balance(current_balance: float, transactions: List[dict], forecast_days: int = 30, 
                     upcoming_bills: List[dict] = None, expected_income: List[dict] = None) -> List[Dict]:
     """
-    Forecast balance for the next N days based on historical averages plus upcoming bills and income.
+    Forecast balance for the next N days by combining historical transaction patterns with known upcoming bills and expected income.
     
     Args:
         current_balance: Current account balance
