@@ -6,6 +6,22 @@ import yaml
 import os
 import re
 
+# Try to import ML categorizer
+try:
+    from modules.core.ml_categorizer import MLCategorizer
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+    print("Warning: ML categorizer not available. Install scikit-learn to enable ML features.")
+
+# Try to import categorization engine
+try:
+    from modules.core.categorization_engine import CategorizationEngine
+    ENGINE_AVAILABLE = True
+except ImportError:
+    ENGINE_AVAILABLE = False
+    print("Warning: Categorization engine not available.")
+
 
 def load_categorization_rules(rules_file: str = "yaml/categorization_rules.yaml") -> List[dict]:
     """Load categorization rules from YAML file."""
@@ -123,20 +139,82 @@ def categorize_by_ai_heuristic(description: str, amount: float, training_data: L
     return None
 
 
-def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data: List[dict] = None) -> pd.DataFrame:
+def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data: List[dict] = None, use_ml: bool = True, use_engine: bool = True) -> pd.DataFrame:
     """
-    Automatically categorize transactions using rules and AI.
+    Automatically categorize transactions using rules, ML, and heuristics.
     
     Args:
         data: DataFrame with transaction data
         rules: List of categorization rules (optional, will load from file if not provided)
         training_data: List of training data (optional)
+        use_ml: Whether to use ML model for categorization (default: True)
+        use_engine: Whether to use advanced categorization engine (default: True)
         
     Returns:
         DataFrame with categorized transactions
     """
     df = data.copy()
     
+    # Initialize category columns if they don't exist
+    if 'category' not in df.columns:
+        df['category'] = ''
+    if 'subcategory' not in df.columns:
+        df['subcategory'] = ''
+    if 'confidence_score' not in df.columns:
+        df['confidence_score'] = 0.0
+    if 'categorization_source' not in df.columns:
+        df['categorization_source'] = ''
+    
+    # Try to use advanced categorization engine first
+    if use_engine and ENGINE_AVAILABLE:
+        try:
+            engine = CategorizationEngine()
+            print(f"Using advanced categorization engine with {engine.get_stats()['categories']} categories")
+            
+            # Categorize each transaction
+            for idx, row in df.iterrows():
+                try:
+                    # Skip if already categorized
+                    if row.get('category') and row.get('subcategory'):
+                        continue
+                    
+                    description = str(row.get('description', ''))
+                    amount = float(row.get('amount', 0))
+                    merchant = str(row.get('merchant', '')) if 'merchant' in row else None
+                    account_type = str(row.get('account_type', '')) if 'account_type' in row else None
+                    
+                    # Use categorization engine
+                    result = engine.categorize(
+                        description=description,
+                        amount=amount,
+                        merchant=merchant,
+                        account_type=account_type,
+                        use_ai=use_ml,
+                        use_semantic=False  # Disable semantic for now due to compatibility issues
+                    )
+                    
+                    # Apply categorization
+                    if result:
+                        df.at[idx, 'category'] = result['category']
+                        df.at[idx, 'subcategory'] = result['subcategory']
+                        df.at[idx, 'confidence_score'] = result.get('confidence_score', 0.0)
+                        df.at[idx, 'categorization_source'] = result.get('source', 'unknown')
+                except Exception as row_error:
+                    # If single transaction fails, log and continue with default
+                    print(f"Error categorizing transaction at row {idx}: {row_error}")
+                    df.at[idx, 'category'] = 'Övrigt'
+                    df.at[idx, 'subcategory'] = 'Okategoriserat'
+                    df.at[idx, 'confidence_score'] = 0.0
+                    df.at[idx, 'categorization_source'] = 'error_fallback'
+            
+            return df
+        except Exception as e:
+            import traceback
+            print(f"Categorization engine error: {e}")
+            traceback.print_exc()
+            print("Falling back to legacy method.")
+    
+    # Fallback to legacy categorization method
     # Load rules if not provided
     if rules is None:
         rules = load_categorization_rules()
@@ -150,11 +228,16 @@ def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data:
                 data_dict = yaml.safe_load(f) or {}
                 training_data = data_dict.get('training_data', [])
     
-    # Initialize category columns if they don't exist
-    if 'category' not in df.columns:
-        df['category'] = ''
-    if 'subcategory' not in df.columns:
-        df['subcategory'] = ''
+    # Initialize ML categorizer if available and requested
+    ml_categorizer = None
+    if use_ml and ML_AVAILABLE:
+        ml_categorizer = MLCategorizer()
+        if not ml_categorizer.is_trained:
+            # Try to train if we have enough data
+            result = ml_categorizer.train()
+            if not result['success']:
+                ml_categorizer = None
+                print(f"ML model not available: {result['message']}")
     
     # Categorize each transaction
     for idx, row in df.iterrows():
@@ -165,21 +248,32 @@ def auto_categorize(data: pd.DataFrame, rules: List[dict] = None, training_data:
         description = str(row.get('description', ''))
         amount = float(row.get('amount', 0))
         
-        # Try rule-based categorization first (higher priority)
+        # Try rule-based categorization first (highest priority)
         result = categorize_by_rules(description, rules)
+        source = 'rule'
         
-        # If no rule match, try AI/heuristic
+        # If no rule match, try ML model
+        if not result and ml_categorizer is not None:
+            result = ml_categorizer.predict(description, return_probability=True)
+            source = 'ai'
+        
+        # If no ML match, try heuristic
         if not result:
             result = categorize_by_ai_heuristic(description, amount, training_data)
+            source = 'heuristic'
         
         # Apply categorization
         if result:
             df.at[idx, 'category'] = result['category']
-            df.at[idx, 'subcategory'] = result['subcategory']
+            df.at[idx, 'subcategory'] = result.get('subcategory', '')
+            df.at[idx, 'confidence_score'] = result.get('confidence_score', 1.0)
+            df.at[idx, 'categorization_source'] = source
         else:
             # Default category
             df.at[idx, 'category'] = 'Övrigt'
             df.at[idx, 'subcategory'] = 'Okategoriserat'
+            df.at[idx, 'confidence_score'] = 0.0
+            df.at[idx, 'categorization_source'] = 'default'
     
     return df
 

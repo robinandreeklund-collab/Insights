@@ -1,0 +1,56 @@
+retraining_pipeline:
+  name: "Insights Categorization Retraining"
+  trigger:
+    type: "manual or threshold"
+    threshold: 10  # antal nya manuella overrides
+    source: training_data.yaml
+    monitor_file: training_data.yaml
+    auto_trigger: true
+
+  preprocessing:
+    steps:
+      - clean_text
+      - normalize_case
+      - remove_stopwords
+      - tokenize
+      - vectorize: "TF-IDF or embeddings"
+
+  model_training:
+    model_type: "LogisticRegression"
+    options:
+      - RandomForest
+      - XGBoost
+      - DistilBERT (via HuggingFace)
+    input_features:
+      - transaction_description
+      - merchant
+      - amount
+      - account_type
+    output:
+      - category
+      - subcategory
+      - confidence_score
+
+  evaluation:
+    metrics:
+      - accuracy
+      - precision
+      - recall
+      - f1_score
+    validation_split: 0.2
+    cross_validation: true
+
+  deployment:
+    save_model_to: models/categorization_model.pkl
+    versioning: true
+    update_timestamp: true
+    notify_ui: true
+
+  audit_log:
+    enabled: true
+    file: logs/retraining_audit.yaml
+    fields:
+      - timestamp
+      - model_version
+      - accuracy
+      - overrides_used

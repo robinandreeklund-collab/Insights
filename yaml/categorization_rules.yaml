@@ -1,106 +1,285 @@
-# Categorization rules
-# Format:
-# rules:
-#   - pattern: regex_pattern
-#     category: category_name
-#     subcategory: subcategory_name
-#     priority: priority_number
+categorization_rules:
+  Boende:
+    Hyra:
+      - "hyra"
+      - "hyresavi"
+      - "betalning hyresvärd"
+      - "bostadsbolag"
+      - "fastighetsägare"
+      - "månadsavgift"
+      - "hyresfaktura"
+      - "boplats"
+    El:
+      - "vattenfall"
+      - "eon"
+      - "elräkning"
+      - "ström"
+      - "elfaktura"
+      - "fortum"
+      - "göteborg energi"
+      - "elhandel"
+    Hemförsäkring:
+      - "folksam"
+      - "trygg hansa"
+      - "lantmännen försäkring"
+      - "hemförsäkring"
+      - "if skadeförsäkring"
+      - "moderna försäkringar"
+    Möbler:
+      - "ikea"
+      - "jysk"
+      - "möbel"
+      - "soffa"
+      - "bord"
+      - "stol"
+      - "säng"
+      - "mio"
+      - "rum21"
+    Städning:
+      - "städfirma"
+      - "hemstäd"
+      - "rengöring"
+      - "cleaning service"
+      - "flyttstäd"
+      - "städab"
 
-rules:
-  # Nordea fees and services
-  - pattern: "Nordea Vardagspaket"
-    category: "Boende"
-    subcategory: "Bank & Avgifter"
-    priority: 100
-  
-  # Transfers and internal transactions
-  - pattern: "Överföring"
-    category: "Överföringar"
-    subcategory: "Intern överföring"
-    priority: 90
-  
-  - pattern: "Uttag"
-    category: "Kontanter"
-    subcategory: "Uttagsautomat"
-    priority: 90
-  
-  - pattern: "Insättning"
-    category: "Inkomster"
-    subcategory: "Insättning"
-    priority: 90
-  
-  # Food and groceries
-  - pattern: "ICA|COOP|HEMKÖP|WILLYS|LIDL"
-    category: "Mat & Dryck"
-    subcategory: "Matinköp"
-    priority: 80
-  
-  - pattern: "RESTAURANG|CAFÉ|PIZZA|BURGER|SUSHI"
-    category: "Mat & Dryck"
-    subcategory: "Restaurang"
-    priority: 80
-  
-  # Transport
-  - pattern: "BENSIN|DIESEL|TANK"
-    category: "Transport"
-    subcategory: "Bränsle"
-    priority: 80
-  
-  - pattern: "PARKERING|P-HUS"
-    category: "Transport"
-    subcategory: "Parkering"
-    priority: 80
-  
-  - pattern: "SL |TÅGLUFF|BUSS"
-    category: "Transport"
-    subcategory: "Kollektivtrafik"
-    priority: 80
-  
-  # Housing and utilities
-  - pattern: "HYRA|BOSTAD"
-    category: "Boende"
-    subcategory: "Hyra"
-    priority: 85
-  
-  - pattern: "EL-RÄKNING|ELBOLAG"
-    category: "Boende"
-    subcategory: "El"
-    priority: 85
-  
-  - pattern: "BREDBAND|INTERNET|TELIA|TELENOR"
-    category: "Boende"
-    subcategory: "Internet & Telefon"
-    priority: 85
-  
-  # Shopping
-  - pattern: "KLARNA|PAYPAL"
-    category: "Shopping"
-    subcategory: "Online-handel"
-    priority: 70
-  
-  - pattern: "AMAZON|EBAY"
-    category: "Shopping"
-    subcategory: "Online-handel"
-    priority: 75
-  
-  # Entertainment
-  - pattern: "SPOTIFY|NETFLIX|HBO|DISNEY"
-    category: "Nöje"
-    subcategory: "Streaming"
-    priority: 75
-  
-  - pattern: "BIO|TEATER|KONSERT"
-    category: "Nöje"
-    subcategory: "Evenemang"
-    priority: 75
-  
-  # Health
-  - pattern: "APOTEK|APOTEKET"
-    category: "Hälsa"
-    subcategory: "Medicin"
-    priority: 80
-  
-  - pattern: "VÅRDCENTRAL|TANDLÄKARE"
-    category: "Hälsa"
-    subcategory: "Vård"
-    priority: 80
+  Transport:
+    Bränsle:
+      - "shell"
+      - "circle k"
+      - "preem"
+      - "tankning"
+      - "diesel"
+      - "bensin"
+      - "bilbränsle"
+      - "okq8"
+    Bilförsäkring:
+      - "motorförsäkring"
+      - "bilförsäkring"
+      - "if bil"
+      - "trygg hansa bil"
+      - "volvia"
+    Parkering:
+      - "easypark"
+      - "parkster"
+      - "p-avgift"
+      - "parkeringshus"
+      - "mobilparkering"
+    Tåg:
+      - "sj"
+      - "mtr"
+      - "öresundståg"
+      - "tågbiljett"
+      - "train ticket"
+      - "snälltåget"
+    Flyg:
+      - "sas"
+      - "norwegian"
+      - "ryanair"
+      - "flygresa"
+      - "flygbiljett"
+      - "swedavia"
+    Bilhyra:
+      - "avis"
+      - "hertz"
+      - "sixt"
+      - "hyrbil"
+      - "biluthyrning"
+
+  Mat:
+    Livsmedel:
+      - "ica"
+      - "coop"
+      - "willys"
+      - "hemköp"
+      - "matbutik"
+      - "livsmedel"
+      - "matinköp"
+      - "city gross"
+      - "lidl"
+    Restaurang:
+      - "restaurang"
+      - "middag"
+      - "lunch"
+      - "à la carte"
+      - "middag ute"
+      - "gastropub"
+      - "bistro"
+    Takeaway:
+      - "foodora"
+      - "ubereats"
+      - "pizza"
+      - "sushi"
+      - "hamburgare"
+      - "takeaway"
+      - "hämtmat"
+    Kafé:
+      - "espresso house"
+      - "waynes"
+      - "fika"
+      - "kaffe"
+      - "bageri"
+      - "konditori"
+      - "latte"
+      - "café"
+
+  Nöje:
+    Streaming:
+      - "spotify"
+      - "netflix"
+      - "viaplay"
+      - "disney+"
+      - "youtube premium"
+      - "apple tv"
+      - "hbo max"
+    Bio:
+      - "sf bio"
+      - "filmstaden"
+      - "biobiljett"
+      - "kino"
+    Spel:
+      - "steam"
+      - "epic games"
+      - "playstation"
+      - "xbox"
+      - "nintendo"
+      - "gamepass"
+    Musik:
+      - "ticketmaster"
+      - "konsert"
+      - "live music"
+      - "musikbiljett"
+      - "gig"
+    Böcker:
+      - "adlibris"
+      - "bokus"
+      - "bokhandel"
+      - "e-bok"
+      - "läsning"
+
+  Hälsa:
+    Medicin:
+      - "apoteket"
+      - "medicin"
+      - "recept"
+      - "läkemedel"
+      - "apotea"
+      - "kronans apotek"
+    Vård:
+      - "vårdcentral"
+      - "läkare"
+      - "sjukhus"
+      - "besök"
+      - "1177"
+      - "hälsokontroll"
+    Gym:
+      - "friskis"
+      - "sats"
+      - "gymkort"
+      - "träningscenter"
+      - "fitness24seven"
+    Tandvård:
+      - "folktandvården"
+      - "tandläkare"
+      - "tandvård"
+      - "tandhygienist"
+
+  Kommunikation:
+    Mobil:
+      - "telia"
+      - "tele2"
+      - "halebop"
+      - "mobilabonnemang"
+      - "comviq"
+    Internet:
+      - "bredband"
+      - "comhem"
+      - "fiber"
+      - "router"
+      - "wifi"
+    TV-abonnemang:
+      - "cmore"
+      - "tv4 play"
+      - "viasat"
+      - "tv-abonnemang"
+      - "boxer"
+
+  Överföring:
+    Intern:
+      - "överföring robin"
+      - "överföring frugan"
+      - "internöverföring"
+      - "överfört till eget konto"
+    Sparkonto:
+      - "överföring sparkonto"
+      - "sparande"
+      - "insättning sparkonto"
+    Kreditkort:
+      - "betalning kreditkort"
+      - "kortfaktura"
+      - "visa faktura"
+      - "mastercard faktura"
+      - "american express"
+
+  Fakturabetalning:
+    Kreditkort:
+      - "faktura mastercard"
+      - "visa faktura"
+      - "kortbetalning"
+      - "betalning av faktura"
+    El:
+      - "elräkning"
+      - "vattenfall faktura"
+      - "elfaktura"
+    Hyra:
+      - "hyresavi"
+      - "betalning hyra"
+      - "hyresfaktura"
+
+  Inkomst:
+    Lön:
+      - "lön"
+      - "månadslön"
+      - "utbetalning från arbetsgivare"
+      - "nettolön"
+      - "bruttolön"
+    Bidrag:
+      - "föräldrapenning"
+      - "barnbidrag"
+      - "csn"
+      - "a-kassa"
+      - "bostadsbidrag"
+    Sidoinkomst:
+      - "swish från kund"
+      - "frilans"
+      - "extraarbete"
+      - "uppdrag"
+      - "gigjobb"
+    Skatteåterbäring:
+      - "skatteverket"
+      - "återbäring"
+      - "skatteåterbetalning"
+
+  Övrigt:
+    Gåva:
+      - "gåva"
+      - "present"
+      - "pengar från familj"
+      - "julklapp"
+      - "födelsedagspresent"
+    Donation:
+      - "donation"
+      - "välgörenhet"
+      - "bidrag till organisation"
+      - "rädda barnen"
+      - "unicef"
+    Avgift:
+      - "bankavgift"
+      - "kortavgift"
+      - "förseningsavgift"
+      - "årsavgift"
+      - "administrationsavgift"
+    Okänd:
+      - "okänd transaktion"
+      - "ej matchad"
+      - "manuell granskning"

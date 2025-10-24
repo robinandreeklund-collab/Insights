@@ -5,6 +5,38 @@ import yaml
 from typing import List, Dict, Optional
 from datetime import datetime
 import re
+import numpy as np
+
+# Try to import ML categorizer
+try:
+    from modules.core.ml_categorizer import MLCategorizer
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+
+
+def convert_numpy_types(obj):
+    """Convert numpy types to native Python types recursively.
+    
+    Args:
+        obj: Object to convert
+        
+    Returns:
+        Object with numpy types converted to Python types
+    """
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_numpy_types(item) for item in obj)
+    return obj
 
 
 class AITrainer:
@@ -18,6 +50,11 @@ class AITrainer:
         
         # Ensure yaml directory exists
         os.makedirs(yaml_dir, exist_ok=True)
+        
+        # Initialize ML categorizer if available
+        self.ml_categorizer = None
+        if ML_AVAILABLE:
+            self.ml_categorizer = MLCategorizer(yaml_dir=yaml_dir)
     
     def _load_yaml(self, filepath: str) -> dict:
         """Load YAML file or return default structure."""
@@ -28,9 +65,11 @@ class AITrainer:
         return {}
     
     def _save_yaml(self, filepath: str, data: dict) -> None:
-        """Save data to YAML file."""
+        """Save data to YAML file, converting numpy types to native Python types."""
+        # Convert any numpy types to native Python types
+        cleaned_data = convert_numpy_types(data)
         with open(filepath, 'w', encoding='utf-8') as f:
-            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            yaml.dump(cleaned_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
     
     def get_training_data(self) -> List[Dict]:
         """Get all training data."""
@@ -265,3 +304,48 @@ class AITrainer:
             self._save_yaml(self.categorization_rules_file, rules_data)
         
         return removed_count
+    
+    def train_ml_model(self, force_retrain: bool = False) -> Dict:
+        """Train the ML model (MultinomialNB) from training data.
+        
+        Args:
+            force_retrain: Force retraining even if model exists
+            
+        Returns:
+            Dictionary with training results
+        """
+        if not ML_AVAILABLE:
+            return {
+                'success': False,
+                'message': 'ML features not available. Install scikit-learn to enable ML model training.',
+                'ml_available': False
+            }
+        
+        if self.ml_categorizer is None:
+            self.ml_categorizer = MLCategorizer(yaml_dir=self.yaml_dir)
+        
+        if force_retrain:
+            result = self.ml_categorizer.train()
+        else:
+            result = self.ml_categorizer.retrain_if_needed()
+        
+        return result
+    
+    def get_ml_model_info(self) -> Dict:
+        """Get information about the ML model.
+        
+        Returns:
+            Dictionary with model information
+        """
+        if not ML_AVAILABLE:
+            return {
+                'ml_available': False,
+                'message': 'ML features not available. Install scikit-learn.'
+            }
+        
+        if self.ml_categorizer is None:
+            self.ml_categorizer = MLCategorizer(yaml_dir=self.yaml_dir)
+        
+        info = self.ml_categorizer.get_model_info()
+        info['ml_available'] = True
+        return info

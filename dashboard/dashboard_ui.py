@@ -35,6 +35,7 @@ from modules.core.settings_panel import SettingsPanel
 from modules.core.ai_trainer import AITrainer
 from modules.core.category_manager import CategoryManager
 from modules.core.person_manager import PersonManager
+from modules.core.admin_dashboard import AdminDashboard
 
 # Import icon helpers using importlib to avoid sys.path modification
 import importlib.util
@@ -1704,6 +1705,318 @@ def create_settings_tab():
     ], className="p-3")
 
 
+def create_admin_tab():
+    """Create the Admin Dashboard tab for AI training and category management."""
+    return html.Div([
+        html.H3("Admin Dashboard - AI Träning & Kategorisering", className="mt-3 mb-4"),
+        
+        # Statistics Overview
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("📊 Statistik", className="card-title"),
+                        html.Div(id='admin-stats-display')
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Filters
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("🔍 Filtrera transaktioner", className="card-title"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Källa:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='admin-filter-source',
+                                    placeholder="Alla källor...",
+                                    clearable=True
+                                )
+                            ], width=3),
+                            dbc.Col([
+                                html.Label("Konto:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='admin-filter-account',
+                                    placeholder="Alla konton...",
+                                    clearable=True
+                                )
+                            ], width=3),
+                            dbc.Col([
+                                html.Label("Kategori:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='admin-filter-category',
+                                    placeholder="Alla kategorier...",
+                                    clearable=True
+                                )
+                            ], width=3),
+                            dbc.Col([
+                                html.Label("Status:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='admin-filter-status',
+                                    options=[
+                                        {'label': 'Alla', 'value': 'all'},
+                                        {'label': 'Okategoriserade', 'value': 'uncategorized'},
+                                        {'label': 'Kategoriserade', 'value': 'categorized'}
+                                    ],
+                                    value='all'
+                                )
+                            ], width=3)
+                        ], className="mb-3"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Från datum:", className="fw-bold"),
+                                dcc.DatePickerSingle(
+                                    id='admin-filter-date-from',
+                                    placeholder='Välj startdatum',
+                                    display_format='YYYY-MM-DD',
+                                    className="w-100"
+                                )
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Till datum:", className="fw-bold"),
+                                dcc.DatePickerSingle(
+                                    id='admin-filter-date-to',
+                                    placeholder='Välj slutdatum',
+                                    display_format='YYYY-MM-DD',
+                                    className="w-100"
+                                )
+                            ], width=4),
+                            dbc.Col([
+                                html.Div([
+                                    html.Label(" ", className="fw-bold"),
+                                    html.Br(),
+                                    dbc.Button("Applicera filter", id='admin-apply-filters-btn', color="primary", className="w-100")
+                                ])
+                            ], width=4)
+                        ])
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Transaction List
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("📝 Transaktioner", className="card-title"),
+                        html.Div([
+                            html.Span(id='admin-transaction-count', className="me-3"),
+                            dbc.Button("Välj alla", id='admin-select-all-btn', size="sm", color="secondary", className="me-2"),
+                            dbc.Button("Avmarkera alla", id='admin-deselect-all-btn', size="sm", color="secondary"),
+                        ], className="mb-3"),
+                        
+                        html.Div(id='admin-transaction-table-container', style={'maxHeight': '500px', 'overflowY': 'auto'})
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Bulk Actions
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("⚡ Bulk-åtgärder", className="card-title"),
+                        html.P(id='admin-selected-count', className="text-muted"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Kategori:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id='admin-bulk-category', 
+                                    placeholder="Välj kategori...",
+                                    options=[{'label': cat, 'value': cat} for cat in CategoryManager().get_categories().keys()]
+                                )
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Underkategori:", className="fw-bold"),
+                                dcc.Dropdown(id='admin-bulk-subcategory', placeholder="Välj underkategori...")
+                            ], width=4),
+                            dbc.Col([
+                                html.Div([
+                                    html.Label(" ", className="fw-bold"),
+                                    html.Br(),
+                                    dbc.Button("Uppdatera valda", id='admin-bulk-update-btn', color="primary", className="me-2"),
+                                    dbc.Button("Träna AI med valda", id='admin-bulk-train-btn', color="success")
+                                ])
+                            ], width=4)
+                        ]),
+                        
+                        html.Div(id='admin-bulk-action-status', className="mt-3")
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # Category Management
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("🏷️ Kategorihantering", className="card-title"),
+                        
+                        dbc.Tabs([
+                            dbc.Tab(label="Skapa kategori", children=[
+                                html.Div([
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.Label("Kategorinamn:", className="fw-bold mt-3"),
+                                            dbc.Input(id='admin-new-category-name', placeholder="T.ex. Transport"),
+                                        ], width=8),
+                                        dbc.Col([
+                                            html.Label(" ", className="fw-bold mt-3"),
+                                            html.Br(),
+                                            dbc.Button("Skapa", id='admin-create-category-btn', color="success", className="w-100")
+                                        ], width=4)
+                                    ], className="mb-3"),
+                                    
+                                    html.Label("Underkategorier (en per rad):", className="fw-bold"),
+                                    dbc.Textarea(
+                                        id='admin-new-subcategories',
+                                        placeholder="T.ex.:\nBränsle\nKollektivtrafik\nTaxi",
+                                        style={'height': '100px'}
+                                    ),
+                                    html.Div(id='admin-create-category-status', className="mt-3")
+                                ], className="p-3")
+                            ]),
+                            dbc.Tab(label="Slå ihop kategorier", children=[
+                                html.Div([
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.Label("Från kategori:", className="fw-bold mt-3"),
+                                            dcc.Dropdown(id='admin-merge-from-category', placeholder="Välj kategori att slå ihop...")
+                                        ], width=5),
+                                        dbc.Col([
+                                            html.Label("Till kategori:", className="fw-bold mt-3"),
+                                            dcc.Dropdown(id='admin-merge-to-category', placeholder="Välj målkategori...")
+                                        ], width=5),
+                                        dbc.Col([
+                                            html.Label(" ", className="fw-bold mt-3"),
+                                            html.Br(),
+                                            dbc.Button("Slå ihop", id='admin-merge-categories-btn', color="warning", className="w-100")
+                                        ], width=2)
+                                    ]),
+                                    html.Div(id='admin-merge-category-status', className="mt-3")
+                                ], className="p-3")
+                            ]),
+                            dbc.Tab(label="Ta bort kategori", children=[
+                                html.Div([
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.Label("Kategori att ta bort:", className="fw-bold mt-3"),
+                                            dcc.Dropdown(id='admin-delete-category', placeholder="Välj kategori...")
+                                        ], width=5),
+                                        dbc.Col([
+                                            html.Label("Flytta transaktioner till:", className="fw-bold mt-3"),
+                                            dcc.Dropdown(id='admin-delete-move-to-category', placeholder="Välj kategori...")
+                                        ], width=5),
+                                        dbc.Col([
+                                            html.Label(" ", className="fw-bold mt-3"),
+                                            html.Br(),
+                                            dbc.Button("Ta bort", id='admin-delete-category-btn', color="danger", className="w-100")
+                                        ], width=2)
+                                    ]),
+                                    html.Div(id='admin-delete-category-status', className="mt-3")
+                                ], className="p-3")
+                            ])
+                        ])
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # AI Training Statistics
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("🤖 AI-träningsstatistik", className="card-title"),
+                        html.Div(id='admin-ai-stats-display')
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
+        # ML Model Training
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("🧠 Maskininlärning (ML Model)", className="card-title"),
+                        html.P("Träna en MultinomialNB-modell för bättre kategorisering", className="text-muted"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div(id='admin-ml-model-info', className="mb-3")
+                            ], width=12)
+                        ]),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Träna ML-modell", id='admin-train-ml-btn', color="success", className="me-2"),
+                                dbc.Button("Tvinga omträning", id='admin-retrain-ml-btn', color="warning", className="me-2"),
+                                html.Div(id='admin-ml-train-status', className="d-inline-block")
+                            ], width=12)
+                        ])
+                    ])
+                ]),
+                
+                # Categorization Engine Card
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("⚙️ Kategoriseringsmotor (Advanced Engine)", className="card-title"),
+                        html.P("Avancerad motor med AI, semantisk matchning och automatisk omträning", className="text-muted"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div(id='admin-engine-info', className="mb-3")
+                            ], width=12)
+                        ]),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Label("Strategier:"),
+                                dbc.Checklist(
+                                    id='admin-engine-strategies',
+                                    options=[
+                                        {'label': ' AI-prediktion', 'value': 'ai'},
+                                        {'label': ' Semantisk matchning', 'value': 'semantic'},
+                                        {'label': ' Regelbaserad', 'value': 'rules'}
+                                    ],
+                                    value=['ai', 'semantic', 'rules'],
+                                    inline=True,
+                                    className="mb-3"
+                                ),
+                            ], width=12)
+                        ]),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Trigga omträning", id='admin-trigger-retrain-btn', color="info", className="me-2"),
+                                dbc.Button("Återställ räknare", id='admin-reset-counter-btn', color="secondary", className="me-2"),
+                                html.Div(id='admin-engine-status', className="d-inline-block")
+                            ], width=12)
+                        ])
+                    ])
+                ], className="mt-3")
+            ], width=12)
+        ]),
+        
+        # Store for selected transactions
+        dcc.Store(id='admin-selected-transactions', data=[]),
+        
+        # Interval for auto-refresh
+        dcc.Interval(id='admin-refresh-interval', interval=10000, n_intervals=0)
+    ], className="p-3")
+
+
 # Main app layout with GitHub-inspired design
 app.layout = html.Div([
     # Storage components for state management
@@ -1797,6 +2110,12 @@ app.layout = html.Div([
                     ], className="sidebar-nav-item"),
                     html.Li([
                         html.A([
+                            html.Span("🔧", className="sidebar-nav-icon", style={'display': 'inline-block'}),
+                            html.Span("Admin Dashboard", style={'marginLeft': '8px'}),
+                        ], href="#", id="nav-admin", className="sidebar-nav-link"),
+                    ], className="sidebar-nav-item"),
+                    html.Li([
+                        html.A([
                             html.Span("⚙️", className="sidebar-nav-icon", style={'display': 'inline-block'}),
                             html.Span("Inställningar", style={'marginLeft': '8px'}),
                         ], href="#", id="nav-settings", className="sidebar-nav-link"),
@@ -1817,8 +2136,8 @@ app.layout = html.Div([
 @app.callback(
     [Output('tab-content', 'children'),
      Output('current-tab', 'data')] +
-    [Output(f'nav-{tab}', 'className') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'settings']],
-    [Input(f'nav-{tab}', 'n_clicks') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'settings']],
+    [Output(f'nav-{tab}', 'className') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'admin', 'settings']],
+    [Input(f'nav-{tab}', 'n_clicks') for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'admin', 'settings']],
     prevent_initial_call=True
 )
 def navigate_tabs(*args):
@@ -1841,6 +2160,7 @@ def navigate_tabs(*args):
         'nav-loans': ('loans', create_loans_tab()),
         'nav-people': ('people', create_people_tab()),
         'nav-agent': ('agent', create_agent_tab()),
+        'nav-admin': ('admin', create_admin_tab()),
         'nav-settings': ('settings', create_settings_tab()),
     }
     
@@ -1851,7 +2171,7 @@ def navigate_tabs(*args):
     
     # Update active class for nav items
     nav_classes = []
-    for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'settings']:
+    for tab in ['overview', 'input', 'accounts', 'bills', 'credit-cards', 'history', 'monthly-analysis', 'loans', 'people', 'agent', 'admin', 'settings']:
         if f'nav-{tab}' == button_id:
             nav_classes.append('sidebar-nav-link active')
         else:
@@ -5831,6 +6151,634 @@ def update_person_spending_graph(person_name, n):
             x=0.5, y=0.5, showarrow=False
         )
         return fig
+
+
+# ============================================================================
+# ADMIN DASHBOARD CALLBACKS
+# ============================================================================
+
+# Initialize admin dashboard
+admin_dashboard = AdminDashboard()
+category_manager = CategoryManager()
+
+@app.callback(
+    Output('admin-stats-display', 'children'),
+    Input('admin-refresh-interval', 'n_intervals')
+)
+def update_admin_stats(n):
+    """Update admin statistics display."""
+    try:
+        stats = admin_dashboard.get_category_statistics()
+        
+        return html.Div([
+            dbc.Row([
+                dbc.Col([
+                    html.Div([
+                        html.H3(f"{stats['total_transactions']}", className="text-primary"),
+                        html.P("Totalt transaktioner", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3),
+                dbc.Col([
+                    html.Div([
+                        html.H3(f"{stats['uncategorized_count']}", className="text-warning"),
+                        html.P(f"Okategoriserade ({stats['uncategorized_percentage']}%)", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3),
+                dbc.Col([
+                    html.Div([
+                        html.H3(f"{len(stats['category_counts'])}", className="text-success"),
+                        html.P("Aktiva kategorier", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3),
+                dbc.Col([
+                    html.Div([
+                        html.H3(f"{stats['total_transactions'] - stats['uncategorized_count']}", className="text-info"),
+                        html.P("Kategoriserade", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3)
+            ])
+        ])
+    except Exception as e:
+        return html.Div(f"Fel vid hämtning av statistik: {str(e)}", className="text-danger")
+
+
+@app.callback(
+    [Output('admin-filter-source', 'options'),
+     Output('admin-filter-account', 'options'),
+     Output('admin-filter-category', 'options'),
+     Output('admin-bulk-category', 'options'),
+     Output('admin-merge-from-category', 'options'),
+     Output('admin-merge-to-category', 'options'),
+     Output('admin-delete-category', 'options'),
+     Output('admin-delete-move-to-category', 'options')],
+    [Input('admin-refresh-interval', 'n_intervals'),
+     Input('current-tab', 'data')]
+)
+def populate_admin_dropdowns(n, current_tab):
+    """Populate dropdowns with sources, accounts, and categories."""
+    try:
+        # Get sources
+        sources = admin_dashboard.get_transaction_sources()
+        source_options = [{'label': s, 'value': s} for s in sources]
+        
+        # Get accounts
+        account_manager = AccountManager()
+        accounts = account_manager.get_accounts()
+        account_options = [{'label': acc.get('name', ''), 'value': acc.get('name', '')} for acc in accounts]
+        
+        # Get categories - Try categorization engine first, fallback to category manager
+        try:
+            from modules.core.categorization_engine import CategorizationEngine
+            engine = CategorizationEngine()
+            categories_list = engine.get_categories()
+            category_options = [{'label': cat, 'value': cat} for cat in categories_list]
+        except Exception as e:
+            # Fallback to existing category manager
+            categories = category_manager.get_categories()
+            category_options = [{'label': cat, 'value': cat} for cat in categories.keys()]
+        
+        return (source_options, account_options, category_options, 
+                category_options, category_options, category_options,
+                category_options, category_options)
+    except Exception as e:
+        print(f"Error populating dropdowns: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        empty = []
+        return (empty, empty, empty, empty, empty, empty, empty, empty)
+
+
+@app.callback(
+    Output('admin-bulk-subcategory', 'options'),
+    Input('admin-bulk-category', 'value')
+)
+def update_admin_bulk_subcategories(category):
+    """Update subcategory dropdown based on selected category."""
+    if not category:
+        return []
+    
+    try:
+        # Try categorization engine first
+        from modules.core.categorization_engine import CategorizationEngine
+        engine = CategorizationEngine()
+        subcategories = engine.get_subcategories(category)
+        return [{'label': sub, 'value': sub} for sub in subcategories]
+    except Exception:
+        # Fallback to existing category manager
+        try:
+            categories = category_manager.get_categories()
+            subcategories = categories.get(category, [])
+            return [{'label': sub, 'value': sub} for sub in subcategories]
+        except:
+            return []
+
+
+@app.callback(
+    [Output('admin-transaction-table-container', 'children'),
+     Output('admin-transaction-count', 'children')],
+    [Input('admin-apply-filters-btn', 'n_clicks'),
+     Input('admin-refresh-interval', 'n_intervals')],
+    [State('admin-filter-source', 'value'),
+     State('admin-filter-account', 'value'),
+     State('admin-filter-category', 'value'),
+     State('admin-filter-status', 'value'),
+     State('admin-filter-date-from', 'value'),
+     State('admin-filter-date-to', 'value')]
+)
+def update_admin_transaction_table(n_clicks, n_intervals, source, account, category, status, date_from, date_to):
+    """Update transaction table with filters."""
+    try:
+        # Build filters
+        filters = {}
+        if source:
+            filters['source'] = source
+        if account:
+            filters['account'] = account
+        if category:
+            filters['category'] = category
+        if status == 'uncategorized':
+            filters['uncategorized'] = True
+        if date_from:
+            filters['date_from'] = date_from
+        if date_to:
+            filters['date_to'] = date_to
+        
+        # Get filtered transactions
+        transactions = admin_dashboard.get_all_transactions(filters)
+        
+        if not transactions:
+            return html.Div("Inga transaktioner hittades", className="text-muted"), "0 transaktioner"
+        
+        # Create table data
+        table_data = []
+        for tx in transactions:
+            table_data.append({
+                'ID': tx.get('id', ''),
+                'Datum': tx.get('date', ''),
+                'Beskrivning': tx.get('description', ''),
+                'Belopp': f"{tx.get('amount', 0):.2f}",
+                'Kategori': tx.get('category', 'Okategoriserat'),
+                'Underkategori': tx.get('subcategory', ''),
+                'Konto': tx.get('account', ''),
+                'Källa': tx.get('source', '')
+            })
+        
+        # Create DataTable
+        table = dash_table.DataTable(
+            id='admin-transaction-table',
+            columns=[
+                {'name': 'Datum', 'id': 'Datum'},
+                {'name': 'Beskrivning', 'id': 'Beskrivning'},
+                {'name': 'Belopp', 'id': 'Belopp'},
+                {'name': 'Kategori', 'id': 'Kategori'},
+                {'name': 'Underkategori', 'id': 'Underkategori'},
+                {'name': 'Konto', 'id': 'Konto'},
+                {'name': 'Källa', 'id': 'Källa'},
+            ],
+            data=table_data,
+            row_selectable='multi',
+            selected_rows=[],
+            page_size=50,
+            style_table={'overflowX': 'auto'},
+            style_cell={
+                'textAlign': 'left',
+                'padding': '10px',
+                'fontSize': '12px'
+            },
+            style_header={
+                'backgroundColor': 'var(--gh-canvas-subtle)',
+                'fontWeight': 'bold'
+            },
+            style_data_conditional=[
+                {
+                    'if': {'column_id': 'Kategori', 'filter_query': '{Kategori} eq "Okategoriserat"'},
+                    'backgroundColor': 'rgba(255, 193, 7, 0.1)',
+                    'color': 'orange'
+                }
+            ]
+        )
+        
+        count_text = f"{len(transactions)} transaktioner"
+        return table, count_text
+        
+    except Exception as e:
+        error_msg = f"Fel vid hämtning av transaktioner: {str(e)}"
+        return html.Div(error_msg, className="text-danger"), "0 transaktioner"
+
+
+@app.callback(
+    Output('admin-selected-count', 'children'),
+    Input('admin-transaction-table', 'selected_rows'),
+    State('admin-transaction-table', 'data'),
+    prevent_initial_call=True
+)
+def update_selected_count(selected_rows, data):
+    """Update count of selected transactions."""
+    if not selected_rows:
+        return "Inga transaktioner valda"
+    return f"{len(selected_rows)} transaktioner valda"
+
+
+@app.callback(
+    Output('admin-bulk-action-status', 'children'),
+    [Input('admin-bulk-update-btn', 'n_clicks'),
+     Input('admin-bulk-train-btn', 'n_clicks')],
+    [State('admin-transaction-table', 'selected_rows'),
+     State('admin-transaction-table', 'data'),
+     State('admin-bulk-category', 'value'),
+     State('admin-bulk-subcategory', 'value')],
+    prevent_initial_call=True
+)
+def handle_bulk_actions(update_clicks, train_clicks, selected_rows, data, category, subcategory):
+    """Handle bulk update and training actions."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if not selected_rows or not data:
+        return dbc.Alert("Inga transaktioner valda", color="warning", dismissable=True)
+    
+    if not category:
+        return dbc.Alert("Välj kategori först", color="warning", dismissable=True)
+    
+    try:
+        selected_data = [data[i] for i in selected_rows]
+        
+        if button_id == 'admin-bulk-update-btn':
+            # Update categories
+            transaction_ids = [tx['ID'] for tx in selected_data if tx.get('ID')]
+            updated = admin_dashboard.bulk_update_categories(
+                transaction_ids, category, subcategory or ''
+            )
+            
+            # Register manual overrides with categorization engine
+            try:
+                from modules.core.categorization_engine import CategorizationEngine
+                engine = CategorizationEngine()
+                for tx in selected_data:
+                    engine.register_manual_override(
+                        transaction_id=tx.get('ID', ''),
+                        category=category,
+                        subcategory=subcategory or '',
+                        description=tx.get('Beskrivning', ''),
+                        train_ai=True
+                    )
+            except Exception as e:
+                logger.warning(f"Could not register overrides with engine: {e}")
+            
+            return dbc.Alert(
+                f"✓ Uppdaterade {updated} transaktioner", 
+                color="success", 
+                dismissable=True
+            )
+        
+        elif button_id == 'admin-bulk-train-btn':
+            # Train AI
+            training_data = []
+            for tx in selected_data:
+                training_data.append({
+                    'description': tx.get('Beskrivning', ''),
+                    'category': tx.get('Kategori', category),
+                    'subcategory': tx.get('Underkategori', subcategory or '')
+                })
+            
+            added = admin_dashboard.bulk_train_ai(training_data)
+            return dbc.Alert(
+                f"✓ Lade till {added} transaktioner till träningsdata", 
+                color="success", 
+                dismissable=True
+            )
+        
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+    
+    raise PreventUpdate
+
+
+@app.callback(
+    Output('admin-create-category-status', 'children'),
+    Input('admin-create-category-btn', 'n_clicks'),
+    [State('admin-new-category-name', 'value'),
+     State('admin-new-subcategories', 'value')]
+)
+def create_category(n_clicks, category_name, subcategories_text):
+    """Create a new category."""
+    if not n_clicks:
+        raise PreventUpdate
+    
+    if not category_name:
+        return dbc.Alert("Ange kategorinamn", color="warning", dismissable=True)
+    
+    try:
+        # Parse subcategories
+        subcategories = []
+        if subcategories_text:
+            subcategories = [line.strip() for line in subcategories_text.split('\n') if line.strip()]
+        
+        # Add category
+        success = category_manager.add_category(category_name, subcategories)
+        
+        if success:
+            return dbc.Alert(
+                f"✓ Kategori '{category_name}' skapad med {len(subcategories)} underkategorier", 
+                color="success", 
+                dismissable=True
+            )
+        else:
+            return dbc.Alert(
+                f"Kategori '{category_name}' finns redan", 
+                color="warning", 
+                dismissable=True
+            )
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+@app.callback(
+    Output('admin-merge-category-status', 'children'),
+    Input('admin-merge-categories-btn', 'n_clicks'),
+    [State('admin-merge-from-category', 'value'),
+     State('admin-merge-to-category', 'value')]
+)
+def merge_categories(n_clicks, from_cat, to_cat):
+    """Merge two categories."""
+    if not n_clicks:
+        raise PreventUpdate
+    
+    if not from_cat or not to_cat:
+        return dbc.Alert("Välj båda kategorier", color="warning", dismissable=True)
+    
+    if from_cat == to_cat:
+        return dbc.Alert("Kategorier måste vara olika", color="warning", dismissable=True)
+    
+    try:
+        updated = admin_dashboard.merge_categories(from_cat, to_cat)
+        return dbc.Alert(
+            f"✓ Slog ihop '{from_cat}' till '{to_cat}' - {updated} transaktioner uppdaterade", 
+            color="success", 
+            dismissable=True
+        )
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+@app.callback(
+    Output('admin-delete-category-status', 'children'),
+    Input('admin-delete-category-btn', 'n_clicks'),
+    [State('admin-delete-category', 'value'),
+     State('admin-delete-move-to-category', 'value')]
+)
+def delete_category(n_clicks, delete_cat, move_to_cat):
+    """Delete a category."""
+    if not n_clicks:
+        raise PreventUpdate
+    
+    if not delete_cat or not move_to_cat:
+        return dbc.Alert("Välj båda kategorier", color="warning", dismissable=True)
+    
+    if delete_cat == move_to_cat:
+        return dbc.Alert("Kategorier måste vara olika", color="warning", dismissable=True)
+    
+    try:
+        updated = admin_dashboard.delete_category(delete_cat, move_to_cat)
+        return dbc.Alert(
+            f"✓ Tog bort '{delete_cat}' - {updated} transaktioner flyttade till '{move_to_cat}'", 
+            color="success", 
+            dismissable=True
+        )
+    except Exception as e:
+        return dbc.Alert(f"Fel: {str(e)}", color="danger", dismissable=True)
+
+
+@app.callback(
+    Output('admin-ai-stats-display', 'children'),
+    Input('admin-refresh-interval', 'n_intervals')
+)
+def update_admin_ai_stats(n):
+    """Update AI training statistics."""
+    try:
+        stats = admin_dashboard.get_ai_accuracy_stats()
+        
+        return html.Div([
+            dbc.Row([
+                dbc.Col([
+                    html.Div([
+                        html.H4(f"{stats['total_training_samples']}", className="text-primary"),
+                        html.P("Totalt träningsprover", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3),
+                dbc.Col([
+                    html.Div([
+                        html.H4(f"{stats['manual_training_samples']}", className="text-success"),
+                        html.P("Manuella prover", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3),
+                dbc.Col([
+                    html.Div([
+                        html.H4(f"{stats['total_rules']}", className="text-info"),
+                        html.P(f"Kategoriseringsregler ({stats['ai_generated_rules']} AI)", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3),
+                dbc.Col([
+                    html.Div([
+                        html.H4(f"{stats['training_samples_last_7_days']}", className="text-warning"),
+                        html.P("Nya prover (7 dagar)", className="text-muted mb-0")
+                    ], className="text-center")
+                ], width=3)
+            ])
+        ])
+    except Exception as e:
+        return html.Div(f"Fel vid hämtning av AI-statistik: {str(e)}", className="text-danger")
+
+
+@app.callback(
+    Output('admin-ml-model-info', 'children'),
+    Input('admin-refresh-interval', 'n_intervals')
+)
+def update_ml_model_info(n):
+    """Update ML model information."""
+    try:
+        from modules.core.ai_trainer import AITrainer
+        trainer = AITrainer()
+        info = trainer.get_ml_model_info()
+        
+        if not info.get('ml_available', False):
+            return dbc.Alert(
+                "ML-funktioner ej tillgängliga. Installera scikit-learn för att aktivera ML-modellen.",
+                color="warning"
+            )
+        
+        if info.get('is_trained', False):
+            return html.Div([
+                dbc.Alert([
+                    html.Strong("✓ ML-modell tränad och redo!"),
+                    html.Br(),
+                    f"Kategorier: {', '.join(info.get('categories', []))}",
+                    html.Br(),
+                    f"Träningsprover: {info.get('total_samples', 0)}"
+                ], color="success"),
+                html.Small(f"Kategorifördelning: {info.get('category_distribution', {})}", className="text-muted")
+            ])
+        else:
+            return dbc.Alert(
+                f"ML-modell ej tränad. Behöver minst 2 kategorier med 2+ exempel vardera. "
+                f"Nuvarande träningsprover: {info.get('total_samples', 0)}",
+                color="info"
+            )
+    except Exception as e:
+        return dbc.Alert(f"Fel vid hämtning av ML-info: {str(e)}", color="danger")
+
+
+@app.callback(
+    Output('admin-ml-train-status', 'children'),
+    [Input('admin-train-ml-btn', 'n_clicks'),
+     Input('admin-retrain-ml-btn', 'n_clicks')],
+    prevent_initial_call=True
+)
+def handle_ml_training(train_clicks, retrain_clicks):
+    """Handle ML model training."""
+    from dash import callback_context
+    
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    try:
+        from modules.core.ai_trainer import AITrainer
+        trainer = AITrainer()
+        
+        if button_id == 'admin-train-ml-btn':
+            result = trainer.train_ml_model(force_retrain=False)
+        else:  # retrain button
+            result = trainer.train_ml_model(force_retrain=True)
+        
+        if result.get('success', False):
+            return dbc.Alert(
+                [
+                    html.Strong("✓ " + result['message']),
+                    html.Br(),
+                    f"Prover: {result.get('samples_used', 0)}, Kategorier: {len(result.get('categories', []))}"
+                ],
+                color="success",
+                dismissable=True,
+                duration=5000
+            )
+        else:
+            return dbc.Alert(
+                result.get('message', 'Träning misslyckades'),
+                color="warning",
+                dismissable=True,
+                duration=5000
+            )
+    except Exception as e:
+        return dbc.Alert(
+            f"Fel vid träning: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=5000
+        )
+
+
+@app.callback(
+    Output('admin-engine-info', 'children'),
+    Input('admin-refresh-interval', 'n_intervals')
+)
+def update_engine_info(n):
+    """Update categorization engine information."""
+    try:
+        from modules.core.categorization_engine import CategorizationEngine
+        engine = CategorizationEngine()
+        stats = engine.get_stats()
+        
+        return html.Div([
+            dbc.Alert([
+                html.Strong(f"✓ Motor aktiv med {stats['categories']} kategorier"),
+                html.Br(),
+                f"Confidence-tröskel: {stats['confidence_threshold']:.2f}",
+                html.Br(),
+                f"Semantisk tröskel: {stats['semantic_threshold']:.2f}",
+                html.Br(),
+                f"Manuella overrides: {stats['manual_overrides_count']}/{stats['retrain_trigger']} (omträning vid {stats['retrain_trigger']})",
+                html.Br(),
+                f"Regler laddade: {stats['rules_loaded']}, Semantiska vektorer: {stats['semantic_vectors_loaded']}"
+            ], color="info"),
+        ])
+    except Exception as e:
+        return dbc.Alert(
+            f"Kategoriseringsmotor ej tillgänglig: {str(e)}",
+            color="warning"
+        )
+
+
+@app.callback(
+    Output('admin-engine-status', 'children'),
+    [Input('admin-trigger-retrain-btn', 'n_clicks'),
+     Input('admin-reset-counter-btn', 'n_clicks')],
+    prevent_initial_call=True
+)
+def handle_engine_actions(retrain_clicks, reset_clicks):
+    """Handle categorization engine actions."""
+    from dash import callback_context
+    
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    try:
+        from modules.core.categorization_engine import CategorizationEngine
+        from modules.core.retraining_pipeline import RetrainingPipeline
+        
+        if button_id == 'admin-trigger-retrain-btn':
+            # Trigger retraining pipeline
+            pipeline = RetrainingPipeline()
+            result = pipeline.run()
+            
+            if result.get('success', False):
+                return dbc.Alert(
+                    [
+                        html.Strong("✓ Omträning slutförd!"),
+                        html.Br(),
+                        f"Prover: {result.get('samples_used', 0)}",
+                        html.Br(),
+                        f"Noggrannhet: {result.get('accuracy', 0):.2%}"
+                    ],
+                    color="success",
+                    dismissable=True,
+                    duration=8000
+                )
+            else:
+                return dbc.Alert(
+                    result.get('message', 'Omträning misslyckades'),
+                    color="warning",
+                    dismissable=True,
+                    duration=5000
+                )
+        
+        elif button_id == 'admin-reset-counter-btn':
+            # Reset manual override counter
+            engine = CategorizationEngine()
+            engine.manual_override_count = 0
+            
+            return dbc.Alert(
+                "✓ Räknare återställd till 0",
+                color="success",
+                dismissable=True,
+                duration=3000
+            )
+    
+    except Exception as e:
+        return dbc.Alert(
+            f"Fel: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=5000
+        )
 
 
 if __name__ == "__main__":

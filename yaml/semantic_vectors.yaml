@@ -1,0 +1,191 @@
+semantic_vectors:
+  Boende:
+    Hyra:
+      - "Betalning till hyresvärd"
+      - "Hyresavi för oktober"
+      - "Månadsavgift till bostadsbolag"
+      - "Hyra för lägenhet"
+      - "Fastighetsägare AB"
+    El:
+      - "Elräkning från Vattenfall"
+      - "Energikostnad för hushåll"
+      - "Faktura från E.ON"
+      - "Strömförbrukning september"
+      - "Fortum elhandel"
+    Hemförsäkring:
+      - "Folksam hemförsäkring"
+      - "Försäkring för bostad"
+      - "Trygg Hansa skadeförsäkring"
+      - "Moderna hemförsäkring"
+    Möbler:
+      - "Köp av soffa på Mio"
+      - "Nytt köksbord från IKEA"
+      - "Säng från Jysk"
+      - "Hemelektronik och möbler"
+    Städning:
+      - "Hemstädning via städfirma"
+      - "Flyttstädning inför utflytt"
+      - "Rengöring av lägenhet"
+      - "Städab AB faktura"
+
+  Transport:
+    Bränsle:
+      - "Tankning Circle K"
+      - "Diesel till bilen"
+      - "Shell Väst bensin"
+      - "Preem drivmedel"
+    Bilförsäkring:
+      - "Bilförsäkring via Volvia"
+      - "Motorförsäkring från IF"
+      - "Trygg Hansa bilförsäkring"
+    Parkering:
+      - "EasyPark mobilparkering"
+      - "Parkster avgift"
+      - "P-hus Göteborg"
+    Tåg:
+      - "SJ tågbiljett till Stockholm"
+      - "MTR Express resa"
+      - "Snälltåget Malmö"
+    Flyg:
+      - "Flygresa med SAS"
+      - "Norwegian biljett"
+      - "Ryanair till Berlin"
+    Bilhyra:
+      - "Hyrbil från Hertz"
+      - "Biluthyrning via Sixt"
+      - "Avis bilhyra"
+
+  Mat:
+    Livsmedel:
+      - "Matinköp på ICA Maxi"
+      - "Willys helghandling"
+      - "Livsmedel från Coop"
+      - "City Gross matvaror"
+    Restaurang:
+      - "Middag på lokal restaurang"
+      - "Lunch med kollegor"
+      - "À la carte på bistro"
+      - "Gastropub besök"
+    Takeaway:
+      - "Pizza via Foodora"
+      - "Sushi från takeaway"
+      - "Hamburgare från Max"
+      - "Matleverans med UberEats"
+    Kafé:
+      - "Fika på Espresso House"
+      - "Kaffe och bulle på Waynes"
+      - "Latte från konditori"
+
+  Nöje:
+    Streaming:
+      - "Spotify Premium abonnemang"
+      - "Netflix månadsavgift"
+      - "Disney+ streamingtjänst"
+      - "HBO Max faktura"
+    Bio:
+      - "Biobiljett Filmstaden"
+      - "SF Bio kvällsfilm"
+      - "Kino Göteborg"
+    Spel:
+      - "Köp på Steam"
+      - "Playstation Store transaktion"
+      - "Epic Games spel"
+    Musik:
+      - "Konsertbiljett Ticketmaster"
+      - "Livegig i Stockholm"
+      - "Musikfestival avgift"
+    Böcker:
+      - "Adlibris bokköp"
+      - "E-bok från Bokus"
+      - "Läsning och litteratur"
+
+  Hälsa:
+    Medicin:
+      - "Apoteket receptbelagd medicin"
+      - "Köp av läkemedel på Apotea"
+      - "Kronans Apotek inköp"
+    Vård:
+      - "Besök hos vårdcentral"
+      - "Läkarbesök via 1177"
+      - "Sjukhusfaktura"
+    Gym:
+      - "SATS träningskort"
+      - "Friskis & Svettis medlemskap"
+      - "Fitness24Seven gymavgift"
+    Tandvård:
+      - "Folktandvården undersökning"
+      - "Tandläkarebesök"
+      - "Tandhygienist faktura"
+
+  Kommunikation:
+    Mobil:
+      - "Mobilabonnemang från Telia"
+      - "Tele2 faktura"
+      - "Comviq månadskostnad"
+    Internet:
+      - "Bredband via Bahnhof"
+      - "Fiberinstallation ComHem"
+      - "Routerköp"
+    TV-abonnemang:
+      - "TV4 Play abonnemang"
+      - "Viasat faktura"
+      - "C More streaming"
+
+  Överföring:
+    Intern:
+      - "Överföring Robin till Frugan"
+      - "Internöverföring mellan konton"
+      - "Flytt av pengar till sparkonto"
+    Sparkonto:
+      - "Insättning till sparkonto"
+      - "Överföring till buffert"
+    Kreditkort:
+      - "Betalning av Mastercard faktura"
+      - "Visa faktura från banken"
+      - "American Express betalning"
+
+  Fakturabetalning:
+    Kreditkort:
+      - "Kortfaktura betalning"
+      - "Betalning av kreditkortssaldo"
+    El:
+      - "Elräkning från Vattenfall"
+      - "Elfaktura E.ON"
+    Hyra:
+      - "Hyresavi till bostadsbolag"
+      - "Betalning av hyra"
+
+  Inkomst:
+    Lön:
+      - "Lön från arbetsgivare"
+      - "Månadslön oktober"
+      - "Nettoinkomst"
+    Bidrag:
+      - "Barnbidrag från Försäkringskassan"
+      - "CSN utbetalning"
+      - "A-kassa ersättning"
+    Sidoinkomst:
+      - "Swish från kund"
+      - "Frilansuppdrag"
+      - "Extraarbete faktura"
+    Skatteåterbäring:
+      - "Återbäring från Skatteverket"
+      - "Skatteåterbetalning"
+
+  Övrigt:
+    Gåva:
+      - "Present från familj"
+      - "Julklapp från vän"
+      - "Födelsedagspengar"
+    Donation:
+      - "Donation till Rädda Barnen"
+      - "Bidrag till UNICEF"
+      - "Välgörenhet via Swish"
+    Avgift:
+      - "Bankavgift Nordea"
+      - "Kortavgift Visa"
+      - "Förseningsavgift"
+    Okänd:
+      - "Ej matchad transaktion"
+      - "Okänd beskrivning"
+      - "Manuell granskning krävs"

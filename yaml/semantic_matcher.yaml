@@ -1,0 +1,34 @@
+semantic_matcher:
+  name: "Insights Semantic Categorization"
+  engine: "SentenceTransformer"
+  model: "all-MiniLM-L6-v2"
+  similarity_threshold: 0.75
+  vector_source: semantic_vectors.yaml
+  match_strategy: "cosine_similarity"
+
+  input:
+    - transaction_description
+    - merchant
+    - optional: account_type
+
+  output:
+    - top_match_category
+    - top_match_subcategory
+    - similarity_score
+    - fallback_if_below_threshold: true
+
+  fallback:
+    if_similarity_below: 0.75
+    use: "rule_based"
+    log_uncertain: true
+
+  feedback_loop:
+    enabled: true
+    log_file: semantic_feedback.yaml
+    update_on_manual_override: true
+    retrain_embeddings: false  # embeddings är statiska, men kan uppdateras manuellt
+
+  audit:
+    log_matches: true
+    log_uncertain: true
+    export_to: semantic_match_audit.yaml
