@@ -1966,7 +1966,46 @@ def create_admin_tab():
                             ], width=12)
                         ])
                     ])
-                ])
+                ]),
+                
+                # Categorization Engine Card
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H5("⚙️ Kategoriseringsmotor (Advanced Engine)", className="card-title"),
+                        html.P("Avancerad motor med AI, semantisk matchning och automatisk omträning", className="text-muted"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div(id='admin-engine-info', className="mb-3")
+                            ], width=12)
+                        ]),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Label("Strategier:"),
+                                dbc.Checklist(
+                                    id='admin-engine-strategies',
+                                    options=[
+                                        {'label': ' AI-prediktion', 'value': 'ai'},
+                                        {'label': ' Semantisk matchning', 'value': 'semantic'},
+                                        {'label': ' Regelbaserad', 'value': 'rules'}
+                                    ],
+                                    value=['ai', 'semantic', 'rules'],
+                                    inline=True,
+                                    className="mb-3"
+                                ),
+                            ], width=12)
+                        ]),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Trigga omträning", id='admin-trigger-retrain-btn', color="info", className="me-2"),
+                                dbc.Button("Återställ räknare", id='admin-reset-counter-btn', color="secondary", className="me-2"),
+                                html.Div(id='admin-engine-status', className="d-inline-block")
+                            ], width=12)
+                        ])
+                    ])
+                ], className="mt-3")
             ], width=12)
         ]),
         
@@ -6187,9 +6226,16 @@ def populate_admin_dropdowns(n, current_tab):
         accounts = account_manager.get_accounts()
         account_options = [{'label': acc.get('name', ''), 'value': acc.get('name', '')} for acc in accounts]
         
-        # Get categories
-        categories = category_manager.get_categories()
-        category_options = [{'label': cat, 'value': cat} for cat in categories.keys()]
+        # Get categories - Try categorization engine first, fallback to category manager
+        try:
+            from modules.core.categorization_engine import CategorizationEngine
+            engine = CategorizationEngine()
+            categories_list = engine.get_categories()
+            category_options = [{'label': cat, 'value': cat} for cat in categories_list]
+        except Exception as e:
+            # Fallback to existing category manager
+            categories = category_manager.get_categories()
+            category_options = [{'label': cat, 'value': cat} for cat in categories.keys()]
         
         return (source_options, account_options, category_options, 
                 category_options, category_options, category_options,
@@ -6212,11 +6258,19 @@ def update_admin_bulk_subcategories(category):
         return []
     
     try:
-        categories = category_manager.get_categories()
-        subcategories = categories.get(category, [])
+        # Try categorization engine first
+        from modules.core.categorization_engine import CategorizationEngine
+        engine = CategorizationEngine()
+        subcategories = engine.get_subcategories(category)
         return [{'label': sub, 'value': sub} for sub in subcategories]
-    except:
-        return []
+    except Exception:
+        # Fallback to existing category manager
+        try:
+            categories = category_manager.get_categories()
+            subcategories = categories.get(category, [])
+            return [{'label': sub, 'value': sub} for sub in subcategories]
+        except:
+            return []
 
 
 @app.callback(
@@ -6358,6 +6412,22 @@ def handle_bulk_actions(update_clicks, train_clicks, selected_rows, data, catego
             updated = admin_dashboard.bulk_update_categories(
                 transaction_ids, category, subcategory or ''
             )
+            
+            # Register manual overrides with categorization engine
+            try:
+                from modules.core.categorization_engine import CategorizationEngine
+                engine = CategorizationEngine()
+                for tx in selected_data:
+                    engine.register_manual_override(
+                        transaction_id=tx.get('ID', ''),
+                        category=category,
+                        subcategory=subcategory or '',
+                        description=tx.get('Beskrivning', ''),
+                        train_ai=True
+                    )
+            except Exception as e:
+                logger.warning(f"Could not register overrides with engine: {e}")
+            
             return dbc.Alert(
                 f"✓ Uppdaterade {updated} transaktioner", 
                 color="success", 
@@ -6607,6 +6677,104 @@ def handle_ml_training(train_clicks, retrain_clicks):
     except Exception as e:
         return dbc.Alert(
             f"Fel vid träning: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=5000
+        )
+
+
+@app.callback(
+    Output('admin-engine-info', 'children'),
+    Input('admin-refresh-interval', 'n_intervals')
+)
+def update_engine_info(n):
+    """Update categorization engine information."""
+    try:
+        from modules.core.categorization_engine import CategorizationEngine
+        engine = CategorizationEngine()
+        stats = engine.get_stats()
+        
+        return html.Div([
+            dbc.Alert([
+                html.Strong(f"✓ Motor aktiv med {stats['categories']} kategorier"),
+                html.Br(),
+                f"Confidence-tröskel: {stats['confidence_threshold']:.2f}",
+                html.Br(),
+                f"Semantisk tröskel: {stats['semantic_threshold']:.2f}",
+                html.Br(),
+                f"Manuella overrides: {stats['manual_overrides_count']}/{stats['retrain_trigger']} (omträning vid {stats['retrain_trigger']})",
+                html.Br(),
+                f"Regler laddade: {stats['rules_loaded']}, Semantiska vektorer: {stats['semantic_vectors_loaded']}"
+            ], color="info"),
+        ])
+    except Exception as e:
+        return dbc.Alert(
+            f"Kategoriseringsmotor ej tillgänglig: {str(e)}",
+            color="warning"
+        )
+
+
+@app.callback(
+    Output('admin-engine-status', 'children'),
+    [Input('admin-trigger-retrain-btn', 'n_clicks'),
+     Input('admin-reset-counter-btn', 'n_clicks')],
+    prevent_initial_call=True
+)
+def handle_engine_actions(retrain_clicks, reset_clicks):
+    """Handle categorization engine actions."""
+    from dash import callback_context
+    
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    try:
+        from modules.core.categorization_engine import CategorizationEngine
+        from modules.core.retraining_pipeline import RetrainingPipeline
+        
+        if button_id == 'admin-trigger-retrain-btn':
+            # Trigger retraining pipeline
+            pipeline = RetrainingPipeline()
+            result = pipeline.run()
+            
+            if result.get('success', False):
+                return dbc.Alert(
+                    [
+                        html.Strong("✓ Omträning slutförd!"),
+                        html.Br(),
+                        f"Prover: {result.get('samples_used', 0)}",
+                        html.Br(),
+                        f"Noggrannhet: {result.get('accuracy', 0):.2%}"
+                    ],
+                    color="success",
+                    dismissable=True,
+                    duration=8000
+                )
+            else:
+                return dbc.Alert(
+                    result.get('message', 'Omträning misslyckades'),
+                    color="warning",
+                    dismissable=True,
+                    duration=5000
+                )
+        
+        elif button_id == 'admin-reset-counter-btn':
+            # Reset manual override counter
+            engine = CategorizationEngine()
+            engine.manual_override_count = 0
+            
+            return dbc.Alert(
+                "✓ Räknare återställd till 0",
+                color="success",
+                dismissable=True,
+                duration=3000
+            )
+    
+    except Exception as e:
+        return dbc.Alert(
+            f"Fel: {str(e)}",
             color="danger",
             dismissable=True,
             duration=5000
